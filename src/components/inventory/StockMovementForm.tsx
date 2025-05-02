@@ -13,19 +13,20 @@ import {
 } from "@/components/ui/select";
 import { StockMovement } from "@/types";
 import { useToast } from "@/components/ui/use-toast";
+import { useProducts } from "@/hooks/useProducts";
 
 interface StockMovementFormProps {
   productId: string;
-  onSubmit: (data: Partial<StockMovement>) => void;
+  onSubmit: () => void;
   onCancel: () => void;
-  isLoading: boolean;
+  currentStock?: number;
 }
 
 export const StockMovementForm: React.FC<StockMovementFormProps> = ({
   productId,
   onSubmit,
   onCancel,
-  isLoading,
+  currentStock = 0,
 }) => {
   const [formData, setFormData] = useState<Partial<StockMovement>>({
     productId,
@@ -34,6 +35,8 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
     notes: "",
   });
   const { toast } = useToast();
+  const { useAddStockMovement } = useProducts();
+  const { mutate: addStockMovement, isPending: isLoading } = useAddStockMovement();
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -64,7 +67,21 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
       return;
     }
     
-    onSubmit(formData);
+    // Check if there's enough stock for outgoing movements
+    if (formData.type === 'out' && formData.quantity > currentStock) {
+      toast({
+        variant: "destructive",
+        title: "Estoque insuficiente",
+        description: `Há apenas ${currentStock} unidades disponíveis em estoque`,
+      });
+      return;
+    }
+    
+    addStockMovement(formData, {
+      onSuccess: () => {
+        onSubmit();
+      }
+    });
   };
 
   return (
@@ -98,6 +115,12 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
             onChange={handleChange}
             required
           />
+          
+          {formData.type === "out" && (
+            <p className="text-xs text-muted-foreground">
+              Estoque disponível: {currentStock} unidades
+            </p>
+          )}
         </div>
         
         <div className="space-y-2">

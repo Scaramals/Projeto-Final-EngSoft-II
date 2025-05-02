@@ -151,6 +151,33 @@ export type Database = {
           updated_at: string
         }[]
       }
+      get_product_movement_history: {
+        Args: { product_id_param: string }
+        Returns: {
+          date: string
+          id: string
+          notes: string | null
+          product_id: string
+          quantity: number
+          type: string
+          user_id: string | null
+        }[]
+      }
+      get_products_by_category: {
+        Args: { category_filter: string }
+        Returns: {
+          category: string | null
+          created_at: string
+          description: string | null
+          id: string
+          image_url: string | null
+          minimum_stock: number | null
+          name: string
+          price: number
+          quantity: number
+          updated_at: string
+        }[]
+      }
       get_recent_movements: {
         Args: { days?: number }
         Returns: {
@@ -161,6 +188,15 @@ export type Database = {
           quantity: number
           type: string
           user_id: string | null
+        }[]
+      }
+      get_top_selling_products: {
+        Args: { limit_count?: number }
+        Returns: {
+          id: string
+          name: string
+          quantity_sold: number
+          category: string
         }[]
       }
       get_total_stock_value: {

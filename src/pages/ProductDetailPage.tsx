@@ -6,9 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ProductForm } from "@/components/products/ProductForm";
 import { StockMovementForm } from "@/components/inventory/StockMovementForm";
-import { formatCurrency, formatDate, generateMockProducts, generateMockStockMovements, getStockStatus } from "@/lib/utils";
+import { formatCurrency, formatDate, getStockStatus } from "@/lib/utils";
 import { Edit, Trash2, Box, ArrowUpDown, Plus } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { useProducts } from "@/hooks/useProducts";
+import { Skeleton } from "@/components/ui/skeleton";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 const ProductDetailPage: React.FC = () => {
   const { productId } = useParams<{ productId: string }>();
@@ -18,55 +21,88 @@ const ProductDetailPage: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [isAddingMovement, setIsAddingMovement] = useState(false);
   
-  // In a real application, fetch the product from Supabase
-  const mockProducts = generateMockProducts(20);
-  const product = mockProducts.find(p => p.id === productId) || mockProducts[0];
+  // Get product data
+  const { useProduct, useUpdateProduct, useDeleteProduct, useProductMovements } = useProducts();
+  const { 
+    data: product, 
+    isLoading: loadingProduct,
+    error: productError 
+  } = useProduct(productId);
   
-  // Mock stock movements for this product
-  const stockMovements = generateMockStockMovements(8).map(m => ({
-    ...m,
-    productId: product.id
-  }));
+  // Get stock movements
+  const {
+    data: stockMovements = [],
+    isLoading: loadingMovements,
+    error: movementsError
+  } = useProductMovements(productId);
   
-  const stockStatus = getStockStatus(product.quantity, product.minimumStock);
+  // Mutations
+  const { mutate: updateProduct, isPending: isUpdating } = useUpdateProduct();
+  const { mutate: deleteProduct, isPending: isDeleting } = useDeleteProduct();
+  
+  const stockStatus = product ? getStockStatus(product.quantity, product.minimumStock) : { class: '', label: '' };
   
   const handleEditProduct = (updatedProduct: any) => {
-    // In a real application, update the product in Supabase
-    console.log("Updated product:", updatedProduct);
+    if (!product) return;
     
-    toast({
-      title: "Produto atualizado",
-      description: "As alterações foram salvas com sucesso!",
+    updateProduct({
+      id: product.id,
+      ...updatedProduct
+    }, {
+      onSuccess: () => {
+        setIsEditing(false);
+      }
     });
-    
-    setIsEditing(false);
   };
   
-  const handleAddMovement = (movementData: any) => {
-    // In a real application, add the movement to Supabase
-    console.log("New movement:", movementData);
-    
-    toast({
-      title: "Movimentação registrada",
-      description: `${movementData.type === 'in' ? 'Entrada' : 'Saída'} de ${movementData.quantity} unidades registrada com sucesso!`,
-    });
-    
+  const handleAddMovement = () => {
     setIsAddingMovement(false);
   };
   
   const handleDeleteProduct = () => {
-    // In a real application, delete the product from Supabase
-    if (confirm("Tem certeza que deseja excluir este produto?")) {
-      console.log("Deleting product:", product.id);
-      
-      toast({
-        title: "Produto excluído",
-        description: "O produto foi removido com sucesso!",
-      });
-      
-      navigate("/products");
-    }
+    if (!productId) return;
+    
+    deleteProduct(productId, {
+      onSuccess: () => {
+        navigate("/products");
+      }
+    });
   };
+
+  // Handle loading and error states
+  if (loadingProduct) {
+    return (
+      <AppLayout>
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <Skeleton className="h-10 w-1/3" />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="md:col-span-2">
+              <Skeleton className="h-64 w-full" />
+            </div>
+            <Skeleton className="h-64 w-full" />
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  if (productError || !product) {
+    return (
+      <AppLayout>
+        <div className="text-center py-12">
+          <h1 className="text-2xl font-bold text-destructive">Produto não encontrado</h1>
+          <p className="text-muted-foreground mt-2">
+            O produto que você está procurando não existe ou foi removido.
+          </p>
+          <Button className="mt-6" variant="default" onClick={() => navigate("/products")}>
+            Voltar para Produtos
+          </Button>
+        </div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout>
@@ -80,7 +116,7 @@ const ProductDetailPage: React.FC = () => {
               initialData={product}
               onSubmit={handleEditProduct}
               onCancel={() => setIsEditing(false)}
-              isLoading={false}
+              isLoading={isUpdating}
             />
           </div>
         </div>
@@ -94,7 +130,7 @@ const ProductDetailPage: React.FC = () => {
               productId={product.id}
               onSubmit={handleAddMovement}
               onCancel={() => setIsAddingMovement(false)}
-              isLoading={false}
+              currentStock={product.quantity}
             />
           </div>
         </div>
@@ -120,13 +156,32 @@ const ProductDetailPage: React.FC = () => {
                 <Edit className="mr-2 h-4 w-4" />
                 Editar
               </Button>
-              <Button 
-                variant="destructive" 
-                onClick={handleDeleteProduct}
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Excluir
-              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive">
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Excluir
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Esta ação não pode ser desfeita. Isso excluirá permanentemente o produto 
+                      "{product.name}" e todos os dados associados.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction 
+                      onClick={handleDeleteProduct}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      {isDeleting ? "Excluindo..." : "Excluir"}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
           </div>
           
@@ -214,56 +269,73 @@ const ProductDetailPage: React.FC = () => {
                   </Button>
                 </div>
                 
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-muted text-muted-foreground">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
-                          Tipo
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
-                          Quantidade
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
-                          Data
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
-                          Observações
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {stockMovements.map((movement) => (
-                        <tr key={movement.id}>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span
-                              className={`status-badge ${
-                                movement.type === 'in'
-                                  ? 'bg-green-100 text-green-800'
-                                  : 'bg-red-100 text-red-800'
-                              }`}
-                            >
-                              {movement.type === 'in' ? 'Entrada' : 'Saída'}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className="font-medium">
-                              {movement.quantity} unidades
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            {formatDate(movement.date)}
-                          </td>
-                          <td className="px-6 py-4">
-                            {movement.notes || '-'}
-                          </td>
+                {loadingMovements ? (
+                  <div className="p-6">
+                    <Skeleton className="h-32 w-full" />
+                  </div>
+                ) : movementsError ? (
+                  <div className="text-center p-6">
+                    <p className="text-destructive">
+                      Erro ao carregar movimentações
+                    </p>
+                    <Button className="mt-4" variant="outline" onClick={() => {
+                      window.location.reload();
+                    }}>
+                      Tentar novamente
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead className="bg-muted text-muted-foreground">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
+                            Tipo
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
+                            Quantidade
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
+                            Data
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
+                            Observações
+                          </th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {stockMovements.map((movement) => (
+                          <tr key={movement.id}>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span
+                                className={`status-badge ${
+                                  movement.type === 'in'
+                                    ? 'bg-green-100 text-green-800'
+                                    : 'bg-red-100 text-red-800'
+                                }`}
+                              >
+                                {movement.type === 'in' ? 'Entrada' : 'Saída'}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className="font-medium">
+                                {movement.quantity} unidades
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              {formatDate(movement.date)}
+                            </td>
+                            <td className="px-6 py-4">
+                              {movement.notes || '-'}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
                 
-                {stockMovements.length === 0 && (
+                {stockMovements.length === 0 && !loadingMovements && !movementsError && (
                   <div className="text-center p-6">
                     <p className="text-muted-foreground">
                       Nenhuma movimentação registrada para este produto

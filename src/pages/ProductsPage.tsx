@@ -4,29 +4,44 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { ProductCard } from "@/components/products/ProductCard";
 import { Button } from "@/components/ui/button";
 import { Plus, Filter, Search as SearchIcon } from "lucide-react";
-import { generateMockProducts } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Link } from "react-router-dom";
+import { useProducts } from "@/hooks/useProducts";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 const ProductsPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
   
-  // This would be replaced by real data fetching from Supabase
-  const products = generateMockProducts(12);
-  
-  // Extract unique categories from products
-  const categories = [...new Set(products.map((p) => p.category))];
-  
-  // Filter products based on search and category
-  const filteredProducts = products.filter((product) => {
-    const matchesSearch = product.name
-      .toLowerCase()
-      .includes(searchQuery.toLowerCase());
-    const matchesCategory =
-      selectedCategory === "" || product.category === selectedCategory;
-    return matchesSearch && matchesCategory;
+  // Get all categories for filter dropdown
+  const { data: categories = [], isLoading: loadingCategories } = useQuery({
+    queryKey: ['categories'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('products')
+        .select('category')
+        .not('category', 'is', null)
+        .order('category');
+      
+      if (error) throw error;
+      
+      // Extract unique categories
+      const uniqueCategories = [...new Set(data.map(item => item.category).filter(Boolean))];
+      return uniqueCategories;
+    }
   });
+  
+  // Get products with filters
+  const { useAllProducts } = useProducts();
+  const { data: products = [], isLoading, error } = useAllProducts({
+    search: searchQuery,
+    category: selectedCategory || undefined
+  });
+  
+  // Filter products based on search and category - handled by the database query now
+  const filteredProducts = products;
 
   return (
     <AppLayout>
@@ -61,22 +76,42 @@ const ProductsPage: React.FC = () => {
               <Filter className="mr-2 h-4 w-4" />
               Filtros
             </Button>
-            <select
-              className="px-3 py-2 bg-white border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-            >
-              <option value="">Todas Categorias</option>
-              {categories.map((category) => (
-                <option key={category} value={category}>
-                  {category}
-                </option>
-              ))}
-            </select>
+            
+            {loadingCategories ? (
+              <Skeleton className="h-10 w-40" />
+            ) : (
+              <select
+                className="px-3 py-2 bg-white border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+              >
+                <option value="">Todas Categorias</option>
+                {categories.map((category) => (
+                  <option key={category} value={category}>
+                    {category}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
         </div>
         
-        {filteredProducts.length === 0 ? (
+        {isLoading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {Array(8).fill(0).map((_, index) => (
+              <Skeleton key={index} className="h-64 w-full rounded-lg" />
+            ))}
+          </div>
+        ) : error ? (
+          <div className="text-center py-12">
+            <p className="text-destructive text-lg">Erro ao carregar produtos</p>
+            <Button className="mt-4" variant="outline" onClick={() => {
+              window.location.reload();
+            }}>
+              Tentar novamente
+            </Button>
+          </div>
+        ) : filteredProducts.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-muted-foreground text-lg">
               Nenhum produto encontrado
