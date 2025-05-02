@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from "react";
-import { BarChart } from "@/components/ui/chart";
+import { BarChart } from "@/components/ui/charts";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/use-toast";

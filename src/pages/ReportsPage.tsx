@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from "react";
-import { BarChart, LineChart, PieChart } from "@/components/ui/chart";
+import { BarChart, LineChart, PieChart } from "@/components/ui/charts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -11,7 +11,7 @@ import { ReportFilters } from "@/components/reports/ReportFilters";
 import { StockValueReport } from "@/components/reports/StockValueReport";
 import { MovementsReport } from "@/components/reports/MovementsReport";
 import { CategoryDistributionChart } from "@/components/reports/CategoryDistributionChart";
-import AppLayout from "@/components/layout/AppLayout";
+import { AppLayout } from "@/components/layout/AppLayout";
 
 const ReportsPage = () => {
   const [isLoading, setIsLoading] = useState(true);

@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from "react";
-import { LineChart } from "@/components/ui/chart";
+import { LineChart } from "@/components/ui/charts";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";

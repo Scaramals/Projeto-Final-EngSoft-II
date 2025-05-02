@@ -80,11 +80,16 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
               to: dateRange.to,
             }}
             onSelect={(range) => {
-              if (range?.from && range?.to) {
-                onDateRangeChange(range);
+              if (range?.from) {
+                // Ensure we always have both from and to dates
+                onDateRangeChange({
+                  from: range.from,
+                  to: range.to || range.from
+                });
               }
             }}
             numberOfMonths={2}
+            className="p-3 pointer-events-auto"
           />
         </PopoverContent>
       </Popover>
