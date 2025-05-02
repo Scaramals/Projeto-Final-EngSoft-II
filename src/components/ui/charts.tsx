@@ -1,4 +1,3 @@
-
 import React from "react";
 import { 
   Line, 
@@ -42,10 +41,6 @@ export const PieChart: React.FC<ChartProps> = ({ data, options, className }) => 
           name: data.labels[index],
           value,
         }))}
-        innerRadius={options?.innerRadius || 0}
-        outerRadius={options?.outerRadius || 80}
-        paddingAngle={options?.paddingAngle || 2}
-        dataKey="value"
         cx="50%"
         cy="50%"
       >
