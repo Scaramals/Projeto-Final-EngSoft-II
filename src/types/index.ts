@@ -57,3 +57,11 @@ export interface FilterParams {
   sortBy?: 'name' | 'quantity' | 'price';
   sortDirection?: 'asc' | 'desc';
 }
+
+export interface Profile {
+  id: string;
+  fullName: string | null;
+  role: 'admin' | 'employee';
+  createdAt: string;
+  updatedAt: string;
+}
