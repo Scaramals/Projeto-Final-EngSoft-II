@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ProductForm } from "@/components/products/ProductForm";
 import { StockMovementForm } from "@/components/inventory/StockMovementForm";
 import { formatCurrency, formatDate, generateMockProducts, generateMockStockMovements, getStockStatus } from "@/lib/utils";
-import { Edit, Trash2, Box, ArrowUpDown } from "lucide-react";
+import { Edit, Trash2, Box, ArrowUpDown, Plus } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 
 const ProductDetailPage: React.FC = () => {
