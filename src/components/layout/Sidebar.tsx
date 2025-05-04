@@ -9,6 +9,7 @@ import {
   Home,
   LogOut,
   Users,
+  ShieldCheck
 } from "lucide-react";
 
 interface NavItemProps {
@@ -77,6 +78,12 @@ export const Sidebar: React.FC = () => {
           icon={<Users size={20} />}
           label="Usuários"
           active={currentPath.startsWith("/users")}
+        />
+        <NavItem
+          to="/admin"
+          icon={<ShieldCheck size={20} />}
+          label="Administração"
+          active={currentPath.startsWith("/admin")}
         />
         <NavItem
           to="/settings"
