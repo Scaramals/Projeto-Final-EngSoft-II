@@ -40,7 +40,7 @@ export function useDashboard() {
         const { count: recentMovementsCount, error: movementsError } = await supabase
           .from("stock_movements")
           .select("*", { count: "exact", head: true })
-          .order("created_at", { ascending: false })
+          .order("date", { ascending: false })
           .limit(10);
 
         if (movementsError) throw movementsError;
@@ -70,7 +70,20 @@ export function useDashboard() {
         .limit(5);
 
       if (error) throw error;
-      return data as Product[];
+      
+      // Convert database model to our Product interface
+      return data.map(item => ({
+        id: item.id,
+        name: item.name,
+        description: item.description || '',
+        quantity: item.quantity,
+        price: item.price,
+        category: item.category || undefined,
+        imageUrl: item.image_url || undefined,
+        minimumStock: item.minimum_stock || undefined,
+        createdAt: item.created_at,
+        updatedAt: item.updated_at
+      })) as Product[];
     },
   });
 
@@ -85,12 +98,12 @@ export function useDashboard() {
           product_id,
           quantity,
           type,
-          created_at,
+          date,
           notes,
           user_id,
           products(name)
         `)
-        .order("created_at", { ascending: false })
+        .order("date", { ascending: false })
         .limit(10);
 
       if (error) throw error;
@@ -100,8 +113,8 @@ export function useDashboard() {
         productId: movement.product_id,
         productName: movement.products?.name || 'Produto desconhecido',
         quantity: movement.quantity,
-        type: movement.type,
-        date: movement.created_at,
+        type: movement.type as 'in' | 'out',
+        date: movement.date,
         notes: movement.notes,
         userId: movement.user_id,
       })) as StockMovement[];

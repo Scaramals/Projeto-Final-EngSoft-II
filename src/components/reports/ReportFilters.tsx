@@ -34,7 +34,8 @@ export const ReportFilters: React.FC = () => {
           <SelectValue placeholder="Categoria" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="todos">Todas as categorias</SelectItem>
+          {/* Fix: Use "all" instead of empty string for the "all categories" option */}
+          <SelectItem value="all">Todas as categorias</SelectItem>
           <SelectItem value="eletronica">Eletrônica</SelectItem>
           <SelectItem value="vestuario">Vestuário</SelectItem>
           <SelectItem value="alimentacao">Alimentação</SelectItem>
