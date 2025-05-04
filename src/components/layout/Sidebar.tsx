@@ -11,6 +11,7 @@ import {
   Users,
   ShieldCheck
 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface NavItemProps {
   to: string;
@@ -38,6 +39,13 @@ const NavItem: React.FC<NavItemProps> = ({ to, icon, label, active }) => {
 export const Sidebar: React.FC = () => {
   const location = useLocation();
   const currentPath = location.pathname;
+  const { signOut, profile } = useAuth();
+  
+  const isAdmin = profile?.role === 'admin';
+
+  const handleLogout = async () => {
+    await signOut();
+  };
 
   return (
     <div className="w-64 bg-sidebar h-full flex flex-col py-6 px-3 border-r border-border hidden md:flex">
@@ -73,18 +81,22 @@ export const Sidebar: React.FC = () => {
           label="Relatórios"
           active={currentPath.startsWith("/reports")}
         />
-        <NavItem
-          to="/users"
-          icon={<Users size={20} />}
-          label="Usuários"
-          active={currentPath.startsWith("/users")}
-        />
-        <NavItem
-          to="/admin"
-          icon={<ShieldCheck size={20} />}
-          label="Administração"
-          active={currentPath.startsWith("/admin")}
-        />
+        {isAdmin && (
+          <>
+            <NavItem
+              to="/users"
+              icon={<Users size={20} />}
+              label="Usuários"
+              active={currentPath.startsWith("/users")}
+            />
+            <NavItem
+              to="/admin"
+              icon={<ShieldCheck size={20} />}
+              label="Administração"
+              active={currentPath.startsWith("/admin")}
+            />
+          </>
+        )}
         <NavItem
           to="/settings"
           icon={<Settings size={20} />}
@@ -94,7 +106,10 @@ export const Sidebar: React.FC = () => {
       </nav>
 
       <div className="px-4 mt-auto pt-4 border-t border-sidebar-border">
-        <button className="flex items-center space-x-3 text-gray-300 hover:text-white w-full px-4 py-3 rounded-lg transition-colors">
+        <button 
+          className="flex items-center space-x-3 text-gray-300 hover:text-white w-full px-4 py-3 rounded-lg transition-colors"
+          onClick={handleLogout}
+        >
           <LogOut size={20} />
           <span className="font-medium">Sair</span>
         </button>

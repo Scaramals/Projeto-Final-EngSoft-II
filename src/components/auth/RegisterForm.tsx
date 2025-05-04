@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 export const RegisterForm: React.FC = () => {
   const [name, setName] = useState("");
@@ -12,6 +13,7 @@ export const RegisterForm: React.FC = () => {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const { signUp } = useAuth();
   const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -29,21 +31,9 @@ export const RegisterForm: React.FC = () => {
     setIsLoading(true);
     
     try {
-      // This will be replaced with actual Supabase registration later
-      console.log("Register with:", { name, email, password });
-      
-      toast({
-        title: "Conta criada com sucesso",
-        description: "Você pode fazer login agora",
-      });
-      
-      window.location.href = "/login";
+      await signUp(email, password, name);
     } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Erro ao criar conta",
-        description: "Tente novamente mais tarde",
-      });
+      console.error("Registration error:", error);
     } finally {
       setIsLoading(false);
     }

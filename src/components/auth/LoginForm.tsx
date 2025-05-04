@@ -4,36 +4,22 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/components/ui/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 export const LoginForm: React.FC = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
+  const { signIn } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     
     try {
-      // This will be replaced with actual Supabase authentication later
-      console.log("Login with:", { email, password });
-      
-      // Simulate login success
-      toast({
-        title: "Login bem-sucedido",
-        description: "Bem-vindo ao StockControl",
-      });
-      
-      // Navigate to dashboard (this will be handled by React Router)
-      window.location.href = "/dashboard";
+      await signIn(email, password);
     } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Erro ao fazer login",
-        description: "Verifique suas credenciais e tente novamente",
-      });
+      console.error("Login error:", error);
     } finally {
       setIsLoading(false);
     }

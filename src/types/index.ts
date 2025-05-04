@@ -6,6 +6,14 @@ export interface User {
   role: 'admin' | 'employee';
 }
 
+export interface Profile {
+  id: string;
+  fullName: string | null;
+  role: 'admin' | 'employee';
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -56,12 +64,4 @@ export interface FilterParams {
   category?: string;
   sortBy?: 'name' | 'quantity' | 'price';
   sortDirection?: 'asc' | 'desc';
-}
-
-export interface Profile {
-  id: string;
-  fullName: string | null;
-  role: 'admin' | 'employee';
-  createdAt: string;
-  updatedAt: string;
 }

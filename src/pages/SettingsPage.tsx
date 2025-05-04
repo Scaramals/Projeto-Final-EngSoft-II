@@ -1,5 +1,4 @@
-
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,10 +6,12 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 import { Eye, EyeOff, Save } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 const SettingsPage: React.FC = () => {
+  const { user, profile, updateProfile, updatePassword } = useAuth();
+  
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [isProfileLoading, setIsProfileLoading] = useState(false);
@@ -23,28 +24,24 @@ const SettingsPage: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const { toast } = useToast();
 
+  // Load user data when component mounts
+  useEffect(() => {
+    if (user) {
+      setEmail(user.email || "");
+    }
+    if (profile) {
+      setName(profile.fullName || "");
+    }
+  }, [user, profile]);
+
   const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsProfileLoading(true);
     
     try {
-      const { error } = await supabase.auth.updateUser({
-        email,
-        data: { full_name: name }
-      });
-
-      if (error) throw error;
-      
-      toast({
-        title: "Perfil atualizado",
-        description: "Suas informações foram atualizadas com sucesso."
-      });
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Erro ao atualizar perfil",
-        description: error.message || "Ocorreu um erro ao atualizar seu perfil."
-      });
+      await updateProfile({ fullName: name });
+    } catch (error) {
+      console.error("Error updating profile:", error);
     } finally {
       setIsProfileLoading(false);
     }
@@ -65,61 +62,18 @@ const SettingsPage: React.FC = () => {
     setIsPasswordLoading(true);
     
     try {
-      // Primeiro verifica a senha atual
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: await getCurrentUserEmail(),
-        password: currentPassword,
-      });
-
-      if (signInError) {
-        throw new Error("Senha atual incorreta");
-      }
-
-      // Depois atualiza para a nova senha
-      const { error } = await supabase.auth.updateUser({
-        password: newPassword
-      });
-
-      if (error) throw error;
+      await updatePassword(newPassword);
       
-      toast({
-        title: "Senha atualizada",
-        description: "Sua senha foi atualizada com sucesso."
-      });
-      
-      // Limpa os campos de senha
+      // Clear password fields
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Erro ao atualizar senha",
-        description: error.message || "Ocorreu um erro ao atualizar sua senha."
-      });
+    } catch (error) {
+      console.error("Error updating password:", error);
     } finally {
       setIsPasswordLoading(false);
     }
   };
-
-  // Função auxiliar para obter o email do usuário atual
-  const getCurrentUserEmail = async (): Promise<string> => {
-    const { data } = await supabase.auth.getUser();
-    return data.user?.email || "";
-  };
-
-  // Carrega os dados do usuário quando a página é montada
-  React.useEffect(() => {
-    const loadUserData = async () => {
-      const { data } = await supabase.auth.getUser();
-      if (data.user) {
-        setEmail(data.user.email || "");
-        setName(data.user.user_metadata.full_name || "");
-      }
-    };
-    
-    loadUserData();
-  }, []);
 
   return (
     <AppLayout>
@@ -163,9 +117,14 @@ const SettingsPage: React.FC = () => {
                       id="email" 
                       type="email" 
                       value={email} 
-                      onChange={(e) => setEmail(e.target.value)}
+                      readOnly
+                      disabled
+                      className="bg-gray-50"
                       placeholder="seu@email.com" 
                     />
+                    <p className="text-xs text-muted-foreground">
+                      O email não pode ser alterado
+                    </p>
                   </div>
                 </CardContent>
                 <CardFooter>

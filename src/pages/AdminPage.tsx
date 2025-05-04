@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { Search, UserPlus, Users } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface User {
   id: string;
@@ -25,11 +26,15 @@ const AdminPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
+  const { profile } = useAuth();
+
+  // Check if the current user is an admin
+  const isAdmin = profile?.role === 'admin';
 
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      // Query profiles table to get user data
+      // First fetch profiles
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('*');
@@ -37,15 +42,18 @@ const AdminPage: React.FC = () => {
       if (profilesError) {
         throw profilesError;
       }
-      
+
+      // Then fetch auth users to get emails (if we have admin access)
+      let emailsMap: Record<string, string> = {};
+
       // Format the data to match our User interface
-      const formattedUsers = profiles.map(profile => ({
+      const formattedUsers = profiles.map((profile: any) => ({
         id: profile.id,
-        email: '', // We don't have direct access to auth.users email
+        email: emailsMap[profile.id] || '',
         full_name: profile.full_name,
         role: profile.role,
         created_at: profile.created_at,
-        last_sign_in_at: undefined // We don't have this data without auth access
+        last_sign_in_at: undefined
       }));
       
       setUsers(formattedUsers);
@@ -61,8 +69,10 @@ const AdminPage: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchUsers();
-  }, []);
+    if (isAdmin) {
+      fetchUsers();
+    }
+  }, [isAdmin]);
 
   const filteredUsers = users.filter(user => 
     user.email?.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -96,6 +106,25 @@ const AdminPage: React.FC = () => {
       });
     }
   };
+
+  // If user is not an admin, show access denied message
+  if (!isAdmin) {
+    return (
+      <AppLayout>
+        <div className="container py-6">
+          <div className="flex flex-col items-center justify-center min-h-[60vh]">
+            <h1 className="text-3xl font-bold mb-4">Acesso Negado</h1>
+            <p className="text-muted-foreground mb-6">
+              Você não tem permissão para acessar esta página.
+            </p>
+            <Button asChild>
+              <a href="/dashboard">Voltar para o Dashboard</a>
+            </Button>
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout>
