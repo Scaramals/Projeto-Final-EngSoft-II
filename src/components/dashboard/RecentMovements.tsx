@@ -32,7 +32,7 @@ export const RecentMovements: React.FC<RecentMovementsProps> = ({ movements }) =
                   {movement.type === "in" ? "+" : "-"}
                 </div>
                 <div className="ml-3">
-                  <p className="font-medium">{`Produto ID ${movement.productId.substring(0, 8)}`}</p>
+                  <p className="font-medium">{movement.productName || `Produto ID ${movement.productId.substring(0, 8)}`}</p>
                   <p className="text-xs text-muted-foreground">
                     {formatDate(movement.date)}
                   </p>

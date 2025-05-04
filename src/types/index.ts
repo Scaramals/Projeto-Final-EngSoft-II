@@ -30,6 +30,7 @@ export interface Product {
 export interface StockMovement {
   id: string;
   productId: string;
+  productName?: string; // Added product name for display
   quantity: number;
   type: 'in' | 'out';
   date: string;
@@ -48,7 +49,7 @@ export interface DashboardStats {
   totalProducts: number;
   lowStockProducts: number;
   totalValue: number;
-  recentMovements: StockMovement[];
+  recentMovementsCount: number;
 }
 
 export interface ChartData {
