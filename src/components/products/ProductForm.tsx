@@ -6,6 +6,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import * as z from "zod";
 
 interface ProductFormProps {
   initialData?: Partial<Product>;
@@ -14,13 +18,32 @@ interface ProductFormProps {
   isLoading: boolean;
 }
 
+// Schema for product validation
+const productSchema = z.object({
+  name: z.string().min(3, "O nome do produto deve ter pelo menos 3 caracteres").max(100),
+  description: z.string().optional(),
+  quantity: z.coerce.number().int().min(0, "A quantidade não pode ser negativa"),
+  price: z.coerce.number().min(0, "O preço deve ser maior ou igual a zero").refine(
+    (val) => !isNaN(val) && Number.isFinite(val),
+    "O preço deve ser um número válido"
+  ),
+  category: z.string().optional(),
+  minimumStock: z.coerce.number().int().min(0, "O estoque mínimo não pode ser negativo"),
+  imageUrl: z.string().url("URL inválida").optional().or(z.literal(''))
+});
+
+type ProductFormValues = z.infer<typeof productSchema>;
+
 export const ProductForm: React.FC<ProductFormProps> = ({
   initialData = {},
   onSubmit,
   onCancel,
   isLoading,
 }) => {
-  const [formData, setFormData] = useState({
+  const { toast } = useToast();
+
+  // Set default values for the form
+  const defaultValues: ProductFormValues = {
     name: initialData.name || "",
     description: initialData.description || "",
     quantity: initialData.quantity || 0,
@@ -28,131 +51,170 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     category: initialData.category || "",
     minimumStock: initialData.minimumStock || 5,
     imageUrl: initialData.imageUrl || "",
-  });
-  const { toast } = useToast();
-
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    const { name, value } = e.target;
-    let parsedValue: string | number = value;
-    
-    // Handle numeric fields
-    if (name === "price" || name === "quantity" || name === "minimumStock") {
-      parsedValue = parseFloat(value) || 0;
-    }
-    
-    setFormData((prev) => ({ ...prev, [name]: parsedValue }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const form = useForm<ProductFormValues>({
+    resolver: zodResolver(productSchema),
+    defaultValues,
+    mode: "onChange"
+  });
+
+  const handleFormSubmit = (values: ProductFormValues) => {
+    // Clean up empty values
+    const formattedValues = {
+      ...values,
+      imageUrl: values.imageUrl || undefined,
+      category: values.category || undefined,
+      description: values.description || undefined,
+    };
     
-    if (!formData.name.trim()) {
-      toast({
-        variant: "destructive",
-        title: "Nome é obrigatório",
-        description: "Por favor, preencha o nome do produto",
-      });
-      return;
-    }
+    onSubmit(formattedValues);
+  };
+
+  // Format price as currency
+  const formatPrice = (value: string) => {
+    // Remove non-numeric characters
+    const numericValue = value.replace(/[^0-9.,]/g, "");
+    // Replace comma with dot for decimal
+    const normalizedValue = numericValue.replace(",", ".");
     
-    onSubmit(formData);
+    return normalizedValue;
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="space-y-2">
-          <Label htmlFor="name">Nome do produto *</Label>
-          <Input
-            id="name"
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <FormField
+            control={form.control}
             name="name"
-            value={formData.name}
-            onChange={handleChange}
-            required
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Nome do produto *</FormLabel>
+                <FormControl>
+                  <Input {...field} placeholder="Nome do produto" />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
           />
-        </div>
-        
-        <div className="space-y-2">
-          <Label htmlFor="category">Categoria</Label>
-          <Input
-            id="category"
+          
+          <FormField
+            control={form.control}
             name="category"
-            value={formData.category}
-            onChange={handleChange}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Categoria</FormLabel>
+                <FormControl>
+                  <Input {...field} placeholder="Categoria do produto" />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
           />
-        </div>
-        
-        <div className="space-y-2 md:col-span-2">
-          <Label htmlFor="description">Descrição</Label>
-          <Textarea
-            id="description"
+          
+          <FormField
+            control={form.control}
             name="description"
-            value={formData.description}
-            onChange={handleChange}
-            rows={3}
+            render={({ field }) => (
+              <FormItem className="md:col-span-2">
+                <FormLabel>Descrição</FormLabel>
+                <FormControl>
+                  <Textarea {...field} rows={3} placeholder="Descrição detalhada do produto" />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
           />
-        </div>
-        
-        <div className="space-y-2">
-          <Label htmlFor="price">Preço (R$)</Label>
-          <Input
-            id="price"
+          
+          <FormField
+            control={form.control}
             name="price"
-            type="number"
-            min="0"
-            step="0.01"
-            value={formData.price}
-            onChange={handleChange}
+            render={({ field: { onChange, ...rest } }) => (
+              <FormItem>
+                <FormLabel>Preço (R$)</FormLabel>
+                <FormControl>
+                  <Input 
+                    type="number" 
+                    step="0.01"
+                    min="0"
+                    placeholder="0,00"
+                    onChange={e => {
+                      const formattedValue = formatPrice(e.target.value);
+                      onChange(formattedValue);
+                    }}
+                    {...rest}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
           />
-        </div>
-        
-        <div className="space-y-2">
-          <Label htmlFor="quantity">Quantidade em estoque</Label>
-          <Input
-            id="quantity"
+          
+          <FormField
+            control={form.control}
             name="quantity"
-            type="number"
-            min="0"
-            step="1"
-            value={formData.quantity}
-            onChange={handleChange}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Quantidade em estoque</FormLabel>
+                <FormControl>
+                  <Input 
+                    type="number"
+                    min="0"
+                    step="1" 
+                    placeholder="0"
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
           />
-        </div>
-        
-        <div className="space-y-2">
-          <Label htmlFor="minimumStock">Estoque mínimo</Label>
-          <Input
-            id="minimumStock"
+          
+          <FormField
+            control={form.control}
             name="minimumStock"
-            type="number"
-            min="0"
-            step="1"
-            value={formData.minimumStock}
-            onChange={handleChange}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Estoque mínimo</FormLabel>
+                <FormControl>
+                  <Input 
+                    type="number"
+                    min="0"
+                    step="1" 
+                    placeholder="5"
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          <FormField
+            control={form.control}
+            name="imageUrl"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>URL da imagem</FormLabel>
+                <FormControl>
+                  <Input {...field} placeholder="https://..." />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
           />
         </div>
         
-        <div className="space-y-2">
-          <Label htmlFor="imageUrl">URL da imagem</Label>
-          <Input
-            id="imageUrl"
-            name="imageUrl"
-            value={formData.imageUrl}
-            onChange={handleChange}
-          />
+        <div className="flex justify-end space-x-3">
+          <Button type="button" variant="outline" onClick={onCancel}>
+            Cancelar
+          </Button>
+          <Button type="submit" disabled={isLoading || !form.formState.isValid}>
+            {isLoading ? "Salvando..." : "Salvar produto"}
+          </Button>
         </div>
-      </div>
-      
-      <div className="flex justify-end space-x-3">
-        <Button type="button" variant="outline" onClick={onCancel}>
-          Cancelar
-        </Button>
-        <Button type="submit" disabled={isLoading}>
-          {isLoading ? "Salvando..." : "Salvar produto"}
-        </Button>
-      </div>
-    </form>
+      </form>
+    </Form>
   );
 };

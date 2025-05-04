@@ -3,41 +3,19 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { ProductForm } from "@/components/products/ProductForm";
-import { useToast } from "@/components/ui/use-toast";
-import { generateMockId } from "@/lib/utils";
+import { useProducts } from "@/hooks/useProducts";
 
 const AddProductPage: React.FC = () => {
   const navigate = useNavigate();
-  const { toast } = useToast();
-  const [isLoading, setIsLoading] = React.useState(false);
+  const { useCreateProduct } = useProducts();
+  const { mutate: createProduct, isPending: isLoading } = useCreateProduct();
 
   const handleAddProduct = (productData: any) => {
-    setIsLoading(true);
-    
-    try {
-      // In a real application, add the product to Supabase
-      console.log("New product:", {
-        ...productData,
-        id: generateMockId(),
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      });
-      
-      toast({
-        title: "Produto adicionado",
-        description: "O produto foi criado com sucesso!",
-      });
-      
-      navigate("/products");
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Erro ao criar produto",
-        description: "Ocorreu um erro ao tentar criar o produto.",
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    createProduct(productData, {
+      onSuccess: () => {
+        navigate("/products");
+      }
+    });
   };
 
   return (

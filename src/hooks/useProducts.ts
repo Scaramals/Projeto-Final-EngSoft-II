@@ -1,8 +1,9 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Product, StockMovement } from "@/types";
+import { Product, StockMovement, FilterParams } from "@/types";
 import { useToast } from "@/components/ui/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 /**
  * Helper function to convert database response to Product type
@@ -66,9 +67,10 @@ const mapStockMovementToDbStockMovement = (movement: Partial<StockMovement>) => 
 export function useProducts() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { user } = useAuth();
 
-  // Fetch all products
-  const useAllProducts = (filters?: { search?: string; category?: string }) => {
+  // Fetch all products with filtering and sorting
+  const useAllProducts = (filters?: FilterParams) => {
     return useQuery({
       queryKey: ['products', filters],
       queryFn: async () => {
@@ -78,11 +80,19 @@ export function useProducts() {
           query = query.ilike('name', `%${filters.search}%`);
         }
 
-        if (filters?.category) {
+        if (filters?.category && filters.category !== '') {
           query = query.eq('category', filters.category);
         }
         
-        const { data, error } = await query.order('name');
+        // Apply sorting if provided
+        if (filters?.sortBy) {
+          const direction = filters?.sortDirection || 'asc';
+          query = query.order(filters.sortBy, { ascending: direction === 'asc' });
+        } else {
+          query = query.order('name');
+        }
+        
+        const { data, error } = await query;
 
         if (error) {
           throw new Error(`Error fetching products: ${error.message}`);
@@ -90,6 +100,7 @@ export function useProducts() {
 
         return data.map(mapDbProductToProduct) as Product[];
       },
+      enabled: !!user, // Only run query when user is authenticated
     });
   };
 
@@ -108,7 +119,7 @@ export function useProducts() {
         
         return data.map(mapDbProductToProduct) as Product[];
       },
-      enabled: category !== undefined,
+      enabled: !!user && category !== undefined,
     });
   };
 
@@ -131,7 +142,7 @@ export function useProducts() {
         
         return mapDbProductToProduct(data);
       },
-      enabled: !!productId,
+      enabled: !!user && !!productId,
     });
   };
 
@@ -152,7 +163,7 @@ export function useProducts() {
         
         return data.map(mapDbStockMovementToStockMovement) as StockMovement[];
       },
-      enabled: !!productId,
+      enabled: !!user && !!productId,
     });
   };
 
@@ -266,6 +277,11 @@ export function useProducts() {
       mutationFn: async (movement: Partial<StockMovement>) => {
         const dbMovement = mapStockMovementToDbStockMovement(movement);
         
+        // Set user_id if not provided
+        if (!dbMovement.user_id && user) {
+          dbMovement.user_id = user.id;
+        }
+        
         const { data, error } = await supabase
           .from('stock_movements')
           .insert(dbMovement)
@@ -309,7 +325,42 @@ export function useProducts() {
         }
         
         return data;
-      }
+      },
+      enabled: !!user,
+    });
+  };
+
+  // Get low stock products
+  const useLowStockProducts = () => {
+    return useQuery({
+      queryKey: ['lowStockProducts'],
+      queryFn: async () => {
+        const { data, error } = await supabase.rpc('get_low_stock_products');
+        
+        if (error) {
+          throw new Error(`Error fetching low stock products: ${error.message}`);
+        }
+        
+        return data.map(mapDbProductToProduct) as Product[];
+      },
+      enabled: !!user,
+    });
+  };
+
+  // Get total stock value
+  const useTotalStockValue = () => {
+    return useQuery({
+      queryKey: ['totalStockValue'],
+      queryFn: async () => {
+        const { data, error } = await supabase.rpc('get_total_stock_value');
+        
+        if (error) {
+          throw new Error(`Error fetching total stock value: ${error.message}`);
+        }
+        
+        return data;
+      },
+      enabled: !!user,
     });
   };
 
@@ -322,6 +373,8 @@ export function useProducts() {
     useUpdateProduct,
     useDeleteProduct,
     useAddStockMovement,
-    useTopSellingProducts
+    useTopSellingProducts,
+    useLowStockProducts,
+    useTotalStockValue
   };
 }

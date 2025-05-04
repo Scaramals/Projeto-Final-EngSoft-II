@@ -34,11 +34,14 @@ export interface StockMovement {
   type: 'in' | 'out';
   date: string;
   notes?: string;
+  userId?: string;
 }
 
 export interface Category {
   id: string;
   name: string;
+  description?: string;
+  createdAt: string;
 }
 
 export interface DashboardStats {
@@ -64,4 +67,22 @@ export interface FilterParams {
   category?: string;
   sortBy?: 'name' | 'quantity' | 'price';
   sortDirection?: 'asc' | 'desc';
+}
+
+// Form types
+export interface ProductFormData {
+  name: string;
+  description?: string;
+  quantity: number;
+  price: number;
+  category?: string;
+  minimumStock?: number;
+  imageUrl?: string;
+}
+
+export interface StockMovementFormData {
+  type: 'in' | 'out';
+  quantity: number;
+  notes?: string;
+  productId: string;
 }

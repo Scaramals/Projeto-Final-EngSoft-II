@@ -1,7 +1,6 @@
 
-import React, { useState } from "react";
+import React from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -14,6 +13,11 @@ import {
 import { StockMovement } from "@/types";
 import { useToast } from "@/components/ui/use-toast";
 import { useProducts } from "@/hooks/useProducts";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Input } from "../ui/input";
 
 interface StockMovementFormProps {
   productId: string;
@@ -22,53 +26,43 @@ interface StockMovementFormProps {
   currentStock?: number;
 }
 
+const stockMovementSchema = z.object({
+  type: z.enum(['in', 'out'], {
+    required_error: "Selecione o tipo de movimentação",
+  }),
+  quantity: z.coerce.number().int().positive("A quantidade deve ser maior que zero"),
+  notes: z.string().optional(),
+});
+
+type StockMovementFormValues = z.infer<typeof stockMovementSchema>;
+
 export const StockMovementForm: React.FC<StockMovementFormProps> = ({
   productId,
   onSubmit,
   onCancel,
   currentStock = 0,
 }) => {
-  const [formData, setFormData] = useState<Partial<StockMovement>>({
-    productId,
-    quantity: 1,
-    type: "in",
-    notes: "",
-  });
   const { toast } = useToast();
   const { useAddStockMovement } = useProducts();
   const { mutate: addStockMovement, isPending: isLoading } = useAddStockMovement();
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    const { name, value } = e.target;
-    let parsedValue: string | number = value;
-    
-    if (name === "quantity") {
-      parsedValue = parseInt(value) || 1;
-    }
-    
-    setFormData((prev) => ({ ...prev, [name]: parsedValue }));
-  };
+  const form = useForm<StockMovementFormValues>({
+    resolver: zodResolver(stockMovementSchema),
+    defaultValues: {
+      type: 'in',
+      quantity: 1,
+      notes: '',
+    },
+  });
 
-  const handleTypeChange = (value: "in" | "out") => {
-    setFormData((prev) => ({ ...prev, type: value }));
-  };
+  const watchType = form.watch('type');
+  const watchQuantity = form.watch('quantity');
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!formData.quantity || formData.quantity < 1) {
-      toast({
-        variant: "destructive",
-        title: "Quantidade inválida",
-        description: "A quantidade deve ser maior que zero",
-      });
-      return;
-    }
-    
-    // Check if there's enough stock for outgoing movements
-    if (formData.type === 'out' && formData.quantity > currentStock) {
+  // Check if there's enough stock for outgoing movements
+  const hasInsufficientStock = watchType === 'out' && watchQuantity > currentStock;
+
+  const handleSubmit = (values: StockMovementFormValues) => {
+    if (values.type === 'out' && values.quantity > currentStock) {
       toast({
         variant: "destructive",
         title: "Estoque insuficiente",
@@ -77,7 +71,12 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
       return;
     }
     
-    addStockMovement(formData, {
+    const movement: Partial<StockMovement> = {
+      ...values,
+      productId,
+    };
+    
+    addStockMovement(movement, {
       onSuccess: () => {
         onSubmit();
       }
@@ -85,73 +84,99 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="space-y-4">
-        <div>
-          <Label htmlFor="type">Tipo de movimentação</Label>
-          <Select
-            value={formData.type}
-            onValueChange={handleTypeChange as (value: string) => void}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Selecione o tipo" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="in">Entrada</SelectItem>
-              <SelectItem value="out">Saída</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        
-        <div className="space-y-2">
-          <Label htmlFor="quantity">Quantidade</Label>
-          <Input
-            id="quantity"
-            name="quantity"
-            type="number"
-            min="1"
-            step="1"
-            value={formData.quantity}
-            onChange={handleChange}
-            required
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+        <div className="space-y-4">
+          <FormField
+            control={form.control}
+            name="type"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Tipo de movimentação</FormLabel>
+                <Select
+                  onValueChange={field.onChange}
+                  defaultValue={field.value}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o tipo" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="in">Entrada</SelectItem>
+                    <SelectItem value="out">Saída</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
           />
           
-          {formData.type === "out" && (
-            <p className="text-xs text-muted-foreground">
-              Estoque disponível: {currentStock} unidades
-            </p>
-          )}
-        </div>
-        
-        <div className="space-y-2">
-          <Label htmlFor="notes">Observações</Label>
-          <Textarea
-            id="notes"
+          <FormField
+            control={form.control}
+            name="quantity"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Quantidade</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    min="1"
+                    step="1"
+                    {...field}
+                  />
+                </FormControl>
+                {watchType === "out" && (
+                  <FormDescription>
+                    Estoque disponível: {currentStock} unidades
+                  </FormDescription>
+                )}
+                {hasInsufficientStock && (
+                  <FormMessage>
+                    Quantidade excede o estoque disponível
+                  </FormMessage>
+                )}
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          <FormField
+            control={form.control}
             name="notes"
-            value={formData.notes}
-            onChange={handleChange}
-            placeholder="Informe detalhes sobre esta movimentação"
-            rows={3}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Observações</FormLabel>
+                <FormControl>
+                  <Textarea
+                    {...field}
+                    placeholder="Informe detalhes sobre esta movimentação"
+                    rows={3}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
           />
         </div>
-      </div>
-      
-      <div className="flex justify-end space-x-3">
-        <Button type="button" variant="outline" onClick={onCancel}>
-          Cancelar
-        </Button>
-        <Button
-          type="submit"
-          disabled={isLoading}
-          variant={formData.type === "in" ? "default" : "destructive"}
-        >
-          {isLoading
-            ? "Processando..."
-            : formData.type === "in"
-            ? "Registrar entrada"
-            : "Registrar saída"}
-        </Button>
-      </div>
-    </form>
+        
+        <div className="flex justify-end space-x-3">
+          <Button type="button" variant="outline" onClick={onCancel}>
+            Cancelar
+          </Button>
+          <Button
+            type="submit"
+            disabled={isLoading || hasInsufficientStock}
+            variant={watchType === "in" ? "default" : "destructive"}
+          >
+            {isLoading
+              ? "Processando..."
+              : watchType === "in"
+              ? "Registrar entrada"
+              : "Registrar saída"}
+          </Button>
+        </div>
+      </form>
+    </Form>
   );
 };
