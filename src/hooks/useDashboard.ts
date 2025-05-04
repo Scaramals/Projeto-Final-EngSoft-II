@@ -1,6 +1,6 @@
 
 import { useQuery } from "@tanstack/react-query";
-import { supabaseClient } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
 import { DashboardStats, Product, StockMovement } from "@/types";
 
 export function useDashboard() {
@@ -10,14 +10,14 @@ export function useDashboard() {
     queryFn: async () => {
       try {
         // Fetch total products count
-        const { count: totalProducts, error: productsError } = await supabaseClient
+        const { count: totalProducts, error: productsError } = await supabase
           .from("products")
           .select("*", { count: "exact", head: true });
 
         if (productsError) throw productsError;
 
         // Fetch low stock products count
-        const { count: lowStockProducts, error: lowStockError } = await supabaseClient
+        const { count: lowStockProducts, error: lowStockError } = await supabase
           .from("products")
           .select("*", { count: "exact", head: true })
           .lt("quantity", 10);
@@ -25,7 +25,7 @@ export function useDashboard() {
         if (lowStockError) throw lowStockError;
 
         // Calculate total stock value
-        const { data: products, error: valueError } = await supabaseClient
+        const { data: products, error: valueError } = await supabase
           .from("products")
           .select("quantity, price");
 
@@ -37,7 +37,7 @@ export function useDashboard() {
         );
 
         // Fetch recent movements count
-        const { count: recentMovementsCount, error: movementsError } = await supabaseClient
+        const { count: recentMovementsCount, error: movementsError } = await supabase
           .from("stock_movements")
           .select("*", { count: "exact", head: true })
           .order("created_at", { ascending: false })
@@ -62,7 +62,7 @@ export function useDashboard() {
   const { data: lowStockProducts, isLoading: isProductsLoading } = useQuery({
     queryKey: ["low-stock-products"],
     queryFn: async () => {
-      const { data, error } = await supabaseClient
+      const { data, error } = await supabase
         .from("products")
         .select("*")
         .lt("quantity", 10)
@@ -78,7 +78,7 @@ export function useDashboard() {
   const { data: recentMovements, isLoading: isMovementsLoading } = useQuery({
     queryKey: ["recent-movements"],
     queryFn: async () => {
-      const { data, error } = await supabaseClient
+      const { data, error } = await supabase
         .from("stock_movements")
         .select(`
           id,
