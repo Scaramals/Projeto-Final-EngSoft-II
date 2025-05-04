@@ -4,6 +4,65 @@ import { supabase } from "@/integrations/supabase/client";
 import { Product, StockMovement } from "@/types";
 import { useToast } from "@/components/ui/use-toast";
 
+/**
+ * Helper function to convert database response to Product type
+ */
+const mapDbProductToProduct = (dbProduct: any): Product => ({
+  id: dbProduct.id,
+  name: dbProduct.name,
+  description: dbProduct.description,
+  quantity: dbProduct.quantity,
+  price: dbProduct.price,
+  category: dbProduct.category,
+  imageUrl: dbProduct.image_url,
+  minimumStock: dbProduct.minimum_stock,
+  createdAt: dbProduct.created_at,
+  updatedAt: dbProduct.updated_at,
+});
+
+/**
+ * Helper function to convert database response to StockMovement type
+ */
+const mapDbStockMovementToStockMovement = (dbMovement: any): StockMovement => ({
+  id: dbMovement.id,
+  productId: dbMovement.product_id,
+  quantity: dbMovement.quantity,
+  type: dbMovement.type as 'in' | 'out',
+  date: dbMovement.date,
+  notes: dbMovement.notes,
+});
+
+/**
+ * Helper function to convert Product type to database format
+ */
+const mapProductToDbProduct = (product: Partial<Product>) => {
+  const dbProduct: any = {};
+  
+  if (product.name !== undefined) dbProduct.name = product.name;
+  if (product.description !== undefined) dbProduct.description = product.description;
+  if (product.quantity !== undefined) dbProduct.quantity = product.quantity;
+  if (product.price !== undefined) dbProduct.price = product.price;
+  if (product.category !== undefined) dbProduct.category = product.category;
+  if (product.imageUrl !== undefined) dbProduct.image_url = product.imageUrl;
+  if (product.minimumStock !== undefined) dbProduct.minimum_stock = product.minimumStock;
+  
+  return dbProduct;
+};
+
+/**
+ * Helper function to convert StockMovement type to database format
+ */
+const mapStockMovementToDbStockMovement = (movement: Partial<StockMovement>) => {
+  const dbMovement: any = {};
+  
+  if (movement.productId !== undefined) dbMovement.product_id = movement.productId;
+  if (movement.quantity !== undefined) dbMovement.quantity = movement.quantity;
+  if (movement.type !== undefined) dbMovement.type = movement.type;
+  if (movement.notes !== undefined) dbMovement.notes = movement.notes;
+  
+  return dbMovement;
+};
+
 export function useProducts() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -29,7 +88,7 @@ export function useProducts() {
           throw new Error(`Error fetching products: ${error.message}`);
         }
 
-        return data as Product[];
+        return data.map(mapDbProductToProduct) as Product[];
       },
     });
   };
@@ -47,7 +106,7 @@ export function useProducts() {
           throw new Error(`Error fetching products by category: ${error.message}`);
         }
         
-        return data as Product[];
+        return data.map(mapDbProductToProduct) as Product[];
       },
       enabled: category !== undefined,
     });
@@ -70,7 +129,7 @@ export function useProducts() {
           throw new Error(`Error fetching product: ${error.message}`);
         }
         
-        return data as Product;
+        return mapDbProductToProduct(data);
       },
       enabled: !!productId,
     });
@@ -91,7 +150,7 @@ export function useProducts() {
           throw new Error(`Error fetching stock movements: ${error.message}`);
         }
         
-        return data as StockMovement[];
+        return data.map(mapDbStockMovementToStockMovement) as StockMovement[];
       },
       enabled: !!productId,
     });
@@ -101,9 +160,11 @@ export function useProducts() {
   const useCreateProduct = () => {
     return useMutation({
       mutationFn: async (product: Partial<Product>) => {
+        const dbProduct = mapProductToDbProduct(product);
+        
         const { data, error } = await supabase
           .from('products')
-          .insert(product)
+          .insert(dbProduct)
           .select()
           .single();
           
@@ -111,7 +172,7 @@ export function useProducts() {
           throw new Error(`Error creating product: ${error.message}`);
         }
         
-        return data;
+        return mapDbProductToProduct(data);
       },
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ['products'] });
@@ -134,9 +195,11 @@ export function useProducts() {
   const useUpdateProduct = () => {
     return useMutation({
       mutationFn: async ({ id, ...updates }: Partial<Product> & { id: string }) => {
+        const dbUpdates = mapProductToDbProduct(updates);
+        
         const { data, error } = await supabase
           .from('products')
-          .update(updates)
+          .update(dbUpdates)
           .eq('id', id)
           .select()
           .single();
@@ -145,7 +208,7 @@ export function useProducts() {
           throw new Error(`Error updating product: ${error.message}`);
         }
         
-        return data;
+        return mapDbProductToProduct(data);
       },
       onSuccess: (_, variables) => {
         queryClient.invalidateQueries({ queryKey: ['products'] });
@@ -201,9 +264,11 @@ export function useProducts() {
   const useAddStockMovement = () => {
     return useMutation({
       mutationFn: async (movement: Partial<StockMovement>) => {
+        const dbMovement = mapStockMovementToDbStockMovement(movement);
+        
         const { data, error } = await supabase
           .from('stock_movements')
-          .insert(movement)
+          .insert(dbMovement)
           .select()
           .single();
           
@@ -211,7 +276,7 @@ export function useProducts() {
           throw new Error(`Error adding stock movement: ${error.message}`);
         }
         
-        return data;
+        return mapDbStockMovementToStockMovement(data);
       },
       onSuccess: (_, variables) => {
         queryClient.invalidateQueries({ queryKey: ['products'] });
