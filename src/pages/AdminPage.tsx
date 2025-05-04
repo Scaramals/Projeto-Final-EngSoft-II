@@ -29,14 +29,26 @@ const AdminPage: React.FC = () => {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      // Obtém todos os usuários através da função RPC (precisaria ser criada no Supabase)
-      const { data, error } = await supabase.rpc('get_all_users_with_profiles');
+      // Query profiles table to get user data
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('*');
       
-      if (error) {
-        throw error;
+      if (profilesError) {
+        throw profilesError;
       }
       
-      setUsers(data || []);
+      // Format the data to match our User interface
+      const formattedUsers = profiles.map(profile => ({
+        id: profile.id,
+        email: '', // We don't have direct access to auth.users email
+        full_name: profile.full_name,
+        role: profile.role,
+        created_at: profile.created_at,
+        last_sign_in_at: undefined // We don't have this data without auth access
+      }));
+      
+      setUsers(formattedUsers);
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -59,14 +71,15 @@ const AdminPage: React.FC = () => {
 
   const changeUserRole = async (userId: string, newRole: string) => {
     try {
-      const { error } = await supabase.rpc('update_user_role', { 
-        user_id: userId,
-        new_role: newRole 
-      });
+      // Update the role directly in the profiles table
+      const { error } = await supabase
+        .from('profiles')
+        .update({ role: newRole })
+        .eq('id', userId);
       
       if (error) throw error;
       
-      // Atualiza a lista de usuários para refletir a mudança
+      // Update the local state to reflect the change
       setUsers(users.map(user => 
         user.id === userId ? { ...user, role: newRole } : user
       ));
@@ -153,14 +166,14 @@ const AdminPage: React.FC = () => {
                         filteredUsers.map((user) => (
                           <TableRow key={user.id}>
                             <TableCell>{user.full_name || 'N/A'}</TableCell>
-                            <TableCell>{user.email}</TableCell>
+                            <TableCell>{user.email || 'N/A'}</TableCell>
                             <TableCell>
                               <Badge variant={user.role === 'admin' ? 'default' : 'outline'}>
                                 {user.role || 'usuário'}
                               </Badge>
                             </TableCell>
                             <TableCell>
-                              {new Date(user.created_at).toLocaleDateString('pt-BR')}
+                              {user.created_at ? new Date(user.created_at).toLocaleDateString('pt-BR') : 'N/A'}
                             </TableCell>
                             <TableCell>
                               {user.last_sign_in_at 
@@ -172,7 +185,7 @@ const AdminPage: React.FC = () => {
                                 <Button 
                                   variant="outline" 
                                   size="sm"
-                                  onClick={() => changeUserRole(user.id, user.role === 'admin' ? 'user' : 'admin')}
+                                  onClick={() => changeUserRole(user.id, user.role === 'admin' ? 'employee' : 'admin')}
                                 >
                                   {user.role === 'admin' ? 'Remover admin' : 'Tornar admin'}
                                 </Button>
