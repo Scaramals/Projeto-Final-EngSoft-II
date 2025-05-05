@@ -30,12 +30,19 @@ export const TermsAcceptanceForm: React.FC<TermsAcceptanceFormProps> = ({ userId
     setError(null);
 
     try {
-      // Atualizar o perfil do usuário para registrar o aceite dos termos
+      // Custom metadata for terms acceptance that will be stored separately
+      const metadata = {
+        terms_accepted: true,
+        terms_accepted_at: new Date().toISOString()
+      };
+      
+      // Update only the profile fields that exist in the profiles table
       const { error } = await supabase
         .from('profiles')
         .update({ 
-          terms_accepted: true,
-          terms_accepted_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
+          // Store terms acceptance info in metadata if needed
+          metadata: metadata
         })
         .eq('id', userId);
       
