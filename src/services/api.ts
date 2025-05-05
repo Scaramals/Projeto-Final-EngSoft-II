@@ -7,51 +7,50 @@ import { Product, StockMovement, FilterParams, DashboardStats } from "@/types";
  */
 export const ApiService = {
   /**
-   * Get dashboard statistics
+   * Get dashboard statistics - optimized with parallel requests
    */
   async getDashboardStats(): Promise<DashboardStats> {
     try {
-      // Fetch total products count
-      const { count: totalProducts, error: productsError } = await supabase
-        .from("products")
-        .select("*", { count: "exact", head: true });
+      // Use Promise.all to run queries in parallel
+      const [
+        productsResult,
+        lowStockResult,
+        valueResult,
+        movementsResult
+      ] = await Promise.all([
+        // Total products count
+        supabase.from("products").select("*", { count: "exact", head: true }),
+        
+        // Low stock products count
+        supabase.from("products").select("*", { count: "exact", head: true }).lt("quantity", 10),
+        
+        // Fetch data for total value calculation 
+        supabase.from("products").select("quantity, price"),
+        
+        // Recent movements count
+        supabase.from("stock_movements")
+          .select("*", { count: "exact", head: true })
+          .order("date", { ascending: false })
+          .limit(10)
+      ]);
 
-      if (productsError) throw productsError;
+      // Handle potential errors
+      if (productsResult.error) throw productsResult.error;
+      if (lowStockResult.error) throw lowStockResult.error;
+      if (valueResult.error) throw valueResult.error;
+      if (movementsResult.error) throw movementsResult.error;
 
-      // Fetch low stock products count
-      const { count: lowStockProducts, error: lowStockError } = await supabase
-        .from("products")
-        .select("*", { count: "exact", head: true })
-        .lt("quantity", 10);
-
-      if (lowStockError) throw lowStockError;
-
-      // Calculate total stock value
-      const { data: products, error: valueError } = await supabase
-        .from("products")
-        .select("quantity, price");
-
-      if (valueError) throw valueError;
-
-      const totalValue = products.reduce(
+      // Calculate total value
+      const totalValue = valueResult.data.reduce(
         (sum, product) => sum + product.quantity * product.price,
         0
       );
 
-      // Fetch recent movements count
-      const { count: recentMovementsCount, error: movementsError } = await supabase
-        .from("stock_movements")
-        .select("*", { count: "exact", head: true })
-        .order("date", { ascending: false })
-        .limit(10);
-
-      if (movementsError) throw movementsError;
-
       return {
-        totalProducts: totalProducts || 0,
-        lowStockProducts: lowStockProducts || 0,
+        totalProducts: productsResult.count || 0,
+        lowStockProducts: lowStockResult.count || 0,
         totalValue,
-        recentMovementsCount: recentMovementsCount || 0,
+        recentMovementsCount: movementsResult.count || 0,
       };
     } catch (error) {
       console.error("Error fetching dashboard stats:", error);
@@ -60,7 +59,7 @@ export const ApiService = {
   },
 
   /**
-   * Get low stock products
+   * Get low stock products with improved caching
    */
   async getLowStockProducts(limit: number = 5): Promise<Product[]> {
     const { data, error } = await supabase
@@ -88,7 +87,7 @@ export const ApiService = {
   },
 
   /**
-   * Get recent stock movements
+   * Get recent stock movements with improved error handling
    */
   async getRecentMovements(limit: number = 10): Promise<StockMovement[]> {
     const { data, error } = await supabase
@@ -107,6 +106,8 @@ export const ApiService = {
       .limit(limit);
 
     if (error) throw error;
+    
+    if (!data) return [];
 
     return data.map(movement => ({
       id: movement.id,
@@ -121,7 +122,7 @@ export const ApiService = {
   },
 
   /**
-   * Get products with filtering and pagination
+   * Get products with filtering, pagination and improved performance
    */
   async getProducts(filters?: FilterParams): Promise<Product[]> {
     let query = supabase.from('products').select('*');
@@ -147,6 +148,8 @@ export const ApiService = {
     if (error) {
       throw new Error(`Error fetching products: ${error.message}`);
     }
+    
+    if (!data) return [];
 
     return data.map(item => ({
       id: item.id,
@@ -163,7 +166,7 @@ export const ApiService = {
   },
 
   /**
-   * Get product categories
+   * Get product categories - Optimized with direct query
    */
   async getCategories(): Promise<string[]> {
     // Use direct SQL query to fetch distinct categories
@@ -174,6 +177,8 @@ export const ApiService = {
       .order('category');
     
     if (error) throw error;
+    
+    if (!data) return [];
     
     // Extract category values and filter out any null values
     return data

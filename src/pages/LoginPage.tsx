@@ -2,8 +2,33 @@
 import React from "react";
 import { LoginForm } from "@/components/auth/LoginForm";
 import { Package } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { Navigate } from "react-router-dom";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const LoginPage: React.FC = () => {
+  const { user, loading } = useAuth();
+
+  // Redirect to dashboard if already logged in
+  if (user && !loading) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  // Show loading state while checking authentication
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-full max-w-md space-y-4 p-4">
+          <Skeleton className="h-12 w-1/2 mx-auto" />
+          <Skeleton className="h-4 w-3/4 mx-auto" />
+          <Skeleton className="h-8 w-full" />
+          <Skeleton className="h-8 w-full" />
+          <Skeleton className="h-10 w-full" />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col sm:flex-row">
       <div className="bg-inventory-indigo sm:w-1/2 flex items-center justify-center p-8">

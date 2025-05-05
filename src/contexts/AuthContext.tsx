@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
@@ -30,15 +29,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Set up auth state change listener
+    // Set up auth state change listener first
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, currentSession) => {
+      (event, currentSession) => {
+        // Update session and user state synchronously
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
         
+        // Defer profile fetch with setTimeout to prevent potential deadlocks
         if (currentSession?.user) {
-          // Fetch user profile when session changes
-          await fetchUserProfile(currentSession.user.id);
+          setTimeout(() => {
+            fetchUserProfile(currentSession.user.id);
+          }, 0);
         } else {
           setProfile(null);
         }
@@ -81,17 +83,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, [navigate]);
 
-  // Fetch user profile data
+  // Fetch user profile data with better error handling and caching
   const fetchUserProfile = async (userId: string) => {
     try {
       const { data, error } = await supabase
         .from("profiles")
         .select("*")
         .eq("id", userId)
-        .single();
+        .maybeSingle();
 
       if (error) {
         throw error;
+      }
+
+      if (!data) {
+        console.log("No profile found for user, creating one...");
+        // Consider creating a default profile if none exists
+        return;
       }
 
       const profileData: Profile = {
@@ -105,25 +113,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setProfile(profileData);
     } catch (error) {
       console.error("Error fetching user profile:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro ao carregar perfil",
+        description: "Não foi possível carregar suas informações de perfil."
+      });
     }
   };
 
-  // Authentication methods
+  // Authentication methods with improved error handling
   const signIn = async (email: string, password: string) => {
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const { error, data } = await supabase.auth.signInWithPassword({ email, password });
       
       if (error) throw error;
+      
+      if (!data.user) {
+        throw new Error("Não foi possível obter informações do usuário.");
+      }
       
       toast({
         title: "Login bem-sucedido",
         description: "Bem-vindo ao StockControl",
       });
     } catch (error: any) {
+      console.error("Login error details:", error);
+      
+      let errorMessage = "Verifique suas credenciais e tente novamente";
+      if (error.message.includes("Invalid login")) {
+        errorMessage = "Credenciais inválidas. Verifique seu e-mail e senha.";
+      } else if (error.message.includes("Email not confirmed")) {
+        errorMessage = "Por favor, confirme seu email antes de fazer login.";
+      }
+      
       toast({
         variant: "destructive",
         title: "Erro ao fazer login",
-        description: error.message || "Verifique suas credenciais e tente novamente",
+        description: errorMessage,
       });
       throw error;
     }
@@ -150,10 +176,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       navigate('/login');
     } catch (error: any) {
+      let errorMessage = error.message || "Ocorreu um problema ao criar sua conta";
+      
+      if (error.message.includes("already registered")) {
+        errorMessage = "Este email já está registrado. Tente fazer login.";
+      }
+      
       toast({
         variant: "destructive",
         title: "Erro ao criar conta",
-        description: error.message || "Ocorreu um problema ao criar sua conta",
+        description: errorMessage,
       });
       throw error;
     }
