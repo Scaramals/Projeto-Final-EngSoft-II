@@ -36,17 +36,24 @@ export function useProfile(userId?: string | null, options?: UseProfileOptions) 
           if (cachedProfile) {
             setProfile(cachedProfile);
             setLoading(false);
+            console.log("Profile loaded from cache:", cachedProfile);
             return;
           }
         }
         
+        console.log("Fetching profile from supabase for userId:", userId);
         const { data, error } = await supabase
           .from("profiles")
           .select("*")
           .eq("id", userId)
           .maybeSingle();
         
-        if (error) throw error;
+        if (error) {
+          console.error("Supabase query error:", error);
+          throw error;
+        }
+        
+        console.log("Profile data received:", data);
         
         if (data) {
           const profileData: Profile = {
@@ -57,14 +64,16 @@ export function useProfile(userId?: string | null, options?: UseProfileOptions) 
             updatedAt: data.updated_at
           };
           
-          // Armazena no cache por 5 minutos
-          cacheService.set(`profile_${userId}`, profileData, 300);
+          // Armazene o perfil em cache por 10 minutos
+          cacheService.set(`profile_${userId}`, profileData, 600);
           setProfile(profileData);
         } else {
+          console.log("No profile found for user");
           setProfile(null);
         }
       } catch (err) {
         const error = err as Error;
+        console.error("Error in fetchProfile:", error);
         setError(error);
         
         if (options?.onError) {
@@ -73,7 +82,7 @@ export function useProfile(userId?: string | null, options?: UseProfileOptions) 
           toast({
             variant: "destructive",
             title: "Erro ao carregar perfil",
-            description: "Não foi possível carregar suas informações de perfil."
+            description: "Não foi possível carregar suas informações de perfil. Tente recarregar a página."
           });
         }
       } finally {
@@ -84,5 +93,51 @@ export function useProfile(userId?: string | null, options?: UseProfileOptions) 
     fetchProfile();
   }, [userId, options?.skipCache, toast]);
   
-  return { profile, loading, error, setProfile };
+  // Função para forçar atualização do perfil
+  const refreshProfile = async () => {
+    if (!userId) return;
+    
+    // Limpa o cache para este usuário
+    cacheService.delete(`profile_${userId}`);
+    
+    // Força carregamento novamente
+    setLoading(true);
+    
+    try {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", userId)
+        .maybeSingle();
+      
+      if (error) throw error;
+      
+      if (data) {
+        const profileData: Profile = {
+          id: data.id,
+          fullName: data.full_name,
+          role: data.role as 'admin' | 'employee',
+          createdAt: data.created_at,
+          updatedAt: data.updated_at
+        };
+        
+        cacheService.set(`profile_${userId}`, profileData, 600);
+        setProfile(profileData);
+      } else {
+        setProfile(null);
+      }
+    } catch (err) {
+      const error = err as Error;
+      setError(error);
+      toast({
+        variant: "destructive",
+        title: "Erro ao atualizar perfil",
+        description: "Não foi possível atualizar suas informações de perfil."
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  return { profile, loading, error, setProfile, refreshProfile };
 }

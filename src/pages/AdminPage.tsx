@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
@@ -9,8 +9,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { Search, UserPlus, Users } from "lucide-react";
+import { Search, UserPlus, Users, Plus, Pencil, Trash2, Tag } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 
 interface User {
   id: string;
@@ -21,12 +25,26 @@ interface User {
   last_sign_in_at?: string;
 }
 
+interface Category {
+  id: string;
+  name: string;
+  description?: string;
+  created_at: string;
+}
+
 const AdminPage: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
+  const [categoryLoading, setCategoryLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [categorySearchTerm, setCategorySearchTerm] = useState("");
   const { toast } = useToast();
   const { profile } = useAuth();
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [newCategoryDescription, setNewCategoryDescription] = useState("");
+  const [editCategory, setEditCategory] = useState<Category | null>(null);
+  const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
 
   // Check if the current user is an admin
   const isAdmin = profile?.role === 'admin';
@@ -68,15 +86,42 @@ const AdminPage: React.FC = () => {
     }
   };
 
+  const fetchCategories = async () => {
+    setCategoryLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .order('name');
+      
+      if (error) throw error;
+      
+      setCategories(data || []);
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Erro ao carregar categorias",
+        description: error.message
+      });
+    } finally {
+      setCategoryLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (isAdmin) {
       fetchUsers();
+      fetchCategories();
     }
   }, [isAdmin]);
 
   const filteredUsers = users.filter(user => 
     user.email?.toLowerCase().includes(searchTerm.toLowerCase()) || 
     user.full_name?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const filteredCategories = categories.filter(category =>
+    category.name.toLowerCase().includes(categorySearchTerm.toLowerCase())
   );
 
   const changeUserRole = async (userId: string, newRole: string) => {
@@ -107,6 +152,114 @@ const AdminPage: React.FC = () => {
     }
   };
 
+  const handleAddCategory = async () => {
+    if (!newCategoryName.trim()) {
+      toast({
+        variant: "destructive",
+        title: "Nome da categoria obrigatório",
+        description: "Por favor, insira um nome para a categoria."
+      });
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('categories')
+        .insert({
+          name: newCategoryName.trim(),
+          description: newCategoryDescription.trim() || null
+        })
+        .select();
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Categoria criada",
+        description: "A nova categoria foi adicionada com sucesso."
+      });
+      
+      // Reset form and refresh categories
+      setNewCategoryName("");
+      setNewCategoryDescription("");
+      setCategoryDialogOpen(false);
+      fetchCategories();
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Erro ao criar categoria",
+        description: error.message
+      });
+    }
+  };
+
+  const handleUpdateCategory = async () => {
+    if (!editCategory || !editCategory.name.trim()) {
+      toast({
+        variant: "destructive",
+        title: "Nome da categoria obrigatório",
+        description: "Por favor, insira um nome para a categoria."
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('categories')
+        .update({
+          name: editCategory.name.trim(),
+          description: editCategory.description?.trim() || null
+        })
+        .eq('id', editCategory.id);
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Categoria atualizada",
+        description: "A categoria foi atualizada com sucesso."
+      });
+      
+      // Reset form and refresh categories
+      setEditCategory(null);
+      setCategoryDialogOpen(false);
+      fetchCategories();
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Erro ao atualizar categoria",
+        description: error.message
+      });
+    }
+  };
+
+  const handleDeleteCategory = async (id: string) => {
+    if (!confirm("Tem certeza que deseja excluir esta categoria? Esta ação não pode ser desfeita.")) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('categories')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Categoria excluída",
+        description: "A categoria foi excluída com sucesso."
+      });
+      
+      // Refresh categories
+      fetchCategories();
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Erro ao excluir categoria",
+        description: error.message
+      });
+    }
+  };
+
   // If user is not an admin, show access denied message
   if (!isAdmin) {
     return (
@@ -132,17 +285,19 @@ const AdminPage: React.FC = () => {
         <div className="mb-6">
           <h1 className="text-3xl font-bold">Administração</h1>
           <p className="text-muted-foreground">
-            Gerencie usuários e configurações do sistema
+            Gerencie usuários, categorias e configurações do sistema
           </p>
         </div>
         
         <Tabs defaultValue="users" className="w-full">
           <TabsList className="mb-6">
             <TabsTrigger value="users">Usuários</TabsTrigger>
+            <TabsTrigger value="categories">Categorias</TabsTrigger>
             <TabsTrigger value="settings">Configurações</TabsTrigger>
             <TabsTrigger value="logs">Logs do Sistema</TabsTrigger>
           </TabsList>
           
+          {/* Tab de Usuários */}
           <TabsContent value="users">
             <Card>
               <CardHeader>
@@ -230,6 +385,153 @@ const AdminPage: React.FC = () => {
             </Card>
           </TabsContent>
           
+          {/* Tab de Categorias */}
+          <TabsContent value="categories">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex justify-between items-center">
+                  <div className="flex items-center">
+                    <Tag className="mr-2" />
+                    Gerenciamento de Categorias
+                  </div>
+                  <Dialog open={categoryDialogOpen} onOpenChange={setCategoryDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button onClick={() => {
+                        setEditCategory(null);
+                        setNewCategoryName("");
+                        setNewCategoryDescription("");
+                      }}>
+                        <Plus className="mr-2 h-4 w-4" />
+                        Nova Categoria
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-[425px]">
+                      <DialogHeader>
+                        <DialogTitle>{editCategory ? "Editar Categoria" : "Adicionar Nova Categoria"}</DialogTitle>
+                        <DialogDescription>
+                          {editCategory 
+                            ? "Edite os detalhes da categoria existente." 
+                            : "Adicione uma nova categoria para classificar seus produtos."}
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="name">Nome da Categoria*</Label>
+                          <Input 
+                            id="name" 
+                            value={editCategory ? editCategory.name : newCategoryName} 
+                            onChange={(e) => {
+                              if (editCategory) {
+                                setEditCategory({...editCategory, name: e.target.value});
+                              } else {
+                                setNewCategoryName(e.target.value);
+                              }
+                            }} 
+                            placeholder="Ex: Eletrônicos, Alimentos, etc." 
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="description">Descrição</Label>
+                          <Textarea 
+                            id="description" 
+                            value={editCategory ? editCategory.description || "" : newCategoryDescription} 
+                            onChange={(e) => {
+                              if (editCategory) {
+                                setEditCategory({...editCategory, description: e.target.value});
+                              } else {
+                                setNewCategoryDescription(e.target.value);
+                              }
+                            }} 
+                            placeholder="Descrição opcional da categoria" 
+                            rows={3}
+                          />
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <Button variant="outline" onClick={() => setCategoryDialogOpen(false)}>Cancelar</Button>
+                        <Button onClick={editCategory ? handleUpdateCategory : handleAddCategory}>
+                          {editCategory ? "Atualizar" : "Adicionar"}
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+                </CardTitle>
+                <CardDescription>
+                  Gerencie as categorias de produtos disponíveis no sistema
+                </CardDescription>
+                <div className="relative mt-4">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar por nome da categoria"
+                    className="pl-8"
+                    value={categorySearchTerm}
+                    onChange={(e) => setCategorySearchTerm(e.target.value)}
+                  />
+                </div>
+              </CardHeader>
+              <CardContent>
+                {categoryLoading ? (
+                  <div className="py-8 text-center">Carregando categorias...</div>
+                ) : (
+                  <>
+                    {filteredCategories.length === 0 ? (
+                      <Alert variant="default" className="bg-muted/50">
+                        <AlertDescription>
+                          Nenhuma categoria encontrada. Adicione uma nova categoria para começar.
+                        </AlertDescription>
+                      </Alert>
+                    ) : (
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Nome</TableHead>
+                            <TableHead>Descrição</TableHead>
+                            <TableHead>Criada em</TableHead>
+                            <TableHead className="w-[100px]">Ações</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {filteredCategories.map((category) => (
+                            <TableRow key={category.id}>
+                              <TableCell className="font-medium">{category.name}</TableCell>
+                              <TableCell>{category.description || 'N/A'}</TableCell>
+                              <TableCell>
+                                {new Date(category.created_at).toLocaleDateString('pt-BR')}
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex gap-2">
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon"
+                                    onClick={() => {
+                                      setEditCategory(category);
+                                      setCategoryDialogOpen(true);
+                                    }}
+                                  >
+                                    <Pencil className="h-4 w-4" />
+                                  </Button>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon"
+                                    className="text-destructive hover:text-destructive/90"
+                                    onClick={() => handleDeleteCategory(category.id)}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    )}
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          {/* Tab de Configurações */}
           <TabsContent value="settings">
             <Card>
               <CardHeader>
@@ -246,6 +548,7 @@ const AdminPage: React.FC = () => {
             </Card>
           </TabsContent>
           
+          {/* Tab de Logs */}
           <TabsContent value="logs">
             <Card>
               <CardHeader>

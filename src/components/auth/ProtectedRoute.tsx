@@ -19,7 +19,16 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   requiredRoles,
 }) => {
   const { user, profile, loading } = useAuth();
-  const { hasPermission, isAdmin } = useAuthorization();
+  const { hasPermission, isAdmin, hasAnyRole } = useAuthorization();
+
+  console.log("ProtectedRoute check:", { 
+    user: user?.id, 
+    profile, 
+    adminOnly, 
+    requiredRoles, 
+    isAdmin: isAdmin(),
+    loading 
+  });
 
   // Mostrar estado de carregamento enquanto verifica autenticação
   if (loading) {
@@ -37,18 +46,21 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   // Se não autenticado, redirecionar para login
   if (!user) {
+    console.log("Not authenticated, redirecting to login");
     return <Navigate to="/login" />;
   }
 
   // Verificação baseada em papéis
   if (adminOnly && !isAdmin()) {
     // Se a rota for apenas para admin e o usuário não for admin, redireciona para dashboard
+    console.log("Admin only route, user is not admin, redirecting");
     return <Navigate to="/dashboard" />;
   }
 
   // Verificação de papéis específicos se fornecidos
   if (requiredRoles && requiredRoles.length > 0) {
-    const hasRequiredRole = requiredRoles.some(role => hasPermission(role));
+    const hasRequiredRole = hasAnyRole(requiredRoles);
+    console.log("Required roles check:", { requiredRoles, hasRequiredRole });
     
     if (!hasRequiredRole) {
       return (
@@ -71,5 +83,6 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   }
 
   // Renderizar o conteúdo protegido
+  console.log("Access granted, rendering protected content");
   return <>{children}</>;
 };
