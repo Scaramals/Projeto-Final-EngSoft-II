@@ -21,7 +21,7 @@ const ReportsPage = () => {
   const [filters, setFilters] = useState({
     search: "",
     category: "all",
-    sortBy: undefined,
+    sortBy: undefined as string | undefined,
     sortDirection: "asc" as "asc" | "desc"
   });
   const [categories, setCategories] = useState<string[]>([]);
@@ -63,7 +63,12 @@ const ReportsPage = () => {
     sortBy?: string;
     sortDirection?: "asc" | "desc";
   }) => {
-    setFilters(newFilters);
+    setFilters({
+      search: newFilters.search,
+      category: newFilters.category,
+      sortBy: newFilters.sortBy, 
+      sortDirection: newFilters.sortDirection || "asc"
+    });
   };
 
   return (
