@@ -1,16 +1,27 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { Product, StockMovement, FilterParams, DashboardStats } from "@/types";
+import { cacheService } from "./cacheService";
 
 /**
- * Service layer to abstract database operations
+ * Service layer to abstract database operations with cache
  */
 export const ApiService = {
   /**
-   * Get dashboard statistics - optimized with parallel requests
+   * Get dashboard statistics - optimized with parallel requests and cache
    */
-  async getDashboardStats(): Promise<DashboardStats> {
+  async getDashboardStats(skipCache: boolean = false): Promise<DashboardStats> {
     try {
+      const cacheKey = 'dashboard_stats';
+      
+      // Return from cache if available and not expired
+      if (!skipCache) {
+        const cachedStats = cacheService.get<DashboardStats>(cacheKey);
+        if (cachedStats) {
+          return cachedStats;
+        }
+      }
+      
       // Use Promise.all to run queries in parallel
       const [
         productsResult,
@@ -46,12 +57,17 @@ export const ApiService = {
         0
       );
 
-      return {
+      const stats = {
         totalProducts: productsResult.count || 0,
         lowStockProducts: lowStockResult.count || 0,
         totalValue,
         recentMovementsCount: movementsResult.count || 0,
       };
+      
+      // Cache the result for 2 minutes
+      cacheService.set(cacheKey, stats, 120);
+      
+      return stats;
     } catch (error) {
       console.error("Error fetching dashboard stats:", error);
       throw error;
@@ -61,7 +77,16 @@ export const ApiService = {
   /**
    * Get low stock products with improved caching
    */
-  async getLowStockProducts(limit: number = 5): Promise<Product[]> {
+  async getLowStockProducts(limit: number = 5, skipCache: boolean = false): Promise<Product[]> {
+    const cacheKey = `low_stock_products_${limit}`;
+    
+    if (!skipCache) {
+      const cachedProducts = cacheService.get<Product[]>(cacheKey);
+      if (cachedProducts) {
+        return cachedProducts;
+      }
+    }
+    
     const { data, error } = await supabase
       .from("products")
       .select("*")
@@ -72,7 +97,7 @@ export const ApiService = {
     if (error) throw error;
     
     // Convert database model to our Product interface
-    return data.map(item => ({
+    const products = data.map(item => ({
       id: item.id,
       name: item.name,
       description: item.description || '',
@@ -84,12 +109,26 @@ export const ApiService = {
       createdAt: item.created_at,
       updatedAt: item.updated_at
     }));
+    
+    // Cache for 2 minutes
+    cacheService.set(cacheKey, products, 120);
+    
+    return products;
   },
 
   /**
-   * Get recent stock movements with improved error handling
+   * Get recent stock movements with improved error handling and caching
    */
-  async getRecentMovements(limit: number = 10): Promise<StockMovement[]> {
+  async getRecentMovements(limit: number = 10, skipCache: boolean = false): Promise<StockMovement[]> {
+    const cacheKey = `recent_movements_${limit}`;
+    
+    if (!skipCache) {
+      const cachedMovements = cacheService.get<StockMovement[]>(cacheKey);
+      if (cachedMovements) {
+        return cachedMovements;
+      }
+    }
+    
     const { data, error } = await supabase
       .from("stock_movements")
       .select(`
@@ -109,7 +148,7 @@ export const ApiService = {
     
     if (!data) return [];
 
-    return data.map(movement => ({
+    const movements = data.map(movement => ({
       id: movement.id,
       productId: movement.product_id,
       productName: movement.products?.name || 'Produto desconhecido',
@@ -119,12 +158,27 @@ export const ApiService = {
       notes: movement.notes || undefined,
       userId: movement.user_id || undefined,
     }));
+    
+    // Cache for 1 minuto
+    cacheService.set(cacheKey, movements, 60);
+    
+    return movements;
   },
 
   /**
-   * Get products with filtering, pagination and improved performance
+   * Get products with filtering, pagination and improved performance with cache
    */
-  async getProducts(filters?: FilterParams): Promise<Product[]> {
+  async getProducts(filters?: FilterParams, skipCache: boolean = false): Promise<Product[]> {
+    // Create cache key based on filters
+    const cacheKey = `products_${JSON.stringify(filters || {})}`;
+    
+    if (!skipCache) {
+      const cachedProducts = cacheService.get<Product[]>(cacheKey);
+      if (cachedProducts) {
+        return cachedProducts;
+      }
+    }
+    
     let query = supabase.from('products').select('*');
 
     if (filters?.search) {
@@ -151,7 +205,7 @@ export const ApiService = {
     
     if (!data) return [];
 
-    return data.map(item => ({
+    const products = data.map(item => ({
       id: item.id,
       name: item.name,
       description: item.description || '',
@@ -163,13 +217,27 @@ export const ApiService = {
       createdAt: item.created_at,
       updatedAt: item.updated_at
     }));
+    
+    // Cache for 2 minutos
+    cacheService.set(cacheKey, products, 120);
+    
+    return products;
   },
 
   /**
-   * Get product categories - Optimized with direct query
+   * Get product categories - Optimized with direct query and cache
    */
-  async getCategories(): Promise<string[]> {
-    // Use direct SQL query to fetch distinct categories
+  async getCategories(skipCache: boolean = false): Promise<string[]> {
+    const cacheKey = 'product_categories';
+    
+    if (!skipCache) {
+      const cachedCategories = cacheService.get<string[]>(cacheKey);
+      if (cachedCategories) {
+        return cachedCategories;
+      }
+    }
+    
+    // Use direct SQL query para buscar categorias distintas
     const { data, error } = await supabase
       .from('products')
       .select('category')
@@ -181,8 +249,24 @@ export const ApiService = {
     if (!data) return [];
     
     // Extract category values and filter out any null values
-    return data
+    const categories = data
       .map(item => item.category)
       .filter(Boolean) as string[];
+    
+    // Cache por 10 minutos (categorias mudam com pouca frequência)
+    cacheService.set(cacheKey, categories, 600);
+    
+    return categories;
+  },
+  
+  /**
+   * Limpar o cache para uma chave específica ou para todas as chaves
+   */
+  clearCache(cacheKey?: string): void {
+    if (cacheKey) {
+      cacheService.delete(cacheKey);
+    } else {
+      cacheService.clear();
+    }
   }
 };

@@ -1,9 +1,11 @@
+
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
 import { Profile } from "@/types";
+import { cacheService } from "@/services/cacheService";
 
 interface AuthContextType {
   user: User | null;
@@ -16,6 +18,7 @@ interface AuthContextType {
   resetPassword: (email: string) => Promise<void>;
   updatePassword: (password: string) => Promise<void>;
   updateProfile: (profile: Partial<Profile>) => Promise<void>;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -28,15 +31,74 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const { toast } = useToast();
   const navigate = useNavigate();
 
+  // Função otimizada para buscar perfil de usuário
+  const fetchUserProfile = async (userId: string) => {
+    try {
+      // Tenta buscar do cache primeiro
+      const cachedProfile = cacheService.get<Profile>(`profile_${userId}`);
+      if (cachedProfile) {
+        setProfile(cachedProfile);
+        return;
+      }
+      
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", userId)
+        .maybeSingle();
+
+      if (error) {
+        throw error;
+      }
+
+      if (!data) {
+        console.log("No profile found for user, creating one...");
+        // Considere criar um perfil padrão se nenhum existir
+        return;
+      }
+
+      const profileData: Profile = {
+        id: data.id,
+        fullName: data.full_name,
+        role: data.role as 'admin' | 'employee',
+        createdAt: data.created_at,
+        updatedAt: data.updated_at
+      };
+
+      // Armazene o perfil em cache por 10 minutos
+      cacheService.set(`profile_${userId}`, profileData, 600);
+      
+      setProfile(profileData);
+    } catch (error) {
+      console.error("Error fetching user profile:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro ao carregar perfil",
+        description: "Não foi possível carregar suas informações de perfil. Tente recarregar a página."
+      });
+    }
+  };
+
+  // Função para atualizar o perfil forçando refresh do cache
+  const refreshProfile = async () => {
+    if (!user) return;
+    
+    // Limpa o cache para este usuário
+    cacheService.delete(`profile_${user.id}`);
+    
+    // Busca novamente
+    await fetchUserProfile(user.id);
+  };
+
   useEffect(() => {
-    // Set up auth state change listener first
+    // Configurar listener de mudança de estado de autenticação primeiro
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, currentSession) => {
-        // Update session and user state synchronously
+        // Atualiza sessão e usuário de forma síncrona
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
         
-        // Defer profile fetch with setTimeout to prevent potential deadlocks
+        // Adia busca de perfil com setTimeout para evitar deadlocks
         if (currentSession?.user) {
           setTimeout(() => {
             fetchUserProfile(currentSession.user.id);
@@ -45,16 +107,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setProfile(null);
         }
 
-        // Handle auth events
+        // Lida com eventos de autenticação
         if (event === 'SIGNED_IN') {
           navigate('/dashboard');
         } else if (event === 'SIGNED_OUT') {
           navigate('/login');
+          // Limpa o cache ao fazer logout
+          cacheService.clear();
         }
       }
     );
 
-    // Check for existing session
+    // Verifica se há sessão existente
     const initializeAuth = async () => {
       try {
         setLoading(true);
@@ -64,7 +128,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setSession(currentSession);
           setUser(currentSession.user);
           
-          // Fetch user profile data
+          // Busca dados do perfil do usuário
           if (currentSession.user) {
             await fetchUserProfile(currentSession.user.id);
           }
@@ -78,52 +142,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     initializeAuth();
 
+    // Função de limpeza
     return () => {
       subscription?.unsubscribe();
     };
   }, [navigate]);
 
-  // Fetch user profile data with better error handling and caching
-  const fetchUserProfile = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", userId)
-        .maybeSingle();
-
-      if (error) {
-        throw error;
-      }
-
-      if (!data) {
-        console.log("No profile found for user, creating one...");
-        // Consider creating a default profile if none exists
-        return;
-      }
-
-      const profileData: Profile = {
-        id: data.id,
-        fullName: data.full_name,
-        role: data.role as 'admin' | 'employee',
-        createdAt: data.created_at,
-        updatedAt: data.updated_at
-      };
-
-      setProfile(profileData);
-    } catch (error) {
-      console.error("Error fetching user profile:", error);
-      toast({
-        variant: "destructive",
-        title: "Erro ao carregar perfil",
-        description: "Não foi possível carregar suas informações de perfil."
-      });
-    }
-  };
-
-  // Authentication methods with improved error handling
+  // Métodos de autenticação com tratamento de erros aprimorado
   const signIn = async (email: string, password: string) => {
     try {
+      setLoading(true);
       const { error, data } = await supabase.auth.signInWithPassword({ email, password });
       
       if (error) throw error;
@@ -152,17 +180,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         description: errorMessage,
       });
       throw error;
+    } finally {
+      setLoading(false);
     }
   };
 
+  // Cadastro de usuários com termos e condições
   const signUp = async (email: string, password: string, fullName: string) => {
     try {
+      setLoading(true);
+      // Adiciona o campo termsAccepted
       const { error } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: {
             full_name: fullName,
+            terms_accepted: true,
+            terms_accepted_at: new Date().toISOString(),
           },
         },
       });
@@ -188,14 +223,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         description: errorMessage,
       });
       throw error;
+    } finally {
+      setLoading(false);
     }
   };
 
   const signOut = async () => {
     try {
+      setLoading(true);
       const { error } = await supabase.auth.signOut();
       
       if (error) throw error;
+      
+      // Limpa o cache ao fazer logout
+      cacheService.clear();
       
       toast({
         title: "Logout realizado",
@@ -207,11 +248,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         title: "Erro ao fazer logout",
         description: error.message || "Ocorreu um problema ao desconectar",
       });
+    } finally {
+      setLoading(false);
     }
   };
 
   const resetPassword = async (email: string) => {
     try {
+      setLoading(true);
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/reset-password`,
       });
@@ -229,11 +273,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         description: error.message || "Não foi possível enviar o email de recuperação",
       });
       throw error;
+    } finally {
+      setLoading(false);
     }
   };
 
   const updatePassword = async (password: string) => {
     try {
+      setLoading(true);
       const { error } = await supabase.auth.updateUser({ password });
       
       if (error) throw error;
@@ -249,6 +296,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         description: error.message || "Não foi possível atualizar sua senha",
       });
       throw error;
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -256,6 +305,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!user) return;
     
     try {
+      setLoading(true);
       const updates = {
         id: user.id,
         full_name: profileData.fullName,
@@ -269,11 +319,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (error) throw error;
 
+      // Atualiza o perfil em cache
       if (profile) {
-        setProfile({
+        const updatedProfile = {
           ...profile,
-          ...profileData
-        });
+          ...profileData,
+          updatedAt: new Date().toISOString()
+        };
+        
+        setProfile(updatedProfile);
+        // Atualiza o cache
+        cacheService.set(`profile_${user.id}`, updatedProfile, 600);
       }
       
       toast({
@@ -287,6 +343,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         description: error.message || "Ocorreu um erro ao atualizar seu perfil",
       });
       throw error;
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -301,6 +359,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     resetPassword,
     updatePassword,
     updateProfile,
+    refreshProfile,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
