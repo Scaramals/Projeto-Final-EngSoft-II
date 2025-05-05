@@ -12,17 +12,28 @@ import { StockValueReport } from "@/components/reports/StockValueReport";
 import { MovementsReport } from "@/components/reports/MovementsReport";
 import { CategoryDistributionChart } from "@/components/reports/CategoryDistributionChart";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { ApiService } from "@/services/api";
 
 const ReportsPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("overview");
   const [dateRange, setDateRange] = useState({ from: new Date(new Date().setDate(new Date().getDate() - 30)), to: new Date() });
+  const [filters, setFilters] = useState({
+    search: "",
+    category: "all",
+    sortBy: undefined,
+    sortDirection: "asc" as "asc" | "desc"
+  });
+  const [categories, setCategories] = useState<string[]>([]);
   const { toast } = useToast();
 
   useEffect(() => {
     // Load initial data
     const loadData = async () => {
       try {
+        // Load categories
+        const categoriesData = await ApiService.getCategories();
+        setCategories(categoriesData);
         setIsLoading(false);
       } catch (error) {
         console.error("Error loading report data:", error);
@@ -44,6 +55,15 @@ const ReportsPage = () => {
 
   const handleDateRangeChange = (range: { from: Date; to: Date }) => {
     setDateRange(range);
+  };
+  
+  const handleFiltersChange = (newFilters: {
+    search: string;
+    category: string;
+    sortBy?: string;
+    sortDirection?: "asc" | "desc";
+  }) => {
+    setFilters(newFilters);
   };
 
   return (
@@ -95,7 +115,10 @@ const ReportsPage = () => {
           </TabsContent>
 
           <TabsContent value="stock" className="space-y-4">
-            <ReportFilters />
+            <ReportFilters 
+              onFiltersChange={handleFiltersChange}
+              categories={categories}
+            />
             <Card>
               <CardHeader>
                 <CardTitle>Análise de Estoque</CardTitle>
@@ -139,7 +162,10 @@ const ReportsPage = () => {
           </TabsContent>
 
           <TabsContent value="movements" className="space-y-4">
-            <ReportFilters />
+            <ReportFilters 
+              onFiltersChange={handleFiltersChange}
+              categories={categories}
+            />
             <MovementsReport dateRange={dateRange} />
           </TabsContent>
         </Tabs>

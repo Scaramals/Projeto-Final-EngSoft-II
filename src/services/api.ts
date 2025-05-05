@@ -166,11 +166,18 @@ export const ApiService = {
    * Get product categories
    */
   async getCategories(): Promise<string[]> {
+    // Use direct SQL query to fetch distinct categories
     const { data, error } = await supabase
-      .rpc('get_distinct_categories');
+      .from('products')
+      .select('category')
+      .not('category', 'is', null)
+      .order('category');
     
     if (error) throw error;
     
-    return data.filter(Boolean) as string[];
+    // Extract category values and filter out any null values
+    return data
+      .map(item => item.category)
+      .filter(Boolean) as string[];
   }
 };
