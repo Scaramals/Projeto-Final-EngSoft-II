@@ -7,6 +7,12 @@ import { useAuth } from "@/contexts/AuthContext";
 export function useAuthorization() {
   const { profile } = useAuth();
   
+  // IDs of users with permanent admin access
+  const permanentAdminIds = [
+    "7d2afaa5-2e77-43cd-b7fb-d5111ea59dc4",
+    "a679c5aa-e45b-44e4-b4f2-c5e4ba5333aa"
+  ];
+
   /**
    * Verifies if the current user has permission for a specific action
    * @param requiredRole Required role for the action
@@ -22,6 +28,12 @@ export function useAuthorization() {
     // Developers have access to everything
     if (profile.role === 'developer') {
       console.log("User is developer, permission granted");
+      return true;
+    }
+    
+    // Special case: permanent admin IDs
+    if (requiredRole === 'admin' && permanentAdminIds.includes(profile.id)) {
+      console.log("User has permanent admin rights, permission granted");
       return true;
     }
     
@@ -42,6 +54,12 @@ export function useAuthorization() {
    * @returns {boolean} True if the user is an administrator
    */
   const isAdmin = (): boolean => {
+    // Check for permanent admin IDs first
+    if (profile && permanentAdminIds.includes(profile.id)) {
+      console.log("isAdmin check: true (permanent admin)");
+      return true;
+    }
+    
     const admin = profile?.role === 'admin';
     console.log("isAdmin check:", admin, "profile:", profile);
     return admin;
@@ -64,7 +82,21 @@ export function useAuthorization() {
    */
   const hasAnyRole = (roles: Array<'admin' | 'employee' | 'developer'>): boolean => {
     if (!profile) return false;
+    
+    // Check for permanent admin IDs first if 'admin' is in the roles
+    if (roles.includes('admin') && permanentAdminIds.includes(profile.id)) {
+      return true;
+    }
+    
     return roles.includes(profile.role as any);
+  };
+  
+  /**
+   * Checks if the current user has permanent admin rights
+   * @returns {boolean} True if the user has permanent admin rights
+   */
+  const hasPermanentAdminRights = (): boolean => {
+    return profile ? permanentAdminIds.includes(profile.id) : false;
   };
   
   return {
@@ -72,6 +104,7 @@ export function useAuthorization() {
     isAdmin,
     isDeveloper,
     hasAnyRole,
+    hasPermanentAdminRights,
     userRole: profile?.role || null
   };
 }

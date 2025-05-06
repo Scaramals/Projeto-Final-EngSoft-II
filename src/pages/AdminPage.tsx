@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -9,13 +8,14 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { Search, UserPlus, Users, Plus, Pencil, Trash2, Tag, Code, Database } from "lucide-react";
+import { Search, UserPlus, Users, Plus, Pencil, Trash2, Tag, Code, Database, Shield, Key } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAuthorization } from "@/hooks/useAuthorization";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface User {
   id: string;
@@ -42,15 +42,19 @@ const AdminPage: React.FC = () => {
   const [categorySearchTerm, setCategorySearchTerm] = useState("");
   const { toast } = useToast();
   const { profile } = useAuth();
-  const { isDeveloper } = useAuthorization();
+  const { isDeveloper, hasPermanentAdminRights } = useAuthorization();
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newCategoryDescription, setNewCategoryDescription] = useState("");
   const [editCategory, setEditCategory] = useState<Category | null>(null);
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
+  const [userDialogOpen, setUserDialogOpen] = useState(false);
+  const [newUserEmail, setNewUserEmail] = useState("");
+  const [newUserRole, setNewUserRole] = useState<string>("employee");
+  const [newUserName, setNewUserName] = useState("");
 
   // Check if the current user is an admin or developer
   const isAdmin = profile?.role === 'admin';
-  const canAccessAdmin = isAdmin || isDeveloper();
+  const canAccessAdmin = isAdmin || isDeveloper() || hasPermanentAdminRights();
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -119,8 +123,8 @@ const AdminPage: React.FC = () => {
   }, [canAccessAdmin]);
 
   const filteredUsers = users.filter(user => 
-    user.email?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    user.full_name?.toLowerCase().includes(searchTerm.toLowerCase())
+    (user.email?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    user.full_name?.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   const filteredCategories = categories.filter(category =>
@@ -150,6 +154,53 @@ const AdminPage: React.FC = () => {
       toast({
         variant: "destructive",
         title: "Erro ao atualizar função",
+        description: error.message
+      });
+    }
+  };
+
+  const handleAddUser = async () => {
+    if (!newUserEmail || !newUserName) {
+      toast({
+        variant: "destructive",
+        title: "Campos obrigatórios",
+        description: "Email e nome são obrigatórios."
+      });
+      return;
+    }
+
+    try {
+      // In a real application, this would send an invitation or create the user
+      // For now we'll just create a profile entry assuming the user will be created
+      const randomId = crypto.randomUUID();
+      
+      const { data, error } = await supabase
+        .from('profiles')
+        .insert({
+          id: randomId,
+          full_name: newUserName,
+          role: newUserRole,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Usuário adicionado",
+        description: "Novo usuário foi adicionado com sucesso."
+      });
+      
+      // Reset form and refresh users
+      setNewUserEmail("");
+      setNewUserName("");
+      setNewUserRole("employee");
+      setUserDialogOpen(false);
+      fetchUsers();
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Erro ao adicionar usuário",
         description: error.message
       });
     }
@@ -312,10 +363,61 @@ const AdminPage: React.FC = () => {
                     <Users className="mr-2" />
                     Gerenciamento de Usuários
                   </div>
-                  <Button>
-                    <UserPlus className="mr-2 h-4 w-4" />
-                    Novo Usuário
-                  </Button>
+                  <Dialog open={userDialogOpen} onOpenChange={setUserDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button>
+                        <UserPlus className="mr-2 h-4 w-4" />
+                        Novo Usuário
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-[425px]">
+                      <DialogHeader>
+                        <DialogTitle>Adicionar Novo Usuário</DialogTitle>
+                        <DialogDescription>
+                          Adicione um novo usuário ao sistema e defina sua função.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="email">Email*</Label>
+                          <Input 
+                            id="email" 
+                            value={newUserEmail} 
+                            onChange={(e) => setNewUserEmail(e.target.value)} 
+                            placeholder="email@exemplo.com" 
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="name">Nome Completo*</Label>
+                          <Input 
+                            id="name" 
+                            value={newUserName} 
+                            onChange={(e) => setNewUserName(e.target.value)} 
+                            placeholder="Nome do usuário" 
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="role">Função</Label>
+                          <Select value={newUserRole} onValueChange={setNewUserRole}>
+                            <SelectTrigger id="role">
+                              <SelectValue placeholder="Selecione uma função" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="employee">Funcionário</SelectItem>
+                              <SelectItem value="admin">Administrador</SelectItem>
+                              {isDeveloper() && (
+                                <SelectItem value="developer">Desenvolvedor</SelectItem>
+                              )}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <Button variant="outline" onClick={() => setUserDialogOpen(false)}>Cancelar</Button>
+                        <Button onClick={handleAddUser}>Adicionar</Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
                 </CardTitle>
                 <CardDescription>
                   Visualize e gerencie todos os usuários do sistema
@@ -338,8 +440,8 @@ const AdminPage: React.FC = () => {
                     <TableHeader>
                       <TableRow>
                         <TableHead>Nome</TableHead>
-                        <TableHead>Email</TableHead>
-                        <TableHead>Função</TableHead>
+                        <TableHead>ID</TableHead>
+                        <TableHead>Funç��o</TableHead>
                         <TableHead>Criado em</TableHead>
                         <TableHead>Último login</TableHead>
                         <TableHead>Ações</TableHead>
@@ -353,36 +455,53 @@ const AdminPage: React.FC = () => {
                           </TableCell>
                         </TableRow>
                       ) : (
-                        filteredUsers.map((user) => (
-                          <TableRow key={user.id}>
-                            <TableCell>{user.full_name || 'N/A'}</TableCell>
-                            <TableCell>{user.email || 'N/A'}</TableCell>
-                            <TableCell>
-                              <Badge variant={user.role === 'admin' ? 'default' : 'outline'}>
-                                {user.role || 'usuário'}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              {user.created_at ? new Date(user.created_at).toLocaleDateString('pt-BR') : 'N/A'}
-                            </TableCell>
-                            <TableCell>
-                              {user.last_sign_in_at 
-                                ? new Date(user.last_sign_in_at).toLocaleDateString('pt-BR')
-                                : 'Nunca'}
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex gap-2">
-                                <Button 
-                                  variant="outline" 
-                                  size="sm"
-                                  onClick={() => changeUserRole(user.id, user.role === 'admin' ? 'employee' : 'admin')}
-                                >
-                                  {user.role === 'admin' ? 'Remover admin' : 'Tornar admin'}
-                                </Button>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))
+                        filteredUsers.map((user) => {
+                          const isPermanentAdmin = user.id === "7d2afaa5-2e77-43cd-b7fb-d5111ea59dc4" || 
+                                                  user.id === "a679c5aa-e45b-44e4-b4f2-c5e4ba5333aa";
+                          
+                          return (
+                            <TableRow key={user.id}>
+                              <TableCell>{user.full_name || 'N/A'}</TableCell>
+                              <TableCell className="font-mono text-xs">{user.id}</TableCell>
+                              <TableCell>
+                                <Badge variant={
+                                  user.role === 'admin' ? 'default' :
+                                  user.role === 'developer' ? 'destructive' : 'outline'
+                                }>
+                                  {user.role || 'usuário'}
+                                  {isPermanentAdmin && <Shield className="ml-1 h-3 w-3" />}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                {user.created_at ? new Date(user.created_at).toLocaleDateString('pt-BR') : 'N/A'}
+                              </TableCell>
+                              <TableCell>
+                                {user.last_sign_in_at 
+                                  ? new Date(user.last_sign_in_at).toLocaleDateString('pt-BR')
+                                  : 'Nunca'}
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex gap-2">
+                                  {!isPermanentAdmin && (
+                                    <Button 
+                                      variant="outline" 
+                                      size="sm"
+                                      onClick={() => changeUserRole(user.id, user.role === 'admin' ? 'employee' : 'admin')}
+                                    >
+                                      {user.role === 'admin' ? 'Remover admin' : 'Tornar admin'}
+                                    </Button>
+                                  )}
+                                  {isPermanentAdmin && (
+                                    <Badge variant="secondary" className="flex items-center">
+                                      <Key className="mr-1 h-3 w-3" />
+                                      Admin permanente
+                                    </Badge>
+                                  )}
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })
                       )}
                     </TableBody>
                   </Table>
@@ -519,7 +638,7 @@ const AdminPage: React.FC = () => {
                                   <Button 
                                     variant="ghost" 
                                     size="icon"
-                                    className="text-destructive hover:text-destructive/90"
+                                    className="text-destructive hover:text-destructive-foreground hover:bg-destructive"
                                     onClick={() => handleDeleteCategory(category.id)}
                                   >
                                     <Trash2 className="h-4 w-4" />
