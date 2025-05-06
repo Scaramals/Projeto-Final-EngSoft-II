@@ -10,27 +10,31 @@ import { AlertCircle } from "lucide-react";
 interface ProtectedRouteProps {
   children: React.ReactNode;
   adminOnly?: boolean;
-  requiredRoles?: Array<'admin' | 'employee'>;
+  developerOnly?: boolean;
+  requiredRoles?: Array<'admin' | 'employee' | 'developer'>;
 }
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
   children, 
   adminOnly = false,
+  developerOnly = false,
   requiredRoles,
 }) => {
   const { user, profile, loading } = useAuth();
-  const { hasPermission, isAdmin, hasAnyRole } = useAuthorization();
+  const { hasPermission, isAdmin, isDeveloper, hasAnyRole } = useAuthorization();
 
   console.log("ProtectedRoute check:", { 
     user: user?.id, 
     profile, 
-    adminOnly, 
+    adminOnly,
+    developerOnly,
     requiredRoles, 
     isAdmin: isAdmin(),
+    isDeveloper: isDeveloper(),
     loading 
   });
 
-  // Mostrar estado de carregamento enquanto verifica autenticação
+  // Show loading state while checking authentication
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -44,20 +48,26 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     );
   }
 
-  // Se não autenticado, redirecionar para login
+  // If not authenticated, redirect to login
   if (!user) {
     console.log("Not authenticated, redirecting to login");
     return <Navigate to="/login" />;
   }
 
-  // Verificação baseada em papéis
-  if (adminOnly && !isAdmin()) {
-    // Se a rota for apenas para admin e o usuário não for admin, redireciona para dashboard
-    console.log("Admin only route, user is not admin, redirecting");
+  // Developer-only route check
+  if (developerOnly && !isDeveloper()) {
+    console.log("Developer only route, user is not a developer, redirecting");
     return <Navigate to="/dashboard" />;
   }
 
-  // Verificação de papéis específicos se fornecidos
+  // Admin-only route check
+  if (adminOnly && !isAdmin() && !isDeveloper()) {
+    // If the route is admin-only and the user is not an admin or developer, redirect to dashboard
+    console.log("Admin only route, user is not admin or developer, redirecting");
+    return <Navigate to="/dashboard" />;
+  }
+
+  // Check for specific roles if provided
   if (requiredRoles && requiredRoles.length > 0) {
     const hasRequiredRole = hasAnyRole(requiredRoles);
     console.log("Required roles check:", { requiredRoles, hasRequiredRole });
@@ -67,10 +77,10 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
         <div className="container py-8 max-w-2xl mx-auto">
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Acesso negado</AlertTitle>
+            <AlertTitle>Access denied</AlertTitle>
             <AlertDescription>
-              Você não tem permissão para acessar esta página. 
-              Por favor, entre em contato com o administrador para mais informações.
+              You do not have permission to access this page. 
+              Please contact the administrator for more information.
             </AlertDescription>
           </Alert>
           
@@ -82,7 +92,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     }
   }
 
-  // Renderizar o conteúdo protegido
+  // Render the protected content
   console.log("Access granted, rendering protected content");
   return <>{children}</>;
 };

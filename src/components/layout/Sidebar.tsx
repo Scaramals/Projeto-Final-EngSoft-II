@@ -9,9 +9,11 @@ import {
   Home,
   LogOut,
   Users,
-  ShieldCheck
+  ShieldCheck,
+  Code
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAuthorization } from "@/hooks/useAuthorization";
 
 interface NavItemProps {
   to: string;
@@ -40,8 +42,9 @@ export const Sidebar: React.FC = () => {
   const location = useLocation();
   const currentPath = location.pathname;
   const { signOut, profile } = useAuth();
+  const { isAdmin, isDeveloper } = useAuthorization();
   
-  const isAdmin = profile?.role === 'admin';
+  const canAccessAdmin = isAdmin() || isDeveloper();
 
   const handleLogout = async () => {
     await signOut();
@@ -81,7 +84,7 @@ export const Sidebar: React.FC = () => {
           label="Relatórios"
           active={currentPath.startsWith("/reports")}
         />
-        {isAdmin && (
+        {canAccessAdmin && (
           <>
             <NavItem
               to="/users"
@@ -96,6 +99,14 @@ export const Sidebar: React.FC = () => {
               active={currentPath.startsWith("/admin")}
             />
           </>
+        )}
+        {isDeveloper() && (
+          <NavItem
+            to="/developer"
+            icon={<Code size={20} />}
+            label="Desenvolvedor"
+            active={currentPath.startsWith("/developer")}
+          />
         )}
         <NavItem
           to="/settings"

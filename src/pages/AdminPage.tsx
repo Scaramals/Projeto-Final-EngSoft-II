@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -9,8 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { Search, UserPlus, Users, Plus, Pencil, Trash2, Tag } from "lucide-react";
+import { Search, UserPlus, Users, Plus, Pencil, Trash2, Tag, Code, Database } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAuthorization } from "@/hooks/useAuthorization";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -41,13 +41,15 @@ const AdminPage: React.FC = () => {
   const [categorySearchTerm, setCategorySearchTerm] = useState("");
   const { toast } = useToast();
   const { profile } = useAuth();
+  const { isDeveloper } = useAuthorization();
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newCategoryDescription, setNewCategoryDescription] = useState("");
   const [editCategory, setEditCategory] = useState<Category | null>(null);
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
 
-  // Check if the current user is an admin
+  // Check if the current user is an admin or developer
   const isAdmin = profile?.role === 'admin';
+  const canAccessAdmin = isAdmin || isDeveloper();
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -109,11 +111,11 @@ const AdminPage: React.FC = () => {
   };
 
   useEffect(() => {
-    if (isAdmin) {
+    if (canAccessAdmin) {
       fetchUsers();
       fetchCategories();
     }
-  }, [isAdmin]);
+  }, [canAccessAdmin]);
 
   const filteredUsers = users.filter(user => 
     user.email?.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -260,8 +262,8 @@ const AdminPage: React.FC = () => {
     }
   };
 
-  // If user is not an admin, show access denied message
-  if (!isAdmin) {
+  // If user doesn't have admin access, show access denied message
+  if (!canAccessAdmin) {
     return (
       <AppLayout>
         <div className="container py-6">
@@ -295,6 +297,9 @@ const AdminPage: React.FC = () => {
             <TabsTrigger value="categories">Categorias</TabsTrigger>
             <TabsTrigger value="settings">Configurações</TabsTrigger>
             <TabsTrigger value="logs">Logs do Sistema</TabsTrigger>
+            {isDeveloper() && (
+              <TabsTrigger value="developer">Desenvolvedor</TabsTrigger>
+            )}
           </TabsList>
           
           {/* Tab de Usuários */}
@@ -564,6 +569,93 @@ const AdminPage: React.FC = () => {
               </CardContent>
             </Card>
           </TabsContent>
+          
+          {/* Developer Tab - Only visible to developers */}
+          {isDeveloper() && (
+            <TabsContent value="developer">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Code className="mr-2" />
+                    Área do Desenvolvedor
+                  </CardTitle>
+                  <CardDescription>
+                    Ferramentas avançadas para configuração e desenvolvimento do sistema
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <Card className="bg-background/50">
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-lg flex items-center">
+                          <Database className="mr-2 h-5 w-5" /> Gerenciamento de Banco de Dados
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-sm text-muted-foreground mb-4">
+                          Ferramentas para gerenciar diretamente o banco de dados do sistema.
+                        </p>
+                        <div className="flex flex-col space-y-2">
+                          <Button variant="outline" className="justify-start">
+                            Visualizar Estrutura do BD
+                          </Button>
+                          <Button variant="outline" className="justify-start">
+                            Executar Query SQL
+                          </Button>
+                          <Button variant="outline" className="justify-start">
+                            Backup de Dados
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                    
+                    <Card className="bg-background/50">
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-lg flex items-center">
+                          <Code className="mr-2 h-5 w-5" /> Configurações Avançadas
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-sm text-muted-foreground mb-4">
+                          Opções avançadas para administração do sistema.
+                        </p>
+                        <div className="flex flex-col space-y-2">
+                          <Button variant="outline" className="justify-start">
+                            Gerenciar API Tokens
+                          </Button>
+                          <Button variant="outline" className="justify-start">
+                            Configurar Integrações
+                          </Button>
+                          <Button variant="outline" className="justify-start" variant="destructive">
+                            Modo de Manutenção
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                  
+                  <Card className="bg-background/50">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-lg">Logs do Sistema</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="bg-muted p-3 rounded-md text-xs font-mono h-48 overflow-y-auto">
+                        <p className="text-green-500">[INFO] Sistema iniciado corretamente</p>
+                        <p className="text-blue-500">[DEBUG] Conexão com banco de dados estabelecida</p>
+                        <p className="text-yellow-500">[WARN] Uso de memória acima de 70%</p>
+                        <p className="text-muted-foreground">[INFO] 3 novos usuários registrados nas últimas 24h</p>
+                        <p className="text-red-500">[ERROR] Falha ao processar backup automático</p>
+                        <p className="text-muted-foreground">[INFO] 27 produtos com estoque baixo</p>
+                      </div>
+                      <div className="flex justify-end mt-2">
+                        <Button variant="outline" size="sm">Ver Todos os Logs</Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          )}
         </Tabs>
       </div>
     </AppLayout>

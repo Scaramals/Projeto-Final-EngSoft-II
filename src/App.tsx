@@ -89,6 +89,13 @@ const App = () => (
               </ProtectedRoute>
             } />
             
+            {/* Developer-only routes */}
+            <Route path="/developer" element={
+              <ProtectedRoute developerOnly>
+                <AdminPage />
+              </ProtectedRoute>
+            } />
+            
             {/* 404 route */}
             <Route path="*" element={<NotFound />} />
           </Routes>

@@ -1,15 +1,14 @@
-
 export interface User {
   id: string;
   name: string;
   email: string;
-  role: 'admin' | 'employee';
+  role: 'admin' | 'employee' | 'developer';
 }
 
 export interface Profile {
   id: string;
   fullName: string | null;
-  role: 'admin' | 'employee';
+  role: 'admin' | 'employee' | 'developer';
   createdAt: string;
   updatedAt: string;
 }
