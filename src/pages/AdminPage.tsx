@@ -626,7 +626,8 @@ const AdminPage: React.FC = () => {
                           <Button variant="outline" className="justify-start">
                             Configurar Integrações
                           </Button>
-                          <Button variant="outline" className="justify-start" variant="destructive">
+                          <Button variant="outline" className="justify-start" 
+                            className="justify-start text-destructive hover:text-destructive-foreground hover:bg-destructive">
                             Modo de Manutenção
                           </Button>
                         </div>
