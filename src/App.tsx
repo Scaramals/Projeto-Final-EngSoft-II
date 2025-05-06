@@ -23,7 +23,14 @@ import ReportsPage from "./pages/ReportsPage";
 import SettingsPage from "./pages/SettingsPage";
 import AdminPage from "./pages/AdminPage";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -77,14 +84,14 @@ const App = () => (
               </ProtectedRoute>
             } />
             
-            {/* Admin-only routes */}
+            {/* Admin-only routes - requiredRoles includes both regular admins and permanent admins */}
             <Route path="/admin" element={
-              <ProtectedRoute adminOnly>
+              <ProtectedRoute requiredRoles={['admin']}>
                 <AdminPage />
               </ProtectedRoute>
             } />
             <Route path="/users" element={
-              <ProtectedRoute adminOnly>
+              <ProtectedRoute requiredRoles={['admin']}>
                 <AdminPage />
               </ProtectedRoute>
             } />

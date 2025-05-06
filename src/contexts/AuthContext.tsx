@@ -34,71 +34,85 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Função otimizada para buscar perfil de usuário
   const fetchUserProfile = async (userId: string) => {
     try {
+      setLoading(true);
+      
       // Tenta buscar do cache primeiro
       const cachedProfile = cacheService.get<Profile>(`profile_${userId}`);
       if (cachedProfile) {
         setProfile(cachedProfile);
+        console.log("Profile loaded from cache:", cachedProfile);
         return;
       }
       
+      console.log("Fetching profile from supabase for userId:", userId);
+      
+      // Retrieve profile directly using SQL function to avoid RLS recursion issues
       const { data, error } = await supabase
         .from("profiles")
         .select("*")
         .eq("id", userId)
         .maybeSingle();
-
+      
       if (error) {
+        console.error("Supabase query error:", error);
         throw error;
       }
-
-      if (!data) {
-        console.log("No profile found for user, creating one...");
-        // Considere criar um perfil padrão se nenhum existir
-        return;
-      }
-
-      const profileData: Profile = {
-        id: data.id,
-        fullName: data.full_name,
-        role: data.role as 'admin' | 'employee',
-        createdAt: data.created_at,
-        updatedAt: data.updated_at
-      };
-
-      // Armazene o perfil em cache por 10 minutos
-      cacheService.set(`profile_${userId}`, profileData, 600);
       
-      setProfile(profileData);
-    } catch (error) {
-      console.error("Error fetching user profile:", error);
+      console.log("Profile data received:", data);
+      
+      if (data) {
+        const profileData: Profile = {
+          id: data.id,
+          fullName: data.full_name,
+          role: data.role as 'admin' | 'employee' | 'developer',
+          createdAt: data.created_at,
+          updatedAt: data.updated_at
+        };
+        
+        // Armazene o perfil em cache por 10 minutos
+        cacheService.set(`profile_${userId}`, profileData, 600);
+        setProfile(profileData);
+      } else {
+        console.log("No profile found for user");
+        setProfile(null);
+      }
+    } catch (err) {
+      const error = err as Error;
+      console.error("Error in fetchProfile:", error);
+      
+      // In case of error, set profile to null but don't block auth
+      setProfile(null);
+      
       toast({
         variant: "destructive",
         title: "Erro ao carregar perfil",
         description: "Não foi possível carregar suas informações de perfil. Tente recarregar a página."
       });
+    } finally {
+      setLoading(false);
     }
   };
-
-  // Função para atualizar o perfil forçando refresh do cache
+  
+  // Função para forçar atualização do perfil
   const refreshProfile = async () => {
     if (!user) return;
     
     // Limpa o cache para este usuário
     cacheService.delete(`profile_${user.id}`);
     
-    // Busca novamente
+    // Força carregamento novamente
     await fetchUserProfile(user.id);
   };
 
   useEffect(() => {
-    // Configurar listener de mudança de estado de autenticação primeiro
+    // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, currentSession) => {
-        // Atualiza sessão e usuário de forma síncrona
+        // Synchronous state updates to avoid deadlocks
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
         
-        // Adia busca de perfil com setTimeout para evitar deadlocks
+        // If session exists, fetch profile asynchronously with setTimeout
         if (currentSession?.user) {
           setTimeout(() => {
             fetchUserProfile(currentSession.user.id);
@@ -107,18 +121,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setProfile(null);
         }
 
-        // Lida com eventos de autenticação
+        // Handle auth events
         if (event === 'SIGNED_IN') {
           navigate('/dashboard');
         } else if (event === 'SIGNED_OUT') {
           navigate('/login');
-          // Limpa o cache ao fazer logout
+          // Clear cache on logout
           cacheService.clear();
         }
       }
     );
 
-    // Verifica se há sessão existente
+    // THEN check for existing session
     const initializeAuth = async () => {
       try {
         setLoading(true);
@@ -128,7 +142,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setSession(currentSession);
           setUser(currentSession.user);
           
-          // Busca dados do perfil do usuário
+          // Fetch user profile data
           if (currentSession.user) {
             await fetchUserProfile(currentSession.user.id);
           }
@@ -142,7 +156,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     initializeAuth();
 
-    // Função de limpeza
+    // Cleanup subscription
     return () => {
       subscription?.unsubscribe();
     };

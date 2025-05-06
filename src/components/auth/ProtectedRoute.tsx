@@ -21,7 +21,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   requiredRoles,
 }) => {
   const { user, profile, loading } = useAuth();
-  const { hasPermission, isAdmin, isDeveloper, hasAnyRole } = useAuthorization();
+  const { hasPermission, isAdmin, isDeveloper, hasAnyRole, hasPermanentAdminRights } = useAuthorization();
 
   console.log("ProtectedRoute check:", { 
     user: user?.id, 
@@ -31,6 +31,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     requiredRoles, 
     isAdmin: isAdmin(),
     isDeveloper: isDeveloper(),
+    hasPermanentAdminRights: hasPermanentAdminRights(),
     loading 
   });
 
@@ -60,8 +61,8 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return <Navigate to="/dashboard" />;
   }
 
-  // Admin-only route check
-  if (adminOnly && !isAdmin() && !isDeveloper()) {
+  // Admin-only route check - allow permanent admins even without profile
+  if (adminOnly && !isAdmin() && !isDeveloper() && !hasPermanentAdminRights()) {
     // If the route is admin-only and the user is not an admin or developer, redirect to dashboard
     console.log("Admin only route, user is not admin or developer, redirecting");
     return <Navigate to="/dashboard" />;
@@ -69,8 +70,16 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   // Check for specific roles if provided
   if (requiredRoles && requiredRoles.length > 0) {
-    const hasRequiredRole = hasAnyRole(requiredRoles);
-    console.log("Required roles check:", { requiredRoles, hasRequiredRole });
+    // Allow permanent admins if admin role is required
+    const isPermanentAdmin = hasPermanentAdminRights() && requiredRoles.includes('admin');
+    const hasRequiredRole = hasAnyRole(requiredRoles) || isPermanentAdmin;
+    
+    console.log("Required roles check:", { 
+      requiredRoles, 
+      hasRequiredRole, 
+      isPermanentAdmin,
+      userRole: profile?.role 
+    });
     
     if (!hasRequiredRole) {
       return (

@@ -41,10 +41,10 @@ const NavItem: React.FC<NavItemProps> = ({ to, icon, label, active }) => {
 export const Sidebar: React.FC = () => {
   const location = useLocation();
   const currentPath = location.pathname;
-  const { signOut, profile } = useAuth();
-  const { isAdmin, isDeveloper } = useAuthorization();
+  const { signOut, profile, user } = useAuth();
+  const { isAdmin, isDeveloper, hasPermanentAdminRights } = useAuthorization();
   
-  const canAccessAdmin = isAdmin() || isDeveloper();
+  const canAccessAdmin = isAdmin() || isDeveloper() || hasPermanentAdminRights();
 
   const handleLogout = async () => {
     await signOut();

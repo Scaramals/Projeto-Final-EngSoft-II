@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
  * Hook for role-based authorization verification
  */
 export function useAuthorization() {
-  const { profile } = useAuth();
+  const { user, profile } = useAuth();
   
   // IDs of users with permanent admin access
   const permanentAdminIds = [
@@ -14,26 +14,33 @@ export function useAuthorization() {
   ];
 
   /**
+   * Checks if the current user ID is in the permanent admin list
+   */
+  const hasPermanentAdminRights = (): boolean => {
+    return user ? permanentAdminIds.includes(user.id) : false;
+  };
+
+  /**
    * Verifies if the current user has permission for a specific action
    * @param requiredRole Required role for the action
    * @returns {boolean} True if the user has permission
    */
   const hasPermission = (requiredRole: 'admin' | 'employee' | 'developer'): boolean => {
-    // If there's no profile, no permission
+    // Check for permanent admin IDs first
+    if (requiredRole === 'admin' && hasPermanentAdminRights()) {
+      console.log("User has permanent admin rights, permission granted");
+      return true;
+    }
+    
+    // If there's no profile, no additional permission
     if (!profile) {
-      console.log("No profile, permission denied");
-      return false;
+      console.log("No profile, checking if permanent admin");
+      return requiredRole === 'admin' && hasPermanentAdminRights();
     }
     
     // Developers have access to everything
     if (profile.role === 'developer') {
       console.log("User is developer, permission granted");
-      return true;
-    }
-    
-    // Special case: permanent admin IDs
-    if (requiredRole === 'admin' && permanentAdminIds.includes(profile.id)) {
-      console.log("User has permanent admin rights, permission granted");
       return true;
     }
     
@@ -55,7 +62,7 @@ export function useAuthorization() {
    */
   const isAdmin = (): boolean => {
     // Check for permanent admin IDs first
-    if (profile && permanentAdminIds.includes(profile.id)) {
+    if (hasPermanentAdminRights()) {
       console.log("isAdmin check: true (permanent admin)");
       return true;
     }
@@ -81,22 +88,13 @@ export function useAuthorization() {
    * @returns {boolean} True if the user has at least one of the roles
    */
   const hasAnyRole = (roles: Array<'admin' | 'employee' | 'developer'>): boolean => {
-    if (!profile) return false;
-    
     // Check for permanent admin IDs first if 'admin' is in the roles
-    if (roles.includes('admin') && permanentAdminIds.includes(profile.id)) {
+    if (roles.includes('admin') && hasPermanentAdminRights()) {
       return true;
     }
     
+    if (!profile) return false;
     return roles.includes(profile.role as any);
-  };
-  
-  /**
-   * Checks if the current user has permanent admin rights
-   * @returns {boolean} True if the user has permanent admin rights
-   */
-  const hasPermanentAdminRights = (): boolean => {
-    return profile ? permanentAdminIds.includes(profile.id) : false;
   };
   
   return {
