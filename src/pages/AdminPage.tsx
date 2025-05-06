@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -626,7 +627,7 @@ const AdminPage: React.FC = () => {
                           <Button variant="outline" className="justify-start">
                             Configurar Integrações
                           </Button>
-                          <Button variant="outline" className="justify-start" 
+                          <Button 
                             className="justify-start text-destructive hover:text-destructive-foreground hover:bg-destructive">
                             Modo de Manutenção
                           </Button>
@@ -640,6 +641,9 @@ const AdminPage: React.FC = () => {
                       <CardTitle className="text-lg">Logs do Sistema</CardTitle>
                     </CardHeader>
                     <CardContent>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Visualize os registros de atividade do sistema.
+                      </p>
                       <div className="bg-muted p-3 rounded-md text-xs font-mono h-48 overflow-y-auto">
                         <p className="text-green-500">[INFO] Sistema iniciado corretamente</p>
                         <p className="text-blue-500">[DEBUG] Conexão com banco de dados estabelecida</p>
