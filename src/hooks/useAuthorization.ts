@@ -33,26 +33,26 @@ export function useAuthorization() {
     }
     
     // If there's no profile, no additional permission
-    if (!profile) {
-      console.log("No profile, checking if permanent admin");
-      return requiredRole === 'admin' && hasPermanentAdminRights();
+    if (!profile && !hasPermanentAdminRights()) {
+      console.log("No profile and not permanent admin, permission denied");
+      return false;
     }
     
     // Developers have access to everything
-    if (profile.role === 'developer') {
+    if (profile?.role === 'developer') {
       console.log("User is developer, permission granted");
       return true;
     }
     
     // Administrators have access to most things
-    if (profile.role === 'admin' && requiredRole !== 'developer') {
+    if (profile?.role === 'admin' && requiredRole !== 'developer') {
       console.log("User is admin, permission granted");
       return true;
     }
     
     // Employees only have access to their own permissions
-    const hasRole = profile.role === requiredRole;
-    console.log(`User has role ${profile.role}, required ${requiredRole}, permission ${hasRole ? 'granted' : 'denied'}`);
+    const hasRole = profile?.role === requiredRole;
+    console.log(`User has role ${profile?.role}, required ${requiredRole}, permission ${hasRole ? 'granted' : 'denied'}`);
     return hasRole;
   };
   

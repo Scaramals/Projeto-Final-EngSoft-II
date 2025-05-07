@@ -203,6 +203,14 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: number
       }
+      get_user_role: {
+        Args: { user_id: string }
+        Returns: string
+      }
+      is_permanent_admin: {
+        Args: { user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never

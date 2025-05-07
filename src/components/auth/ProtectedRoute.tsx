@@ -20,12 +20,11 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   developerOnly = false,
   requiredRoles,
 }) => {
-  const { user, profile, loading } = useAuth();
+  const { user, loading } = useAuth();
   const { hasPermission, isAdmin, isDeveloper, hasAnyRole, hasPermanentAdminRights } = useAuthorization();
 
   console.log("ProtectedRoute check:", { 
     user: user?.id, 
-    profile, 
     adminOnly,
     developerOnly,
     requiredRoles, 
@@ -77,8 +76,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     console.log("Required roles check:", { 
       requiredRoles, 
       hasRequiredRole, 
-      isPermanentAdmin,
-      userRole: profile?.role 
+      isPermanentAdmin
     });
     
     if (!hasRequiredRole) {
@@ -86,10 +84,10 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
         <div className="container py-8 max-w-2xl mx-auto">
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Access denied</AlertTitle>
+            <AlertTitle>Acesso negado</AlertTitle>
             <AlertDescription>
-              You do not have permission to access this page. 
-              Please contact the administrator for more information.
+              Você não tem permissão para acessar esta página. 
+              Por favor, contate o administrador para mais informações.
             </AlertDescription>
           </Alert>
           
