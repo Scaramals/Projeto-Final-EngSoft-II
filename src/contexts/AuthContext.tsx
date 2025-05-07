@@ -34,6 +34,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Função otimizada para buscar perfil de usuário
   const fetchUserProfile = async (userId: string) => {
     try {
+      // O profile ainda está carregando
+      if (loading) return;
+      
       setLoading(true);
       
       // Tenta buscar do cache primeiro
@@ -41,12 +44,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (cachedProfile) {
         setProfile(cachedProfile);
         console.log("Profile loaded from cache:", cachedProfile);
+        setLoading(false);
         return;
       }
       
       console.log("Fetching profile from supabase for userId:", userId);
       
-      // Retrieve profile directly using SQL function to avoid RLS recursion issues
+      // Use the security definer function to avoid infinite recursion
       const { data, error } = await supabase
         .from("profiles")
         .select("*")
@@ -105,14 +109,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
-    // Set up auth state listener FIRST
+    // Set up auth state listener FIRST to avoid deadlocks
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, currentSession) => {
-        // Synchronous state updates to avoid deadlocks
+        console.log("Auth state changed:", event, currentSession?.user?.id);
+        
+        // Synchronous state updates to prevent deadlocks
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
         
-        // If session exists, fetch profile asynchronously with setTimeout
+        // Profile fetching needs to be deferred to prevent recursion
         if (currentSession?.user) {
           setTimeout(() => {
             fetchUserProfile(currentSession.user.id);
@@ -142,7 +148,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setSession(currentSession);
           setUser(currentSession.user);
           
-          // Fetch user profile data
+          // Fetch user profile data after updating user state
           if (currentSession.user) {
             await fetchUserProfile(currentSession.user.id);
           }
@@ -199,17 +205,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Cadastro de usuários com termos e condições
+  // Cadastro de usuários com inclusão automática dos dados no perfil
   const signUp = async (email: string, password: string, fullName: string) => {
     try {
       setLoading(true);
-      // Adiciona o campo termsAccepted
-      const { error } = await supabase.auth.signUp({
+      const { error, data } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: {
-            full_name: fullName,
+            full_name: fullName, // This will be used by the trigger to create the profile
             terms_accepted: true,
             terms_accepted_at: new Date().toISOString(),
           },
