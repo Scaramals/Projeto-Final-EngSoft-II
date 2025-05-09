@@ -7,88 +7,88 @@ import { useAuth } from "@/contexts/AuthContext";
 export function useAuthorization() {
   const { user, profile } = useAuth();
   
-  // IDs de usuários com acesso de administrador permanente
+  // IDs of users with permanent admin rights
   const permanentAdminIds = [
     "7d2afaa5-2e77-43cd-b7fb-d5111ea59dc4",
     "a679c5aa-e45b-44e4-b4f2-c5e4ba5333aa"
   ];
 
   /**
-   * Verifica se o ID do usuário atual está na lista de administradores permanentes
+   * Verifies if the current user ID is in the list of permanent admins
    */
   const hasPermanentAdminRights = (): boolean => {
     return user ? permanentAdminIds.includes(user.id) : false;
   };
 
   /**
-   * Verifica se o usuário atual tem permissão para uma ação específica
-   * @param requiredRole Papel necessário para a ação
-   * @returns {boolean} Verdadeiro se o usuário tem permissão
+   * Checks if the current user has permission for a specific action
+   * @param requiredRole Role needed for the action
+   * @returns {boolean} True if the user has permission
    */
   const hasPermission = (requiredRole: 'admin' | 'employee' | 'developer'): boolean => {
-    // Verifica primeiro os IDs de administrador permanentes
+    // Check for permanent admin IDs first
     if (requiredRole === 'admin' && hasPermanentAdminRights()) {
-      console.log("Usuário tem direitos administrativos permanentes, permissão concedida");
+      console.log("User has permanent admin rights, permission granted");
       return true;
     }
     
-    // Se não houver perfil, nenhuma permissão adicional
+    // If no profile and not a permanent admin, no additional permissions
     if (!profile && !hasPermanentAdminRights()) {
-      console.log("Sem perfil e não administrador permanente, permissão negada");
+      console.log("No profile and not a permanent admin, permission denied");
       return false;
     }
     
-    // Desenvolvedores têm acesso a tudo
+    // Developers have access to everything
     if (profile?.role === 'developer') {
-      console.log("Usuário é desenvolvedor, permissão concedida");
+      console.log("User is a developer, permission granted");
       return true;
     }
     
-    // Administradores têm acesso à maioria das coisas
+    // Admins have access to most things (except developer-specific ones)
     if (profile?.role === 'admin' && requiredRole !== 'developer') {
-      console.log("Usuário é administrador, permissão concedida");
+      console.log("User is an admin, permission granted");
       return true;
     }
     
-    // Funcionários só têm acesso às suas próprias permissões
+    // Regular employees only have access to their specific permissions
     const hasRole = profile?.role === requiredRole;
-    console.log(`Usuário tem papel ${profile?.role}, necessário ${requiredRole}, permissão ${hasRole ? 'concedida' : 'negada'}`);
+    console.log(`User has role ${profile?.role}, required ${requiredRole}, permission ${hasRole ? 'granted' : 'denied'}`);
     return hasRole;
   };
   
   /**
-   * Verifica se o usuário atual é um administrador
-   * @returns {boolean} Verdadeiro se o usuário é um administrador
+   * Checks if the current user is an admin
+   * @returns {boolean} True if the user is an admin
    */
   const isAdmin = (): boolean => {
-    // Verifica primeiro os IDs de administrador permanentes
+    // Check for permanent admin IDs first
     if (hasPermanentAdminRights()) {
-      console.log("Verificação isAdmin: verdadeiro (administrador permanente)");
+      console.log("isAdmin check: true (permanent admin)");
       return true;
     }
     
     const admin = profile?.role === 'admin';
-    console.log("Verificação isAdmin:", admin, "perfil:", profile);
+    console.log("isAdmin check:", admin, "profile:", profile);
     return admin;
   };
 
   /**
-   * Verifica se o usuário atual é um desenvolvedor
-   * @returns {boolean} Verdadeiro se o usuário é um desenvolvedor
+   * Checks if the current user is a developer
+   * @returns {boolean} True if the user is a developer
    */
   const isDeveloper = (): boolean => {
     const developer = profile?.role === 'developer';
-    console.log("Verificação isDeveloper:", developer, "perfil:", profile);
+    console.log("isDeveloper check:", developer, "profile:", profile);
     return developer;
   };
   
   /**
-   * Verifica se o usuário tem qualquer um dos papéis especificados
-   * @param roles Array de papéis permitidos
-   * @returns {boolean} Verdadeiro se o usuário tem pelo menos um dos papéis
+   * Checks if the user has any of the specified roles
+   * @param roles Array of allowed roles
+   * @returns {boolean} True if the user has at least one of the roles
    */
   const hasAnyRole = (roles: Array<'admin' | 'employee' | 'developer'>): boolean => {
-    // Verifica primeiro os IDs de administrador permanentes se 'admin' estiver nos papéis
+    // Check for permanent admin IDs first if 'admin' is in the roles
     if (roles.includes('admin') && hasPermanentAdminRights()) {
       return true;
     }

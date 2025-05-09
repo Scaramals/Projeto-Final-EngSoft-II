@@ -34,7 +34,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     loading 
   });
 
-  // Exibe estado de carregamento enquanto verifica autenticação
+  // Show loading state while checking authentication
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -48,31 +48,31 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     );
   }
 
-  // Se não estiver autenticado, redireciona para o login
+  // If not authenticated, redirect to login
   if (!user) {
-    console.log("Não autenticado, redirecionando para login");
+    console.log("Not authenticated, redirecting to login");
     return <Navigate to="/login" />;
   }
 
-  // Verificação de rota apenas para desenvolvedores
+  // Check for developer-only route
   if (developerOnly && !isDeveloper()) {
-    console.log("Rota apenas para desenvolvedores, usuário não é desenvolvedor, redirecionando");
+    console.log("Developer-only route, user is not a developer, redirecting");
     return <Navigate to="/dashboard" />;
   }
 
-  // Verificação de rota apenas para administradores - permite administradores permanentes mesmo sem perfil
+  // Check for admin-only route - allow permanent admins even without profile
   if (adminOnly && !isAdmin() && !isDeveloper() && !hasPermanentAdminRights()) {
-    console.log("Rota apenas para administradores, usuário não é administrador ou desenvolvedor, redirecionando");
+    console.log("Admin-only route, user is not an admin or developer, redirecting");
     return <Navigate to="/dashboard" />;
   }
 
-  // Verifica papéis específicos se fornecidos
+  // Check specific roles if provided
   if (requiredRoles && requiredRoles.length > 0) {
-    // Permite administradores permanentes se o papel de administrador for necessário
+    // Allow permanent admins if admin role is required
     const isPermanentAdmin = hasPermanentAdminRights() && requiredRoles.includes('admin');
     const hasRequiredRole = hasAnyRole(requiredRoles) || isPermanentAdmin;
     
-    console.log("Verificação de papéis necessários:", { 
+    console.log("Required roles check:", { 
       requiredRoles, 
       hasRequiredRole, 
       isPermanentAdmin
@@ -83,10 +83,10 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
         <div className="container py-8 max-w-2xl mx-auto">
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Acesso negado</AlertTitle>
+            <AlertTitle>Access denied</AlertTitle>
             <AlertDescription>
-              Você não tem permissão para acessar esta página. 
-              Por favor, contate o administrador para mais informações.
+              You don't have permission to access this page. 
+              Please contact the administrator for more information.
             </AlertDescription>
           </Alert>
           
@@ -98,7 +98,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     }
   }
 
-  // Renderiza o conteúdo protegido
-  console.log("Acesso concedido, renderizando conteúdo protegido");
+  // Render the protected content
+  console.log("Access granted, rendering protected content");
   return <>{children}</>;
 };
