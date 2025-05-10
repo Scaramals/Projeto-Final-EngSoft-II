@@ -1,216 +1,210 @@
 
 import React, { useState } from "react";
-import { Product } from "@/types";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/components/ui/use-toast";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { useForm } from "react-hook-form";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import * as z from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Button } from "@/components/ui/button";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { CurrencyInput } from "@/components/ui/currency-input";
+import { ProductFormData } from "@/types";
+import { CategorySelect } from "@/components/products/CategorySelect";
 
-interface ProductFormProps {
-  initialData?: Partial<Product>;
-  onSubmit: (data: Partial<Product>) => void;
-  onCancel: () => void;
-  isLoading: boolean;
-}
-
-// Schema for product validation
-const productSchema = z.object({
-  name: z.string().min(3, "O nome do produto deve ter pelo menos 3 caracteres").max(100),
+const productFormSchema = z.object({
+  name: z.string()
+    .min(2, { message: "Nome deve ter pelo menos 2 caracteres" })
+    .max(100, { message: "Nome não pode exceder 100 caracteres" }),
   description: z.string().optional(),
-  quantity: z.coerce.number().int().min(0, "A quantidade não pode ser negativa"),
-  price: z.coerce.number().min(0, "O preço deve ser maior ou igual a zero").refine(
-    (val) => !isNaN(val) && Number.isFinite(val),
-    "O preço deve ser um número válido"
-  ),
+  quantity: z.coerce.number()
+    .int({ message: "Quantidade deve ser um número inteiro" })
+    .min(0, { message: "Quantidade não pode ser negativa" }),
+  price: z.coerce.number()
+    .min(0, { message: "Preço não pode ser negativo" }),
   category: z.string().optional(),
-  minimumStock: z.coerce.number().int().min(0, "O estoque mínimo não pode ser negativo"),
-  imageUrl: z.string().url("URL inválida").optional().or(z.literal(''))
+  minimumStock: z.coerce.number()
+    .int({ message: "Estoque mínimo deve ser um número inteiro" })
+    .min(0, { message: "Estoque mínimo não pode ser negativo" })
+    .optional(),
+  imageUrl: z.string().url({ message: "URL de imagem inválida" }).optional().or(z.literal("")),
 });
 
-type ProductFormValues = z.infer<typeof productSchema>;
+interface ProductFormProps {
+  defaultValues?: Partial<ProductFormData>;
+  onSubmit: (data: ProductFormData) => void;
+  onCancel: () => void;
+  isLoading?: boolean;
+}
 
 export const ProductForm: React.FC<ProductFormProps> = ({
-  initialData = {},
+  defaultValues,
   onSubmit,
   onCancel,
-  isLoading,
+  isLoading = false,
 }) => {
-  const { toast } = useToast();
-
-  // Set default values for the form
-  const defaultValues: ProductFormValues = {
-    name: initialData.name || "",
-    description: initialData.description || "",
-    quantity: initialData.quantity || 0,
-    price: initialData.price || 0,
-    category: initialData.category || "",
-    minimumStock: initialData.minimumStock || 5,
-    imageUrl: initialData.imageUrl || "",
-  };
-
-  const form = useForm<ProductFormValues>({
-    resolver: zodResolver(productSchema),
-    defaultValues,
-    mode: "onChange"
+  const form = useForm<ProductFormData>({
+    resolver: zodResolver(productFormSchema),
+    defaultValues: {
+      name: "",
+      description: "",
+      quantity: 0,
+      price: 0,
+      category: "",
+      minimumStock: 5,
+      imageUrl: "",
+      ...defaultValues,
+    },
   });
 
-  const handleFormSubmit = (values: ProductFormValues) => {
-    // Clean up empty values
-    const formattedValues = {
-      ...values,
-      imageUrl: values.imageUrl || undefined,
-      category: values.category || undefined,
-      description: values.description || undefined,
-    };
-    
-    onSubmit(formattedValues);
-  };
-
-  // Format price as currency
-  const formatPrice = (value: string) => {
-    // Remove non-numeric characters
-    const numericValue = value.replace(/[^0-9.,]/g, "");
-    // Replace comma with dot for decimal
-    const normalizedValue = numericValue.replace(",", ".");
-    
-    return normalizedValue;
+  const handleSubmit = (data: ProductFormData) => {
+    onSubmit(data);
   };
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6">
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <FormField
-            control={form.control}
-            name="name"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Nome do produto *</FormLabel>
-                <FormControl>
-                  <Input {...field} placeholder="Nome do produto" />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
-          <FormField
-            control={form.control}
-            name="category"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Categoria</FormLabel>
-                <FormControl>
-                  <Input {...field} placeholder="Categoria do produto" />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
-          <FormField
-            control={form.control}
-            name="description"
-            render={({ field }) => (
-              <FormItem className="md:col-span-2">
-                <FormLabel>Descrição</FormLabel>
-                <FormControl>
-                  <Textarea {...field} rows={3} placeholder="Descrição detalhada do produto" />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
-          <FormField
-            control={form.control}
-            name="price"
-            render={({ field: { onChange, ...rest } }) => (
-              <FormItem>
-                <FormLabel>Preço (R$)</FormLabel>
-                <FormControl>
-                  <Input 
-                    type="number" 
-                    step="0.01"
-                    min="0"
-                    placeholder="0,00"
-                    onChange={e => {
-                      const formattedValue = formatPrice(e.target.value);
-                      onChange(formattedValue);
-                    }}
-                    {...rest}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
-          <FormField
-            control={form.control}
-            name="quantity"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Quantidade em estoque</FormLabel>
-                <FormControl>
-                  <Input 
-                    type="number"
-                    min="0"
-                    step="1" 
-                    placeholder="0"
-                    {...field}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
-          <FormField
-            control={form.control}
-            name="minimumStock"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Estoque mínimo</FormLabel>
-                <FormControl>
-                  <Input 
-                    type="number"
-                    min="0"
-                    step="1" 
-                    placeholder="5"
-                    {...field}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
-          <FormField
-            control={form.control}
-            name="imageUrl"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>URL da imagem</FormLabel>
-                <FormControl>
-                  <Input {...field} placeholder="https://..." />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          <div className="space-y-6">
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Nome do produto*</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Digite o nome do produto"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="category"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Categoria</FormLabel>
+                  <FormControl>
+                    <CategorySelect 
+                      value={field.value || ''} 
+                      onChange={field.onChange} 
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="quantity"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Quantidade*</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        {...field}
+                        onChange={(e) => field.onChange(e.target.valueAsNumber || 0)}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="minimumStock"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Estoque mínimo</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        {...field}
+                        onChange={(e) => field.onChange(e.target.valueAsNumber || 0)}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <FormField
+              control={form.control}
+              name="price"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Preço*</FormLabel>
+                  <FormControl>
+                    <CurrencyInput
+                      value={field.value}
+                      onChange={field.onChange}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
+          <div className="space-y-6">
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Descrição</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Descreva o produto"
+                      className="h-32 resize-none"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="imageUrl"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>URL da imagem</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="https://exemplo.com/imagem.jpg"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
         </div>
-        
-        <div className="flex justify-end space-x-3">
+
+        <div className="flex justify-end gap-2">
           <Button type="button" variant="outline" onClick={onCancel}>
             Cancelar
           </Button>
-          <Button type="submit" disabled={isLoading || !form.formState.isValid}>
+          <Button type="submit" disabled={isLoading}>
             {isLoading ? "Salvando..." : "Salvar produto"}
           </Button>
         </div>

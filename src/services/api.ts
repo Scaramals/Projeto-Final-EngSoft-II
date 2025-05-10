@@ -4,17 +4,17 @@ import { Product, StockMovement, FilterParams, DashboardStats } from "@/types";
 import { cacheService } from "./cacheService";
 
 /**
- * Service layer to abstract database operations with cache
+ * Camada de serviço para abstrair operações de banco de dados com cache
  */
 export const ApiService = {
   /**
-   * Get dashboard statistics - optimized with parallel requests and cache
+   * Obter estatísticas do dashboard - otimizado com requisições paralelas e cache
    */
   async getDashboardStats(skipCache: boolean = false): Promise<DashboardStats> {
     try {
       const cacheKey = 'dashboard_stats';
       
-      // Return from cache if available and not expired
+      // Retornar do cache se disponível e não expirado
       if (!skipCache) {
         const cachedStats = cacheService.get<DashboardStats>(cacheKey);
         if (cachedStats) {
@@ -22,36 +22,39 @@ export const ApiService = {
         }
       }
       
-      // Use Promise.all to run queries in parallel
+      // Usar Promise.all para executar consultas em paralelo
       const [
         productsResult,
         lowStockResult,
         valueResult,
         movementsResult
       ] = await Promise.all([
-        // Total products count
+        // Contagem total de produtos
         supabase.from("products").select("*", { count: "exact", head: true }),
         
-        // Low stock products count
-        supabase.from("products").select("*", { count: "exact", head: true }).lt("quantity", 10),
+        // Contagem de produtos com estoque baixo
+        supabase.from("products")
+          .select("*", { count: "exact", head: true })
+          .lt("quantity", supabase.rpc("coalesce_min_stock"))
+          .gt("quantity", 0),
         
-        // Fetch data for total value calculation 
+        // Buscar dados para cálculo do valor total
         supabase.from("products").select("quantity, price"),
         
-        // Recent movements count
+        // Contagem de movimentações recentes
         supabase.from("stock_movements")
           .select("*", { count: "exact", head: true })
           .order("date", { ascending: false })
           .limit(10)
       ]);
 
-      // Handle potential errors
+      // Tratar possíveis erros
       if (productsResult.error) throw productsResult.error;
       if (lowStockResult.error) throw lowStockResult.error;
       if (valueResult.error) throw valueResult.error;
       if (movementsResult.error) throw movementsResult.error;
 
-      // Calculate total value
+      // Calcular valor total
       const totalValue = valueResult.data.reduce(
         (sum, product) => sum + product.quantity * product.price,
         0
@@ -64,18 +67,18 @@ export const ApiService = {
         recentMovementsCount: movementsResult.count || 0,
       };
       
-      // Cache the result for 2 minutes
+      // Armazenar em cache por 2 minutos
       cacheService.set(cacheKey, stats, 120);
       
       return stats;
     } catch (error) {
-      console.error("Error fetching dashboard stats:", error);
+      console.error("Erro ao buscar estatísticas do dashboard:", error);
       throw error;
     }
   },
 
   /**
-   * Get low stock products with improved caching
+   * Obter produtos com estoque baixo com melhoria no cache
    */
   async getLowStockProducts(limit: number = 5, skipCache: boolean = false): Promise<Product[]> {
     const cacheKey = `low_stock_products_${limit}`;
@@ -90,13 +93,14 @@ export const ApiService = {
     const { data, error } = await supabase
       .from("products")
       .select("*")
-      .lt("quantity", 10)
+      .lt("quantity", supabase.rpc("coalesce_min_stock"))
+      .gt("quantity", 0)
       .order("quantity")
       .limit(limit);
 
     if (error) throw error;
     
-    // Convert database model to our Product interface
+    // Converter modelo do banco para nossa interface Product
     const products = data.map(item => ({
       id: item.id,
       name: item.name,
@@ -110,14 +114,14 @@ export const ApiService = {
       updatedAt: item.updated_at
     }));
     
-    // Cache for 2 minutes
+    // Cache por 2 minutos
     cacheService.set(cacheKey, products, 120);
     
     return products;
   },
 
   /**
-   * Get recent stock movements with improved error handling and caching
+   * Obter movimentações recentes de estoque com melhor tratamento de erro e cache
    */
   async getRecentMovements(limit: number = 10, skipCache: boolean = false): Promise<StockMovement[]> {
     const cacheKey = `recent_movements_${limit}`;
@@ -159,17 +163,17 @@ export const ApiService = {
       userId: movement.user_id || undefined,
     }));
     
-    // Cache for 1 minuto
+    // Cache por 1 minuto
     cacheService.set(cacheKey, movements, 60);
     
     return movements;
   },
 
   /**
-   * Get products with filtering, pagination and improved performance with cache
+   * Obter produtos com filtragem, paginação e melhor performance com cache
    */
   async getProducts(filters?: FilterParams, skipCache: boolean = false): Promise<Product[]> {
-    // Create cache key based on filters
+    // Criar chave de cache baseada nos filtros
     const cacheKey = `products_${JSON.stringify(filters || {})}`;
     
     if (!skipCache) {
@@ -189,7 +193,7 @@ export const ApiService = {
       query = query.eq('category', filters.category);
     }
     
-    // Apply sorting if provided
+    // Aplicar ordenação se fornecida
     if (filters?.sortBy) {
       const direction = filters?.sortDirection || 'asc';
       query = query.order(filters.sortBy, { ascending: direction === 'asc' });
@@ -200,7 +204,7 @@ export const ApiService = {
     const { data, error } = await query;
 
     if (error) {
-      throw new Error(`Error fetching products: ${error.message}`);
+      throw new Error(`Erro ao buscar produtos: ${error.message}`);
     }
     
     if (!data) return [];
@@ -218,14 +222,14 @@ export const ApiService = {
       updatedAt: item.updated_at
     }));
     
-    // Cache for 2 minutos
+    // Cache por 2 minutos
     cacheService.set(cacheKey, products, 120);
     
     return products;
   },
 
   /**
-   * Get product categories - Optimized with direct query and cache
+   * Obter categorias de produtos - Otimizado com consulta direta e cache
    */
   async getCategories(skipCache: boolean = false): Promise<string[]> {
     const cacheKey = 'product_categories';
@@ -237,20 +241,20 @@ export const ApiService = {
       }
     }
     
-    // Use direct SQL query para buscar categorias distintas
+    // Usar consulta SQL direta para buscar categorias distintas
     const { data, error } = await supabase
-      .from('products')
-      .select('category')
-      .not('category', 'is', null)
-      .order('category');
+      .from('categories')
+      .select('name')
+      .not('name', 'is', null)
+      .order('name');
     
     if (error) throw error;
     
     if (!data) return [];
     
-    // Extract category values and filter out any null values
+    // Extrair valores de categoria e filtrar valores nulos
     const categories = data
-      .map(item => item.category)
+      .map(item => item.name)
       .filter(Boolean) as string[];
     
     // Cache por 10 minutos (categorias mudam com pouca frequência)

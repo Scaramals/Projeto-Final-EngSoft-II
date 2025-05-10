@@ -31,7 +31,7 @@ export interface Product {
 export interface StockMovement {
   id: string;
   productId: string;
-  productName?: string; // Added product name for display
+  productName?: string; // Nome do produto para exibição
   quantity: number;
   type: 'in' | 'out';
   date: string;
@@ -84,7 +84,7 @@ export interface FilterParams {
   sortDirection?: 'asc' | 'desc';
 }
 
-// Form types
+// Tipos para formulários
 export interface ProductFormData {
   name: string;
   description?: string;
@@ -109,4 +109,9 @@ export interface SupplierFormData {
   phone?: string;
   address?: string;
   notes?: string;
+}
+
+export interface CategoryFormData {
+  name: string;
+  description?: string;
 }

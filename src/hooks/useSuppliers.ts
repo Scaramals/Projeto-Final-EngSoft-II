@@ -42,7 +42,7 @@ export function useSuppliers() {
   const { toast } = useToast();
   const { user } = useAuth();
 
-  // Fetch all suppliers
+  // Fetch all suppliers - corrigido para não usar tabela users diretamente
   const useAllSuppliers = (search?: string) => {
     return useQuery({
       queryKey: ['suppliers', search],
@@ -63,11 +63,11 @@ export function useSuppliers() {
 
         return (data || []).map(mapDbSupplierToSupplier) as Supplier[];
       },
-      enabled: !!user, // Only run query when user is authenticated
+      enabled: !!user, // Só executa quando o usuário está autenticado
     });
   };
 
-  // Fetch a single supplier by ID
+  // Buscar um fornecedor pelo ID
   const useSupplier = (supplierId: string | undefined) => {
     return useQuery({
       queryKey: ['suppliers', supplierId],
@@ -90,13 +90,13 @@ export function useSuppliers() {
     });
   };
 
-  // Create a new supplier
+  // Criar um novo fornecedor
   const useCreateSupplier = () => {
     return useMutation({
       mutationFn: async (supplier: SupplierFormData) => {
         const dbSupplier = mapSupplierToDbSupplier(supplier);
         
-        // Add user ID as created_by
+        // Adicionar ID do usuário como created_by
         if (user) {
           dbSupplier.created_by = user.id;
         }
@@ -130,7 +130,7 @@ export function useSuppliers() {
     });
   };
 
-  // Update an existing supplier
+  // Atualizar um fornecedor existente
   const useUpdateSupplier = () => {
     return useMutation({
       mutationFn: async ({ id, ...updates }: Partial<Supplier> & { id: string }) => {
@@ -167,7 +167,7 @@ export function useSuppliers() {
     });
   };
 
-  // Delete a supplier
+  // Excluir um fornecedor
   const useDeleteSupplier = () => {
     return useMutation({
       mutationFn: async (id: string) => {
