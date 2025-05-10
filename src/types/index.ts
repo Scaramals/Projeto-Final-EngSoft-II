@@ -1,3 +1,4 @@
+
 export interface User {
   id: string;
   name: string;
@@ -11,6 +12,7 @@ export interface Profile {
   role: 'admin' | 'employee' | 'developer';
   createdAt: string;
   updatedAt: string;
+  is_master?: boolean;
 }
 
 export interface Product {
@@ -42,6 +44,19 @@ export interface Category {
   name: string;
   description?: string;
   createdAt: string;
+}
+
+export interface Supplier {
+  id: string;
+  name: string;
+  contactName?: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+  createdBy?: string;
 }
 
 export interface DashboardStats {
@@ -85,4 +100,13 @@ export interface StockMovementFormData {
   quantity: number;
   notes?: string;
   productId: string;
+}
+
+export interface SupplierFormData {
+  name: string;
+  contactName?: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  notes?: string;
 }

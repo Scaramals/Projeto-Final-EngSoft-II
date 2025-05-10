@@ -21,14 +21,21 @@ export function useAuthorization() {
   };
 
   /**
+   * Checks if the current user is a master user (can manage all aspects of the system)
+   */
+  const isMaster = (): boolean => {
+    return hasPermanentAdminRights() || (profile?.is_master === true);
+  };
+
+  /**
    * Checks if the current user has permission for a specific action
    * @param requiredRole Role needed for the action
    * @returns {boolean} True if the user has permission
    */
   const hasPermission = (requiredRole: 'admin' | 'employee' | 'developer'): boolean => {
-    // Check for permanent admin IDs first
-    if (requiredRole === 'admin' && hasPermanentAdminRights()) {
-      console.log("User has permanent admin rights, permission granted");
+    // Check for permanent admin IDs or master users first
+    if ((requiredRole === 'admin' && hasPermanentAdminRights()) || isMaster()) {
+      console.log("User has permanent admin rights or is master, permission granted");
       return true;
     }
     
@@ -62,8 +69,8 @@ export function useAuthorization() {
    */
   const isAdmin = (): boolean => {
     // Check for permanent admin IDs first
-    if (hasPermanentAdminRights()) {
-      console.log("isAdmin check: true (permanent admin)");
+    if (hasPermanentAdminRights() || isMaster()) {
+      console.log("isAdmin check: true (permanent admin or master)");
       return true;
     }
     
@@ -89,7 +96,7 @@ export function useAuthorization() {
    */
   const hasAnyRole = (roles: Array<'admin' | 'employee' | 'developer'>): boolean => {
     // Check for permanent admin IDs first if 'admin' is in the roles
-    if (roles.includes('admin') && hasPermanentAdminRights()) {
+    if (roles.includes('admin') && (hasPermanentAdminRights() || isMaster())) {
       return true;
     }
     
@@ -103,6 +110,7 @@ export function useAuthorization() {
     isDeveloper,
     hasAnyRole,
     hasPermanentAdminRights,
+    isMaster,
     userRole: profile?.role || null
   };
 }

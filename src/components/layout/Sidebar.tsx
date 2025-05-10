@@ -10,7 +10,8 @@ import {
   LogOut,
   Users,
   ShieldCheck,
-  Code
+  Code,
+  Truck
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAuthorization } from "@/hooks/useAuthorization";
@@ -42,9 +43,9 @@ export const Sidebar: React.FC = () => {
   const location = useLocation();
   const currentPath = location.pathname;
   const { signOut, profile, user } = useAuth();
-  const { isAdmin, isDeveloper, hasPermanentAdminRights } = useAuthorization();
+  const { isAdmin, isDeveloper, hasPermanentAdminRights, isMaster } = useAuthorization();
   
-  const canAccessAdmin = isAdmin() || isDeveloper() || hasPermanentAdminRights();
+  const canAccessAdmin = isAdmin() || isDeveloper() || hasPermanentAdminRights() || isMaster();
 
   const handleLogout = async () => {
     await signOut();
@@ -77,6 +78,12 @@ export const Sidebar: React.FC = () => {
           icon={<Box size={20} />}
           label="Estoque"
           active={currentPath.startsWith("/inventory")}
+        />
+        <NavItem
+          to="/suppliers"
+          icon={<Truck size={20} />}
+          label="Fornecedores"
+          active={currentPath.startsWith("/suppliers")}
         />
         <NavItem
           to="/reports"

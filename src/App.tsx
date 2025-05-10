@@ -22,6 +22,9 @@ import InventoryPage from "./pages/InventoryPage";
 import ReportsPage from "./pages/ReportsPage";
 import SettingsPage from "./pages/SettingsPage";
 import AdminPage from "./pages/AdminPage";
+import SuppliersPage from "./pages/SuppliersPage";
+import AddSupplierPage from "./pages/AddSupplierPage";
+import SupplierDetailPage from "./pages/SupplierDetailPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -81,6 +84,28 @@ const App = () => (
             <Route path="/settings" element={
               <ProtectedRoute>
                 <SettingsPage />
+              </ProtectedRoute>
+            } />
+            
+            {/* Supplier routes */}
+            <Route path="/suppliers" element={
+              <ProtectedRoute>
+                <SuppliersPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/suppliers/new" element={
+              <ProtectedRoute requiredRoles={['admin']}>
+                <AddSupplierPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/suppliers/:supplierId" element={
+              <ProtectedRoute>
+                <SupplierDetailPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/suppliers/:supplierId/edit" element={
+              <ProtectedRoute requiredRoles={['admin']}>
+                <SupplierDetailPage />
               </ProtectedRoute>
             } />
             

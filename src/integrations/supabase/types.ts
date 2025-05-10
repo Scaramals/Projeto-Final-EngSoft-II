@@ -74,6 +74,7 @@ export type Database = {
           created_at: string
           full_name: string | null
           id: string
+          is_master: boolean | null
           role: string | null
           updated_at: string
         }
@@ -81,6 +82,7 @@ export type Database = {
           created_at?: string
           full_name?: string | null
           id: string
+          is_master?: boolean | null
           role?: string | null
           updated_at?: string
         }
@@ -88,6 +90,7 @@ export type Database = {
           created_at?: string
           full_name?: string | null
           id?: string
+          is_master?: boolean | null
           role?: string | null
           updated_at?: string
         }
@@ -130,6 +133,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      suppliers: {
+        Row: {
+          address: string | null
+          contact_name: string | null
+          created_at: string
+          created_by: string | null
+          email: string | null
+          id: string
+          name: string
+          notes: string | null
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          contact_name?: string | null
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          contact_name?: string | null
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
       }
     }
     Views: {

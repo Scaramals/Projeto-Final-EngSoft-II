@@ -21,7 +21,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   requiredRoles,
 }) => {
   const { user, loading } = useAuth();
-  const { hasPermission, isAdmin, isDeveloper, hasAnyRole, hasPermanentAdminRights } = useAuthorization();
+  const { hasPermission, isAdmin, isDeveloper, hasAnyRole, hasPermanentAdminRights, isMaster } = useAuthorization();
 
   console.log("ProtectedRoute check:", { 
     user: user?.id, 
@@ -30,6 +30,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     requiredRoles, 
     isAdmin: isAdmin(),
     isDeveloper: isDeveloper(),
+    isMaster: isMaster(),
     hasPermanentAdminRights: hasPermanentAdminRights(),
     loading 
   });
@@ -60,16 +61,16 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return <Navigate to="/dashboard" />;
   }
 
-  // Check for admin-only route - allow permanent admins even without profile
-  if (adminOnly && !isAdmin() && !isDeveloper() && !hasPermanentAdminRights()) {
-    console.log("Admin-only route, user is not an admin or developer, redirecting");
+  // Check for admin-only route - allow master users or permanent admins
+  if (adminOnly && !isAdmin() && !isDeveloper() && !hasPermanentAdminRights() && !isMaster()) {
+    console.log("Admin-only route, user is not an admin, developer, or master, redirecting");
     return <Navigate to="/dashboard" />;
   }
 
   // Check specific roles if provided
   if (requiredRoles && requiredRoles.length > 0) {
-    // Allow permanent admins if admin role is required
-    const isPermanentAdmin = hasPermanentAdminRights() && requiredRoles.includes('admin');
+    // Allow permanent admins or master users if admin role is required
+    const isPermanentAdmin = (hasPermanentAdminRights() || isMaster()) && requiredRoles.includes('admin');
     const hasRequiredRole = hasAnyRole(requiredRoles) || isPermanentAdmin;
     
     console.log("Required roles check:", { 
@@ -83,10 +84,10 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
         <div className="container py-8 max-w-2xl mx-auto">
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Access denied</AlertTitle>
+            <AlertTitle>Acesso negado</AlertTitle>
             <AlertDescription>
-              You don't have permission to access this page. 
-              Please contact the administrator for more information.
+              Você não tem permissão para acessar esta página. 
+              Por favor, entre em contato com o administrador para mais informações.
             </AlertDescription>
           </Alert>
           
