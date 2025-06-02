@@ -25,10 +25,13 @@ export const OptimizedApiService = {
       
       if (error) throw error;
       
-      // Cache por 2 minutos
-      cacheService.set(cacheKey, data, 120);
+      // Properly handle the Json type conversion
+      const stats = data as unknown as DashboardStats;
       
-      return data as DashboardStats;
+      // Cache por 2 minutos
+      cacheService.set(cacheKey, stats, 120);
+      
+      return stats;
     } catch (error) {
       console.error("Erro ao buscar estatísticas do dashboard:", error);
       throw error;
@@ -55,10 +58,13 @@ export const OptimizedApiService = {
       
       if (error) throw error;
       
-      // Cache por 5 minutos
-      cacheService.set(cacheKey, data || [], 300);
+      // Properly handle the array type conversion
+      const movements = (data || []) as unknown as MovementSummary[];
       
-      return (data || []) as MovementSummary[];
+      // Cache por 5 minutos
+      cacheService.set(cacheKey, movements, 300);
+      
+      return movements;
     } catch (error) {
       console.error("Erro ao buscar resumo de movimentações:", error);
       throw error;
@@ -83,10 +89,13 @@ export const OptimizedApiService = {
       
       if (error) throw error;
       
-      // Cache por 10 minutos
-      cacheService.set(cacheKey, data || [], 600);
+      // Properly handle the array type conversion
+      const analysis = (data || []) as unknown as CategoryAnalysis[];
       
-      return (data || []) as CategoryAnalysis[];
+      // Cache por 10 minutos
+      cacheService.set(cacheKey, analysis, 600);
+      
+      return analysis;
     } catch (error) {
       console.error("Erro ao buscar análise de categorias:", error);
       throw error;
