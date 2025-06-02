@@ -1,177 +1,98 @@
 
-import React, { useState, useEffect } from "react";
-import { BarChart, LineChart, PieChart } from "@/components/ui/charts";
+import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Skeleton } from "@/components/ui/skeleton";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/components/ui/use-toast";
-import { DateRangePicker } from "@/components/reports/DateRangePicker";
-import { ReportFilters } from "@/components/reports/ReportFilters";
-import { StockValueReport } from "@/components/reports/StockValueReport";
-import { MovementsReport } from "@/components/reports/MovementsReport";
-import { CategoryDistributionChart } from "@/components/reports/CategoryDistributionChart";
+import { Button } from "@/components/ui/button";
+import { RefreshCw, TrendingUp, Package, BarChart3 } from "lucide-react";
+import { OptimizedStockValueReport } from "@/components/reports/OptimizedStockValueReport";
+import { OptimizedMovementsReport } from "@/components/reports/OptimizedMovementsReport";
+import { OptimizedCategoryDistributionChart } from "@/components/reports/OptimizedCategoryDistributionChart";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { ApiService } from "@/services/api";
+import { useOptimizedDashboard } from "@/hooks/useOptimizedDashboard";
+import { OptimizedApiService } from "@/services/optimizedApi";
+import { useToast } from "@/components/ui/use-toast";
 
 const ReportsPage = () => {
-  const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("overview");
-  const [dateRange, setDateRange] = useState({ from: new Date(new Date().setDate(new Date().getDate() - 30)), to: new Date() });
-  const [filters, setFilters] = useState({
-    search: "",
-    category: "all",
-    sortBy: undefined as string | undefined,
-    sortDirection: "asc" as "asc" | "desc"
-  });
-  const [categories, setCategories] = useState<string[]>([]);
+  const { refreshAll, isLoading } = useOptimizedDashboard();
   const { toast } = useToast();
 
-  useEffect(() => {
-    // Load initial data
-    const loadData = async () => {
-      try {
-        // Load categories
-        const categoriesData = await ApiService.getCategories();
-        setCategories(categoriesData);
-        setIsLoading(false);
-      } catch (error) {
-        console.error("Error loading report data:", error);
-        toast({
-          variant: "destructive",
-          title: "Erro ao carregar relatórios",
-          description: "Não foi possível carregar os dados dos relatórios. Tente novamente mais tarde.",
-        });
-        setIsLoading(false);
-      }
-    };
-
-    loadData();
-  }, [toast]);
+  const handleRefresh = async () => {
+    try {
+      OptimizedApiService.clearCache();
+      await refreshAll();
+      toast({
+        title: "Dados atualizados",
+        description: "Os relatórios foram atualizados com sucesso!",
+      });
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Erro ao atualizar",
+        description: "Não foi possível atualizar os dados. Tente novamente.",
+      });
+    }
+  };
 
   const handleTabChange = (value: string) => {
     setActiveTab(value);
   };
 
-  const handleDateRangeChange = (range: { from: Date; to: Date }) => {
-    setDateRange(range);
-  };
-  
-  const handleFiltersChange = (newFilters: {
-    search: string;
-    category: string;
-    sortBy?: string;
-    sortDirection?: "asc" | "desc";
-  }) => {
-    setFilters({
-      search: newFilters.search,
-      category: newFilters.category,
-      sortBy: newFilters.sortBy, 
-      sortDirection: newFilters.sortDirection || "asc"
-    });
-  };
-
   return (
     <AppLayout>
-      <div className="flex flex-col gap-6">
-        <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold">Relatórios e Análises</h1>
-          <DateRangePicker
-            dateRange={dateRange}
-            onDateRangeChange={handleDateRangeChange}
-          />
+      <div className="flex flex-col gap-4 md:gap-6 p-2 md:p-0">
+        {/* Header responsivo */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+          <div>
+            <h1 className="text-xl md:text-2xl font-bold">Relatórios e Análises</h1>
+            <p className="text-sm text-muted-foreground">
+              Acompanhe o desempenho do seu estoque em tempo real
+            </p>
+          </div>
+          <Button 
+            onClick={handleRefresh} 
+            disabled={isLoading}
+            size="sm"
+            className="w-full sm:w-auto"
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            Atualizar
+          </Button>
         </div>
 
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-          <TabsList className="mb-4">
-            <TabsTrigger value="overview">Visão Geral</TabsTrigger>
-            <TabsTrigger value="stock">Estoque</TabsTrigger>
-            <TabsTrigger value="movements">Movimentações</TabsTrigger>
+          {/* Tabs responsivas */}
+          <TabsList className="grid w-full grid-cols-3 mb-4">
+            <TabsTrigger value="overview" className="text-xs md:text-sm">
+              <TrendingUp className="w-4 h-4 mr-1 md:mr-2" />
+              <span className="hidden sm:inline">Visão </span>Geral
+            </TabsTrigger>
+            <TabsTrigger value="stock" className="text-xs md:text-sm">
+              <Package className="w-4 h-4 mr-1 md:mr-2" />
+              Estoque
+            </TabsTrigger>
+            <TabsTrigger value="movements" className="text-xs md:text-sm">
+              <BarChart3 className="w-4 h-4 mr-1 md:mr-2" />
+              Movimentações
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-lg">Distribuição por Categoria</CardTitle>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  {isLoading ? (
-                    <Skeleton className="h-64 w-full" />
-                  ) : (
-                    <CategoryDistributionChart />
-                  )}
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-lg">Valor do Estoque</CardTitle>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  {isLoading ? (
-                    <Skeleton className="h-64 w-full" />
-                  ) : (
-                    <StockValueReport />
-                  )}
-                </CardContent>
-              </Card>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <OptimizedCategoryDistributionChart />
+              <OptimizedStockValueReport />
             </div>
           </TabsContent>
 
           <TabsContent value="stock" className="space-y-4">
-            <ReportFilters 
-              onFiltersChange={handleFiltersChange}
-              categories={categories}
-            />
-            <Card>
-              <CardHeader>
-                <CardTitle>Análise de Estoque</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {isLoading ? (
-                  <Skeleton className="h-80 w-full" />
-                ) : (
-                  <BarChart
-                    data={{
-                      labels: ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun"],
-                      datasets: [
-                        {
-                          label: "Produtos com Estoque Baixo",
-                          data: [12, 15, 18, 14, 10, 8],
-                          backgroundColor: "rgba(255, 99, 132, 0.5)",
-                        },
-                        {
-                          label: "Total de Produtos",
-                          data: [65, 72, 78, 84, 90, 95],
-                          backgroundColor: "rgba(53, 162, 235, 0.5)",
-                        },
-                      ],
-                    }}
-                    options={{
-                      responsive: true,
-                      plugins: {
-                        legend: {
-                          position: "top" as const,
-                        },
-                        title: {
-                          display: true,
-                          text: "Evolução do Estoque",
-                        },
-                      },
-                    }}
-                  />
-                )}
-              </CardContent>
-            </Card>
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+              <OptimizedStockValueReport />
+              <OptimizedCategoryDistributionChart />
+            </div>
           </TabsContent>
 
           <TabsContent value="movements" className="space-y-4">
-            <ReportFilters 
-              onFiltersChange={handleFiltersChange}
-              categories={categories}
-            />
-            <MovementsReport dateRange={dateRange} />
+            <OptimizedMovementsReport />
           </TabsContent>
         </Tabs>
       </div>

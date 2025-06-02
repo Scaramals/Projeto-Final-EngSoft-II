@@ -22,12 +22,14 @@ export const StatsCard: React.FC<StatsCardProps> = ({
   return (
     <div className={`data-card ${className}`}>
       <div className="flex justify-between items-start">
-        <div>
-          <p className="text-sm text-muted-foreground font-medium">{title}</p>
-          <h3 className="text-2xl font-bold mt-1">{value}</h3>
+        <div className="flex-1 min-w-0">
+          <p className="text-xs md:text-sm text-muted-foreground font-medium truncate">{title}</p>
+          <h3 className="text-lg md:text-2xl font-bold mt-1 truncate" title={value.toString()}>
+            {value}
+          </h3>
           
           {trend && (
-            <div className="flex items-center mt-2">
+            <div className="flex items-center mt-1 md:mt-2">
               <span
                 className={`text-xs font-medium ${
                   trend.isPositive ? "text-green-600" : "text-red-600"
@@ -36,14 +38,14 @@ export const StatsCard: React.FC<StatsCardProps> = ({
                 {trend.value}%
                 {trend.isPositive ? " ↑" : " ↓"}
               </span>
-              <span className="text-xs text-muted-foreground ml-1">
+              <span className="text-xs text-muted-foreground ml-1 hidden md:inline">
                 desde o mês passado
               </span>
             </div>
           )}
         </div>
         
-        <div className="p-3 rounded-full bg-primary/10 text-primary">
+        <div className="p-2 md:p-3 rounded-full bg-primary/10 text-primary ml-2 flex-shrink-0">
           {icon}
         </div>
       </div>

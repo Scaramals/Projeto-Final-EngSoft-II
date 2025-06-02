@@ -178,6 +178,19 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_category_analysis: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          category_name: string
+          product_count: number
+          total_quantity: number
+          total_value: number
+        }[]
+      }
+      get_dashboard_stats: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       get_low_stock_products: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -191,6 +204,15 @@ export type Database = {
           price: number
           quantity: number
           updated_at: string
+        }[]
+      }
+      get_movements_summary: {
+        Args: { days_back?: number }
+        Returns: {
+          movement_date: string
+          total_in: number
+          total_out: number
+          net_movement: number
         }[]
       }
       get_product_movement_history: {
