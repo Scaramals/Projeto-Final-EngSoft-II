@@ -42,7 +42,7 @@ export function useSuppliers() {
   const { toast } = useToast();
   const { user } = useAuth();
 
-  // Fetch all suppliers - corrigido para não usar tabela users diretamente
+  // Fetch all suppliers
   const useAllSuppliers = (search?: string) => {
     return useQuery({
       queryKey: ['suppliers', search],
@@ -63,7 +63,7 @@ export function useSuppliers() {
 
         return (data || []).map(mapDbSupplierToSupplier) as Supplier[];
       },
-      enabled: !!user, // Só executa quando o usuário está autenticado
+      enabled: !!user,
     });
   };
 

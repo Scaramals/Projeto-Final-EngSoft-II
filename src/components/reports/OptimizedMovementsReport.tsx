@@ -7,14 +7,7 @@ import { useOptimizedDashboard } from "@/hooks/useOptimizedDashboard";
 import { ArrowUpRight, ArrowDownLeft, BarChart3 } from "lucide-react";
 import { MovementSummary } from "@/types";
 
-interface OptimizedMovementsReportProps {
-  dateRange?: {
-    from: Date;
-    to: Date;
-  };
-}
-
-export const OptimizedMovementsReport: React.FC<OptimizedMovementsReportProps> = () => {
+export const OptimizedMovementsReport: React.FC = () => {
   const { movementsSummary, isLoading } = useOptimizedDashboard();
 
   if (isLoading) {
@@ -51,14 +44,14 @@ export const OptimizedMovementsReport: React.FC<OptimizedMovementsReportProps> =
     datasets: [
       {
         label: "Entradas",
-        data: last7Days.map((item: MovementSummary) => item.total_in),
+        data: last7Days.map((item: MovementSummary) => Number(item.total_in) || 0),
         backgroundColor: "rgba(34, 197, 94, 0.6)",
         borderColor: "rgba(34, 197, 94, 1)",
         borderWidth: 1,
       },
       {
         label: "Saídas",
-        data: last7Days.map((item: MovementSummary) => item.total_out),
+        data: last7Days.map((item: MovementSummary) => Number(item.total_out) || 0),
         backgroundColor: "rgba(239, 68, 68, 0.6)",
         borderColor: "rgba(239, 68, 68, 1)",
         borderWidth: 1,
@@ -67,8 +60,8 @@ export const OptimizedMovementsReport: React.FC<OptimizedMovementsReportProps> =
   };
 
   // Calcular totais
-  const totalIn = movementsSummary.reduce((sum: number, item: MovementSummary) => sum + item.total_in, 0);
-  const totalOut = movementsSummary.reduce((sum: number, item: MovementSummary) => sum + item.total_out, 0);
+  const totalIn = movementsSummary.reduce((sum: number, item: MovementSummary) => sum + (Number(item.total_in) || 0), 0);
+  const totalOut = movementsSummary.reduce((sum: number, item: MovementSummary) => sum + (Number(item.total_out) || 0), 0);
   const netMovement = totalIn - totalOut;
 
   return (
@@ -124,7 +117,7 @@ export const OptimizedMovementsReport: React.FC<OptimizedMovementsReportProps> =
                     boxWidth: 12,
                     padding: 8,
                     font: {
-                      size: 11
+                      size: 10
                     }
                   }
                 }

@@ -25,7 +25,7 @@ export const OptimizedStockValueReport: React.FC = () => {
     datasets: [
       {
         label: "Valor do Estoque (R$)",
-        data: movementsSummary?.slice(0, 7).reverse().map(() => stats?.totalValue || 0) || [],
+        data: movementsSummary?.slice(0, 7).reverse().map(() => Number(stats?.totalValue) || 0) || [],
         borderColor: "rgb(75, 192, 192)",
         backgroundColor: "rgba(75, 192, 192, 0.5)",
         tension: 0.4,
@@ -42,15 +42,15 @@ export const OptimizedStockValueReport: React.FC = () => {
         <div className="mb-4 text-center">
           <p className="text-xs md:text-sm text-muted-foreground">Valor total atual</p>
           <h3 className="text-xl md:text-3xl font-bold text-green-600">
-            {formatCurrency(stats?.totalValue || 0)}
+            {formatCurrency(Number(stats?.totalValue) || 0)}
           </h3>
           <div className="grid grid-cols-2 gap-2 mt-2 text-xs md:text-sm">
             <div className="bg-blue-50 p-2 rounded">
-              <p className="text-blue-600 font-medium">{stats?.totalProducts || 0}</p>
+              <p className="text-blue-600 font-medium">{Number(stats?.totalProducts) || 0}</p>
               <p className="text-blue-500">Total Produtos</p>
             </div>
             <div className="bg-red-50 p-2 rounded">
-              <p className="text-red-600 font-medium">{stats?.lowStockProducts || 0}</p>
+              <p className="text-red-600 font-medium">{Number(stats?.lowStockProducts) || 0}</p>
               <p className="text-red-500">Estoque Baixo</p>
             </div>
           </div>
@@ -66,7 +66,7 @@ export const OptimizedStockValueReport: React.FC = () => {
                   beginAtZero: false,
                   ticks: {
                     callback: function(value: any) {
-                      return formatCurrency(value);
+                      return formatCurrency(Number(value) || 0);
                     }
                   }
                 },

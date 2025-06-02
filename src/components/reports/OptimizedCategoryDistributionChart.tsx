@@ -42,11 +42,11 @@ export const OptimizedCategoryDistributionChart: React.FC = () => {
   };
 
   const chartData = {
-    labels: categoryAnalysis.map((item: CategoryAnalysis) => item.category_name),
+    labels: categoryAnalysis.map((item: CategoryAnalysis) => item.category_name || 'Sem categoria'),
     datasets: [
       {
         label: "Valor por Categoria",
-        data: categoryAnalysis.map((item: CategoryAnalysis) => Number(item.total_value)),
+        data: categoryAnalysis.map((item: CategoryAnalysis) => Number(item.total_value) || 0),
         backgroundColor: generateColors(categoryAnalysis.length),
         borderWidth: 2,
         borderColor: '#fff',
@@ -74,7 +74,7 @@ export const OptimizedCategoryDistributionChart: React.FC = () => {
                     boxWidth: 12,
                     padding: 8,
                     font: {
-                      size: 11
+                      size: 10
                     }
                   }
                 },
@@ -82,7 +82,7 @@ export const OptimizedCategoryDistributionChart: React.FC = () => {
                   callbacks: {
                     label: function(context: any) {
                       const label = context.label || '';
-                      const value = formatCurrency(context.raw);
+                      const value = formatCurrency(context.raw || 0);
                       return `${label}: ${value}`;
                     }
                   }
@@ -92,14 +92,14 @@ export const OptimizedCategoryDistributionChart: React.FC = () => {
           />
         </div>
         
-        {/* Resumo das categorias em mobile */}
+        {/* Resumo das categorias */}
         <div className="grid grid-cols-1 gap-2 mt-4">
           {categoryAnalysis.slice(0, 3).map((item: CategoryAnalysis, index: number) => (
             <div key={index} className="flex justify-between items-center text-xs md:text-sm p-2 bg-gray-50 rounded">
-              <span className="font-medium truncate">{item.category_name}</span>
+              <span className="font-medium truncate">{item.category_name || 'Sem categoria'}</span>
               <div className="text-right">
-                <div className="font-bold text-green-600">{formatCurrency(Number(item.total_value))}</div>
-                <div className="text-gray-500">{item.product_count} produtos</div>
+                <div className="font-bold text-green-600">{formatCurrency(Number(item.total_value) || 0)}</div>
+                <div className="text-gray-500">{item.product_count || 0} produtos</div>
               </div>
             </div>
           ))}

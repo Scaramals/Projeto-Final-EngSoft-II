@@ -73,27 +73,27 @@ const DashboardPage: React.FC = () => {
             <>
               <StatsCard
                 title="Total de Produtos"
-                value={stats?.totalProducts || 0}
+                value={Number(stats?.totalProducts) || 0}
                 icon={<Package size={20} className="md:w-6 md:h-6" />}
                 trend={{ value: 12, isPositive: true }}
                 className="text-xs md:text-sm"
               />
               <StatsCard
                 title="Estoque Baixo"
-                value={stats?.lowStockProducts || 0}
+                value={Number(stats?.lowStockProducts) || 0}
                 icon={<AlertTriangle size={20} className="md:w-6 md:h-6" />}
                 trend={{ value: 5, isPositive: false }}
                 className="text-xs md:text-sm"
               />
               <StatsCard
                 title="Valor Total"
-                value={formatCurrency(stats?.totalValue || 0)}
+                value={formatCurrency(Number(stats?.totalValue) || 0)}
                 icon={<BarChart size={20} className="md:w-6 md:h-6" />}
                 className="text-xs md:text-sm"
               />
               <StatsCard
                 title="Movimentações"
-                value={stats?.recentMovementsCount || 0}
+                value={Number(stats?.recentMovementsCount) || 0}
                 icon={<ArrowUpDown size={20} className="md:w-6 md:h-6" />}
                 trend={{ value: 8, isPositive: true }}
                 className="text-xs md:text-sm"
