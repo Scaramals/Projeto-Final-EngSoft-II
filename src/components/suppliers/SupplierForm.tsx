@@ -51,30 +51,38 @@ const SupplierForm: React.FC<SupplierFormProps> = ({
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 sm:space-y-6">
         <FormField
           control={form.control}
           name="name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Nome do Fornecedor*</FormLabel>
+              <FormLabel className="text-sm sm:text-base">Nome do Fornecedor*</FormLabel>
               <FormControl>
-                <Input placeholder="Digite o nome do fornecedor" {...field} />
+                <Input 
+                  placeholder="Digite o nome do fornecedor" 
+                  className="text-sm sm:text-base" 
+                  {...field} 
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
 
-        <div className="grid md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <FormField
             control={form.control}
             name="contactName"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Nome do Contato</FormLabel>
+                <FormLabel className="text-sm sm:text-base">Nome do Contato</FormLabel>
                 <FormControl>
-                  <Input placeholder="Nome da pessoa de contato" {...field} />
+                  <Input 
+                    placeholder="Nome da pessoa de contato" 
+                    className="text-sm sm:text-base" 
+                    {...field} 
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -86,9 +94,14 @@ const SupplierForm: React.FC<SupplierFormProps> = ({
             name="email"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Email</FormLabel>
+                <FormLabel className="text-sm sm:text-base">Email</FormLabel>
                 <FormControl>
-                  <Input placeholder="Email de contato" type="email" {...field} />
+                  <Input 
+                    placeholder="Email de contato" 
+                    type="email" 
+                    className="text-sm sm:text-base" 
+                    {...field} 
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -96,15 +109,19 @@ const SupplierForm: React.FC<SupplierFormProps> = ({
           />
         </div>
 
-        <div className="grid md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <FormField
             control={form.control}
             name="phone"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Telefone</FormLabel>
+                <FormLabel className="text-sm sm:text-base">Telefone</FormLabel>
                 <FormControl>
-                  <Input placeholder="Telefone de contato" {...field} />
+                  <Input 
+                    placeholder="Telefone de contato" 
+                    className="text-sm sm:text-base" 
+                    {...field} 
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -116,9 +133,13 @@ const SupplierForm: React.FC<SupplierFormProps> = ({
             name="address"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Endereço</FormLabel>
+                <FormLabel className="text-sm sm:text-base">Endereço</FormLabel>
                 <FormControl>
-                  <Input placeholder="Endereço do fornecedor" {...field} />
+                  <Input 
+                    placeholder="Endereço do fornecedor" 
+                    className="text-sm sm:text-base" 
+                    {...field} 
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -131,12 +152,13 @@ const SupplierForm: React.FC<SupplierFormProps> = ({
           name="notes"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Observações</FormLabel>
+              <FormLabel className="text-sm sm:text-base">Observações</FormLabel>
               <FormControl>
                 <Textarea 
                   placeholder="Observações ou informações adicionais" 
+                  className="text-sm sm:text-base resize-none" 
                   {...field} 
-                  rows={4}
+                  rows={3}
                 />
               </FormControl>
               <FormMessage />
@@ -144,7 +166,11 @@ const SupplierForm: React.FC<SupplierFormProps> = ({
           )}
         />
 
-        <Button type="submit" className="w-full" disabled={isLoading}>
+        <Button 
+          type="submit" 
+          className="w-full text-sm sm:text-base py-2 sm:py-3" 
+          disabled={isLoading}
+        >
           {isLoading ? 'Salvando...' : 'Salvar Fornecedor'}
         </Button>
       </form>

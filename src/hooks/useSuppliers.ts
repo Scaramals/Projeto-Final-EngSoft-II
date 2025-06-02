@@ -94,12 +94,14 @@ export function useSuppliers() {
   const useCreateSupplier = () => {
     return useMutation({
       mutationFn: async (supplier: SupplierFormData) => {
+        if (!user) {
+          throw new Error("User not authenticated");
+        }
+
         const dbSupplier = mapSupplierToDbSupplier(supplier);
         
         // Adicionar ID do usuário como created_by
-        if (user) {
-          dbSupplier.created_by = user.id;
-        }
+        dbSupplier.created_by = user.id;
         
         const { data, error } = await supabase
           .from('suppliers')
