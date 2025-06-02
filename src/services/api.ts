@@ -32,10 +32,10 @@ export const ApiService = {
         // Contagem total de produtos
         supabase.from("products").select("*", { count: "exact", head: true }),
         
-        // Contagem de produtos com estoque baixo
+        // Contagem de produtos com estoque baixo usando consulta SQL direta
         supabase.from("products")
           .select("*", { count: "exact", head: true })
-          .lt("quantity", supabase.rpc("coalesce_min_stock"))
+          .filter("quantity", "lte", "minimum_stock")
           .gt("quantity", 0),
         
         // Buscar dados para cálculo do valor total
@@ -90,10 +90,11 @@ export const ApiService = {
       }
     }
     
+    // Use uma consulta SQL direta que compara quantity com minimum_stock
     const { data, error } = await supabase
       .from("products")
       .select("*")
-      .lt("quantity", supabase.rpc("coalesce_min_stock"))
+      .filter("quantity", "lte", "minimum_stock")
       .gt("quantity", 0)
       .order("quantity")
       .limit(limit);

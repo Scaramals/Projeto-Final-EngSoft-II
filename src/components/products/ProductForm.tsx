@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -14,7 +13,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { CurrencyInput } from "@/components/ui/currency-input";
+import { AutoCurrencyInput } from "@/components/ui/auto-currency-input";
 import { ProductFormData } from "@/types";
 import { CategorySelect } from "@/components/products/CategorySelect";
 
@@ -151,7 +150,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                 <FormItem>
                   <FormLabel>Preço*</FormLabel>
                   <FormControl>
-                    <CurrencyInput
+                    <AutoCurrencyInput
                       value={field.value}
                       onChange={field.onChange}
                     />

@@ -113,7 +113,7 @@ const ProductDetailPage: React.FC = () => {
           </div>
           <div className="bg-white rounded-lg shadow p-6">
             <ProductForm
-              initialData={product}
+              defaultValues={product}
               onSubmit={handleEditProduct}
               onCancel={() => setIsEditing(false)}
               isLoading={isUpdating}
