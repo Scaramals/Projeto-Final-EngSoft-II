@@ -5,6 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useOptimizedDashboard } from "@/hooks/useOptimizedDashboard";
 import { ArrowUpRight, ArrowDownLeft, BarChart3 } from "lucide-react";
+import { MovementSummary } from "@/types";
 
 interface OptimizedMovementsReportProps {
   dateRange?: {
@@ -41,7 +42,7 @@ export const OptimizedMovementsReport: React.FC<OptimizedMovementsReportProps> =
   const last7Days = movementsSummary.slice(0, 7).reverse();
   
   const chartData = {
-    labels: last7Days.map((item: any) => 
+    labels: last7Days.map((item: MovementSummary) => 
       new Date(item.movement_date).toLocaleDateString('pt-BR', { 
         day: '2-digit', 
         month: '2-digit' 
@@ -50,14 +51,14 @@ export const OptimizedMovementsReport: React.FC<OptimizedMovementsReportProps> =
     datasets: [
       {
         label: "Entradas",
-        data: last7Days.map((item: any) => item.total_in),
+        data: last7Days.map((item: MovementSummary) => item.total_in),
         backgroundColor: "rgba(34, 197, 94, 0.6)",
         borderColor: "rgba(34, 197, 94, 1)",
         borderWidth: 1,
       },
       {
         label: "Saídas",
-        data: last7Days.map((item: any) => item.total_out),
+        data: last7Days.map((item: MovementSummary) => item.total_out),
         backgroundColor: "rgba(239, 68, 68, 0.6)",
         borderColor: "rgba(239, 68, 68, 1)",
         borderWidth: 1,
@@ -66,8 +67,8 @@ export const OptimizedMovementsReport: React.FC<OptimizedMovementsReportProps> =
   };
 
   // Calcular totais
-  const totalIn = movementsSummary.reduce((sum: number, item: any) => sum + item.total_in, 0);
-  const totalOut = movementsSummary.reduce((sum: number, item: any) => sum + item.total_out, 0);
+  const totalIn = movementsSummary.reduce((sum: number, item: MovementSummary) => sum + item.total_in, 0);
+  const totalOut = movementsSummary.reduce((sum: number, item: MovementSummary) => sum + item.total_out, 0);
   const netMovement = totalIn - totalOut;
 
   return (

@@ -5,6 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useOptimizedDashboard } from "@/hooks/useOptimizedDashboard";
 import { formatCurrency } from "@/lib/utils";
+import { CategoryAnalysis } from "@/types";
 
 export const OptimizedCategoryDistributionChart: React.FC = () => {
   const { categoryAnalysis, isLoading } = useOptimizedDashboard();
@@ -41,11 +42,11 @@ export const OptimizedCategoryDistributionChart: React.FC = () => {
   };
 
   const chartData = {
-    labels: categoryAnalysis.map((item: any) => item.category_name),
+    labels: categoryAnalysis.map((item: CategoryAnalysis) => item.category_name),
     datasets: [
       {
         label: "Valor por Categoria",
-        data: categoryAnalysis.map((item: any) => Number(item.total_value)),
+        data: categoryAnalysis.map((item: CategoryAnalysis) => Number(item.total_value)),
         backgroundColor: generateColors(categoryAnalysis.length),
         borderWidth: 2,
         borderColor: '#fff',
@@ -93,7 +94,7 @@ export const OptimizedCategoryDistributionChart: React.FC = () => {
         
         {/* Resumo das categorias em mobile */}
         <div className="grid grid-cols-1 gap-2 mt-4">
-          {categoryAnalysis.slice(0, 3).map((item: any, index: number) => (
+          {categoryAnalysis.slice(0, 3).map((item: CategoryAnalysis, index: number) => (
             <div key={index} className="flex justify-between items-center text-xs md:text-sm p-2 bg-gray-50 rounded">
               <span className="font-medium truncate">{item.category_name}</span>
               <div className="text-right">

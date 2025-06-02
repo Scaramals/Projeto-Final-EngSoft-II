@@ -1,6 +1,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { cacheService } from "./cacheService";
+import { DashboardStats, MovementSummary, CategoryAnalysis } from "@/types";
 
 /**
  * API otimizada usando as novas funções do banco para melhor performance
@@ -9,12 +10,12 @@ export const OptimizedApiService = {
   /**
    * Obter estatísticas do dashboard usando função otimizada do banco
    */
-  async getDashboardStats(skipCache: boolean = false) {
+  async getDashboardStats(skipCache: boolean = false): Promise<DashboardStats> {
     try {
       const cacheKey = 'dashboard_stats_optimized';
       
       if (!skipCache) {
-        const cachedStats = cacheService.get(cacheKey);
+        const cachedStats = cacheService.get<DashboardStats>(cacheKey);
         if (cachedStats) {
           return cachedStats;
         }
@@ -27,7 +28,7 @@ export const OptimizedApiService = {
       // Cache por 2 minutos
       cacheService.set(cacheKey, data, 120);
       
-      return data;
+      return data as DashboardStats;
     } catch (error) {
       console.error("Erro ao buscar estatísticas do dashboard:", error);
       throw error;
@@ -37,12 +38,12 @@ export const OptimizedApiService = {
   /**
    * Obter resumo de movimentações otimizado
    */
-  async getMovementsSummary(daysBack: number = 30, skipCache: boolean = false) {
+  async getMovementsSummary(daysBack: number = 30, skipCache: boolean = false): Promise<MovementSummary[]> {
     try {
       const cacheKey = `movements_summary_${daysBack}`;
       
       if (!skipCache) {
-        const cached = cacheService.get(cacheKey);
+        const cached = cacheService.get<MovementSummary[]>(cacheKey);
         if (cached) {
           return cached;
         }
@@ -57,7 +58,7 @@ export const OptimizedApiService = {
       // Cache por 5 minutos
       cacheService.set(cacheKey, data || [], 300);
       
-      return data || [];
+      return (data || []) as MovementSummary[];
     } catch (error) {
       console.error("Erro ao buscar resumo de movimentações:", error);
       throw error;
@@ -67,12 +68,12 @@ export const OptimizedApiService = {
   /**
    * Obter análise de categorias otimizada
    */
-  async getCategoryAnalysis(skipCache: boolean = false) {
+  async getCategoryAnalysis(skipCache: boolean = false): Promise<CategoryAnalysis[]> {
     try {
       const cacheKey = 'category_analysis';
       
       if (!skipCache) {
-        const cached = cacheService.get(cacheKey);
+        const cached = cacheService.get<CategoryAnalysis[]>(cacheKey);
         if (cached) {
           return cached;
         }
@@ -85,7 +86,7 @@ export const OptimizedApiService = {
       // Cache por 10 minutos
       cacheService.set(cacheKey, data || [], 600);
       
-      return data || [];
+      return (data || []) as CategoryAnalysis[];
     } catch (error) {
       console.error("Erro ao buscar análise de categorias:", error);
       throw error;

@@ -5,6 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useOptimizedDashboard } from "@/hooks/useOptimizedDashboard";
 import { formatCurrency } from "@/lib/utils";
+import { MovementSummary, DashboardStats } from "@/types";
 
 export const OptimizedStockValueReport: React.FC = () => {
   const { stats, movementsSummary, isLoading } = useOptimizedDashboard();
@@ -15,7 +16,7 @@ export const OptimizedStockValueReport: React.FC = () => {
 
   // Processar dados para o gráfico
   const chartData = {
-    labels: movementsSummary?.slice(0, 7).reverse().map((item: any) => 
+    labels: movementsSummary?.slice(0, 7).reverse().map((item: MovementSummary) => 
       new Date(item.movement_date).toLocaleDateString('pt-BR', { 
         day: '2-digit', 
         month: '2-digit' 

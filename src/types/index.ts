@@ -66,6 +66,21 @@ export interface DashboardStats {
   recentMovementsCount: number;
 }
 
+// Novos tipos para os dados otimizados
+export interface MovementSummary {
+  movement_date: string;
+  total_in: number;
+  total_out: number;
+  net_movement: number;
+}
+
+export interface CategoryAnalysis {
+  category_name: string;
+  product_count: number;
+  total_quantity: number;
+  total_value: number;
+}
+
 export interface ChartData {
   labels: string[];
   datasets: {
