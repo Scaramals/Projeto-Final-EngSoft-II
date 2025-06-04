@@ -1,786 +1,413 @@
-import React, { useState, useEffect } from "react";
-import { AppLayout } from "@/components/layout/AppLayout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/components/ui/use-toast";
-import { Search, UserPlus, Users, Plus, Pencil, Trash2, Tag, Code, Database, Shield, Key } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
+
+import React, { useState } from "react";
+import { useProfile } from "@/hooks/useProfile";
 import { useAuthorization } from "@/hooks/useAuthorization";
+import { AppLayout } from "@/components/layout/AppLayout";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { UserCog, Shield, AlertTriangle, Plus, Pencil, Trash2 } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface User {
   id: string;
-  email: string;
-  full_name?: string;
-  role?: string;
-  created_at: string;
-  last_sign_in_at?: string;
-}
-
-interface Category {
-  id: string;
-  name: string;
-  description?: string;
+  full_name: string;
+  role: string;
+  is_master: boolean;
   created_at: string;
 }
 
-const AdminPage: React.FC = () => {
-  const [users, setUsers] = useState<User[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [categoryLoading, setCategoryLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [categorySearchTerm, setCategorySearchTerm] = useState("");
-  const { toast } = useToast();
-  const { profile } = useAuth();
-  const { isDeveloper, hasPermanentAdminRights } = useAuthorization();
-  const [newCategoryName, setNewCategoryName] = useState("");
-  const [newCategoryDescription, setNewCategoryDescription] = useState("");
-  const [editCategory, setEditCategory] = useState<Category | null>(null);
-  const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
-  const [userDialogOpen, setUserDialogOpen] = useState(false);
-  const [newUserEmail, setNewUserEmail] = useState("");
-  const [newUserRole, setNewUserRole] = useState<string>("employee");
-  const [newUserName, setNewUserName] = useState("");
+const AdminPage = () => {
+  const { isMaster, isDeveloper } = useAuthorization();
+  const { users, isLoading, updateUserRole, createProfile, deleteProfile } = useProfile();
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [deleteUserId, setDeleteUserId] = useState<string | null>(null);
+  const [newUser, setNewUser] = useState({ full_name: '', role: 'employee' });
 
-  // Check if the current user is an admin or developer
-  const isAdmin = profile?.role === 'admin';
-  const canAccessAdmin = isAdmin || isDeveloper() || hasPermanentAdminRights();
+  const canManageUsers = isMaster() || isDeveloper();
 
-  const fetchUsers = async () => {
-    setLoading(true);
-    try {
-      // First fetch profiles
-      const { data: profiles, error: profilesError } = await supabase
-        .from('profiles')
-        .select('*');
-      
-      if (profilesError) {
-        throw profilesError;
-      }
-
-      // Then fetch auth users to get emails (if we have admin access)
-      let emailsMap: Record<string, string> = {};
-
-      // Format the data to match our User interface
-      const formattedUsers = profiles.map((profile: any) => ({
-        id: profile.id,
-        email: emailsMap[profile.id] || '',
-        full_name: profile.full_name,
-        role: profile.role,
-        created_at: profile.created_at,
-        last_sign_in_at: undefined
-      }));
-      
-      setUsers(formattedUsers);
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Erro ao carregar usuários",
-        description: error.message
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchCategories = async () => {
-    setCategoryLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('categories')
-        .select('*')
-        .order('name');
-      
-      if (error) throw error;
-      
-      setCategories(data || []);
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Erro ao carregar categorias",
-        description: error.message
-      });
-    } finally {
-      setCategoryLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (canAccessAdmin) {
-      fetchUsers();
-      fetchCategories();
-    }
-  }, [canAccessAdmin]);
-
-  const filteredUsers = users.filter(user => 
-    (user.email?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    user.full_name?.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
-
-  const filteredCategories = categories.filter(category =>
-    category.name.toLowerCase().includes(categorySearchTerm.toLowerCase())
-  );
-
-  const changeUserRole = async (userId: string, newRole: string) => {
-    try {
-      // Update the role directly in the profiles table
-      const { error } = await supabase
-        .from('profiles')
-        .update({ role: newRole })
-        .eq('id', userId);
-      
-      if (error) throw error;
-      
-      // Update the local state to reflect the change
-      setUsers(users.map(user => 
-        user.id === userId ? { ...user, role: newRole } : user
-      ));
-      
-      toast({
-        title: "Função atualizada",
-        description: `A função do usuário foi alterada para ${newRole}.`
-      });
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Erro ao atualizar função",
-        description: error.message
-      });
-    }
-  };
-
-  const handleAddUser = async () => {
-    if (!newUserEmail || !newUserName) {
-      toast({
-        variant: "destructive",
-        title: "Campos obrigatórios",
-        description: "Email e nome são obrigatórios."
-      });
-      return;
-    }
-
-    try {
-      // In a real application, this would send an invitation or create the user
-      // For now we'll just create a profile entry assuming the user will be created
-      const randomId = crypto.randomUUID();
-      
-      const { data, error } = await supabase
-        .from('profiles')
-        .insert({
-          id: randomId,
-          full_name: newUserName,
-          role: newUserRole,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        });
-      
-      if (error) throw error;
-      
-      toast({
-        title: "Usuário adicionado",
-        description: "Novo usuário foi adicionado com sucesso."
-      });
-      
-      // Reset form and refresh users
-      setNewUserEmail("");
-      setNewUserName("");
-      setNewUserRole("employee");
-      setUserDialogOpen(false);
-      fetchUsers();
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Erro ao adicionar usuário",
-        description: error.message
-      });
-    }
-  };
-
-  const handleAddCategory = async () => {
-    if (!newCategoryName.trim()) {
-      toast({
-        variant: "destructive",
-        title: "Nome da categoria obrigatório",
-        description: "Por favor, insira um nome para a categoria."
-      });
-      return;
-    }
-
-    try {
-      const { data, error } = await supabase
-        .from('categories')
-        .insert({
-          name: newCategoryName.trim(),
-          description: newCategoryDescription.trim() || null
-        })
-        .select();
-      
-      if (error) throw error;
-      
-      toast({
-        title: "Categoria criada",
-        description: "A nova categoria foi adicionada com sucesso."
-      });
-      
-      // Reset form and refresh categories
-      setNewCategoryName("");
-      setNewCategoryDescription("");
-      setCategoryDialogOpen(false);
-      fetchCategories();
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Erro ao criar categoria",
-        description: error.message
-      });
-    }
-  };
-
-  const handleUpdateCategory = async () => {
-    if (!editCategory || !editCategory.name.trim()) {
-      toast({
-        variant: "destructive",
-        title: "Nome da categoria obrigatório",
-        description: "Por favor, insira um nome para a categoria."
-      });
-      return;
-    }
-
-    try {
-      const { error } = await supabase
-        .from('categories')
-        .update({
-          name: editCategory.name.trim(),
-          description: editCategory.description?.trim() || null
-        })
-        .eq('id', editCategory.id);
-      
-      if (error) throw error;
-      
-      toast({
-        title: "Categoria atualizada",
-        description: "A categoria foi atualizada com sucesso."
-      });
-      
-      // Reset form and refresh categories
-      setEditCategory(null);
-      setCategoryDialogOpen(false);
-      fetchCategories();
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Erro ao atualizar categoria",
-        description: error.message
-      });
-    }
-  };
-
-  const handleDeleteCategory = async (id: string) => {
-    if (!confirm("Tem certeza que deseja excluir esta categoria? Esta ação não pode ser desfeita.")) {
-      return;
-    }
-
-    try {
-      const { error } = await supabase
-        .from('categories')
-        .delete()
-        .eq('id', id);
-      
-      if (error) throw error;
-      
-      toast({
-        title: "Categoria excluída",
-        description: "A categoria foi excluída com sucesso."
-      });
-      
-      // Refresh categories
-      fetchCategories();
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Erro ao excluir categoria",
-        description: error.message
-      });
-    }
-  };
-
-  // If user doesn't have admin access, show access denied message
-  if (!canAccessAdmin) {
+  if (!canManageUsers) {
     return (
       <AppLayout>
-        <div className="container py-6">
-          <div className="flex flex-col items-center justify-center min-h-[60vh]">
-            <h1 className="text-3xl font-bold mb-4">Acesso Negado</h1>
-            <p className="text-muted-foreground mb-6">
-              Você não tem permissão para acessar esta página.
-            </p>
-            <Button asChild>
-              <a href="/dashboard">Voltar para o Dashboard</a>
-            </Button>
-          </div>
+        <div className="container max-w-4xl mx-auto py-4 sm:py-6 lg:py-8 px-4 sm:px-6">
+          <Card>
+            <CardHeader className="text-center pb-4">
+              <Shield className="h-12 w-12 mx-auto text-red-500 mb-4" />
+              <CardTitle className="text-lg sm:text-xl">Acesso Negado</CardTitle>
+              <CardDescription className="text-sm sm:text-base">
+                Você não tem permissão para acessar esta página.
+              </CardDescription>
+            </CardHeader>
+          </Card>
         </div>
       </AppLayout>
     );
   }
 
+  const handleUpdateRole = async () => {
+    if (selectedUser) {
+      await updateUserRole.mutateAsync({
+        userId: selectedUser.id,
+        role: selectedUser.role,
+        isMaster: selectedUser.is_master,
+      });
+      setIsEditDialogOpen(false);
+    }
+  };
+
+  const handleCreateUser = async () => {
+    await createProfile.mutateAsync(newUser);
+    setIsCreateDialogOpen(false);
+    setNewUser({ full_name: '', role: 'employee' });
+  };
+
+  const handleDeleteUser = async () => {
+    if (deleteUserId) {
+      await deleteProfile.mutateAsync(deleteUserId);
+      setDeleteUserId(null);
+    }
+  };
+
   return (
     <AppLayout>
-      <div className="container py-6">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold">Administração</h1>
-          <p className="text-muted-foreground">
-            Gerencie usuários, categorias e configurações do sistema
-          </p>
+      <div className="container max-w-7xl mx-auto py-4 sm:py-6 lg:py-8 px-4 sm:px-6">
+        <div className="flex flex-col space-y-4 sm:space-y-6 mb-6">
+          <div>
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold flex items-center gap-2">
+              <UserCog className="h-6 w-6 sm:h-8 sm:w-8" />
+              Administração
+            </h1>
+            <p className="text-sm sm:text-base text-muted-foreground mt-1">
+              Gerencie usuários e permissões do sistema
+            </p>
+          </div>
+
+          <Button 
+            onClick={() => setIsCreateDialogOpen(true)}
+            className="w-full sm:w-auto text-sm sm:text-base"
+            size="default"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Novo Usuário
+          </Button>
         </div>
-        
-        <Tabs defaultValue="users" className="w-full">
-          <TabsList className="mb-6">
-            <TabsTrigger value="users">Usuários</TabsTrigger>
-            <TabsTrigger value="categories">Categorias</TabsTrigger>
-            <TabsTrigger value="settings">Configurações</TabsTrigger>
-            <TabsTrigger value="logs">Logs do Sistema</TabsTrigger>
-            {isDeveloper() && (
-              <TabsTrigger value="developer">Desenvolvedor</TabsTrigger>
-            )}
-          </TabsList>
-          
-          {/* Tab de Usuários */}
-          <TabsContent value="users">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex justify-between items-center">
-                  <div className="flex items-center">
-                    <Users className="mr-2" />
-                    Gerenciamento de Usuários
+
+        <Card>
+          <CardHeader className="pb-4 sm:pb-6">
+            <CardTitle className="text-lg sm:text-xl">Usuários do Sistema</CardTitle>
+            <CardDescription className="text-sm sm:text-base">
+              {users && users.length > 0
+                ? `Mostrando ${users.length} usuário${users.length > 1 ? "s" : ""}`
+                : "Nenhum usuário encontrado"}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-0 sm:p-6">
+            {isLoading ? (
+              <div className="space-y-4 p-4 sm:p-0">
+                {[...Array(5)].map((_, i) => (
+                  <div key={i} className="flex items-center space-x-4">
+                    <Skeleton className="h-12 w-full" />
                   </div>
-                  <Dialog open={userDialogOpen} onOpenChange={setUserDialogOpen}>
-                    <DialogTrigger asChild>
-                      <Button>
-                        <UserPlus className="mr-2 h-4 w-4" />
-                        Novo Usuário
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-[425px]">
-                      <DialogHeader>
-                        <DialogTitle>Adicionar Novo Usuário</DialogTitle>
-                        <DialogDescription>
-                          Adicione um novo usuário ao sistema e defina sua função.
-                        </DialogDescription>
-                      </DialogHeader>
-                      <div className="space-y-4 py-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="email">Email*</Label>
-                          <Input 
-                            id="email" 
-                            value={newUserEmail} 
-                            onChange={(e) => setNewUserEmail(e.target.value)} 
-                            placeholder="email@exemplo.com" 
-                          />
+                ))}
+              </div>
+            ) : users && users.length > 0 ? (
+              <div className="overflow-x-auto">
+                {/* Mobile view - Card layout */}
+                <div className="block sm:hidden space-y-4 p-4">
+                  {users.map((user) => (
+                    <Card key={user.id} className="p-4">
+                      <div className="space-y-2">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <p className="font-medium text-sm">{user.full_name}</p>
+                            <p className="text-xs text-muted-foreground capitalize">
+                              {user.role}
+                              {user.is_master && " (Master)"}
+                            </p>
+                          </div>
                         </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="name">Nome Completo*</Label>
-                          <Input 
-                            id="name" 
-                            value={newUserName} 
-                            onChange={(e) => setNewUserName(e.target.value)} 
-                            placeholder="Nome do usuário" 
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="role">Função</Label>
-                          <Select value={newUserRole} onValueChange={setNewUserRole}>
-                            <SelectTrigger id="role">
-                              <SelectValue placeholder="Selecione uma função" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="employee">Funcionário</SelectItem>
-                              <SelectItem value="admin">Administrador</SelectItem>
-                              {isDeveloper() && (
-                                <SelectItem value="developer">Desenvolvedor</SelectItem>
-                              )}
-                            </SelectContent>
-                          </Select>
+                        
+                        <p className="text-xs text-muted-foreground">
+                          Criado em: {new Date(user.created_at).toLocaleDateString('pt-BR')}
+                        </p>
+                        
+                        <div className="flex space-x-2 pt-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedUser(user);
+                              setIsEditDialogOpen(true);
+                            }}
+                            className="flex-1 text-xs"
+                          >
+                            <Pencil className="h-3 w-3 mr-1" />
+                            Editar
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => setDeleteUserId(user.id)}
+                            className="flex-1 text-xs"
+                          >
+                            <Trash2 className="h-3 w-3 mr-1" />
+                            Excluir
+                          </Button>
                         </div>
                       </div>
-                      <DialogFooter>
-                        <Button variant="outline" onClick={() => setUserDialogOpen(false)}>Cancelar</Button>
-                        <Button onClick={handleAddUser}>Adicionar</Button>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
-                </CardTitle>
-                <CardDescription>
-                  Visualize e gerencie todos os usuários do sistema
-                </CardDescription>
-                <div className="relative mt-4">
-                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Buscar por nome ou email"
-                    className="pl-8"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
+                    </Card>
+                  ))}
                 </div>
-              </CardHeader>
-              <CardContent>
-                {loading ? (
-                  <div className="py-8 text-center">Carregando usuários...</div>
-                ) : (
+
+                {/* Desktop view - Table layout */}
+                <div className="hidden sm:block">
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Nome</TableHead>
-                        <TableHead>ID</TableHead>
-                        <TableHead>Funç��o</TableHead>
-                        <TableHead>Criado em</TableHead>
-                        <TableHead>Último login</TableHead>
-                        <TableHead>Ações</TableHead>
+                        <TableHead className="text-sm font-medium">Nome</TableHead>
+                        <TableHead className="text-sm font-medium">Role</TableHead>
+                        <TableHead className="text-sm font-medium">Status</TableHead>
+                        <TableHead className="text-sm font-medium">Criado em</TableHead>
+                        <TableHead className="text-sm font-medium">Ações</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredUsers.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={6} className="text-center py-4">
-                            Nenhum usuário encontrado
+                      {users.map((user) => (
+                        <TableRow key={user.id}>
+                          <TableCell className="font-medium text-sm sm:text-base">
+                            {user.full_name}
+                          </TableCell>
+                          <TableCell className="text-sm sm:text-base capitalize">
+                            {user.role}
+                          </TableCell>
+                          <TableCell className="text-sm sm:text-base">
+                            {user.is_master ? (
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-purple-100 text-purple-800">
+                                Master
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">
+                                Ativo
+                              </span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-sm sm:text-base">
+                            {new Date(user.created_at).toLocaleDateString('pt-BR')}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex space-x-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedUser(user);
+                                  setIsEditDialogOpen(true);
+                                }}
+                                className="text-xs"
+                              >
+                                Editar
+                              </Button>
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => setDeleteUserId(user.id)}
+                                className="text-xs"
+                              >
+                                Excluir
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
-                      ) : (
-                        filteredUsers.map((user) => {
-                          const isPermanentAdmin = user.id === "7d2afaa5-2e77-43cd-b7fb-d5111ea59dc4" || 
-                                                  user.id === "a679c5aa-e45b-44e4-b4f2-c5e4ba5333aa";
-                          
-                          return (
-                            <TableRow key={user.id}>
-                              <TableCell>{user.full_name || 'N/A'}</TableCell>
-                              <TableCell className="font-mono text-xs">{user.id}</TableCell>
-                              <TableCell>
-                                <Badge variant={
-                                  user.role === 'admin' ? 'default' :
-                                  user.role === 'developer' ? 'destructive' : 'outline'
-                                }>
-                                  {user.role || 'usuário'}
-                                  {isPermanentAdmin && <Shield className="ml-1 h-3 w-3" />}
-                                </Badge>
-                              </TableCell>
-                              <TableCell>
-                                {user.created_at ? new Date(user.created_at).toLocaleDateString('pt-BR') : 'N/A'}
-                              </TableCell>
-                              <TableCell>
-                                {user.last_sign_in_at 
-                                  ? new Date(user.last_sign_in_at).toLocaleDateString('pt-BR')
-                                  : 'Nunca'}
-                              </TableCell>
-                              <TableCell>
-                                <div className="flex gap-2">
-                                  {!isPermanentAdmin && (
-                                    <Button 
-                                      variant="outline" 
-                                      size="sm"
-                                      onClick={() => changeUserRole(user.id, user.role === 'admin' ? 'employee' : 'admin')}
-                                    >
-                                      {user.role === 'admin' ? 'Remover admin' : 'Tornar admin'}
-                                    </Button>
-                                  )}
-                                  {isPermanentAdmin && (
-                                    <Badge variant="secondary" className="flex items-center">
-                                      <Key className="mr-1 h-3 w-3" />
-                                      Admin permanente
-                                    </Badge>
-                                  )}
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })
-                      )}
+                      ))}
                     </TableBody>
                   </Table>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-          
-          {/* Tab de Categorias */}
-          <TabsContent value="categories">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex justify-between items-center">
-                  <div className="flex items-center">
-                    <Tag className="mr-2" />
-                    Gerenciamento de Categorias
-                  </div>
-                  <Dialog open={categoryDialogOpen} onOpenChange={setCategoryDialogOpen}>
-                    <DialogTrigger asChild>
-                      <Button onClick={() => {
-                        setEditCategory(null);
-                        setNewCategoryName("");
-                        setNewCategoryDescription("");
-                      }}>
-                        <Plus className="mr-2 h-4 w-4" />
-                        Nova Categoria
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-[425px]">
-                      <DialogHeader>
-                        <DialogTitle>{editCategory ? "Editar Categoria" : "Adicionar Nova Categoria"}</DialogTitle>
-                        <DialogDescription>
-                          {editCategory 
-                            ? "Edite os detalhes da categoria existente." 
-                            : "Adicione uma nova categoria para classificar seus produtos."}
-                        </DialogDescription>
-                      </DialogHeader>
-                      <div className="space-y-4 py-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="name">Nome da Categoria*</Label>
-                          <Input 
-                            id="name" 
-                            value={editCategory ? editCategory.name : newCategoryName} 
-                            onChange={(e) => {
-                              if (editCategory) {
-                                setEditCategory({...editCategory, name: e.target.value});
-                              } else {
-                                setNewCategoryName(e.target.value);
-                              }
-                            }} 
-                            placeholder="Ex: Eletrônicos, Alimentos, etc." 
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="description">Descrição</Label>
-                          <Textarea 
-                            id="description" 
-                            value={editCategory ? editCategory.description || "" : newCategoryDescription} 
-                            onChange={(e) => {
-                              if (editCategory) {
-                                setEditCategory({...editCategory, description: e.target.value});
-                              } else {
-                                setNewCategoryDescription(e.target.value);
-                              }
-                            }} 
-                            placeholder="Descrição opcional da categoria" 
-                            rows={3}
-                          />
-                        </div>
-                      </div>
-                      <DialogFooter>
-                        <Button variant="outline" onClick={() => setCategoryDialogOpen(false)}>Cancelar</Button>
-                        <Button onClick={editCategory ? handleUpdateCategory : handleAddCategory}>
-                          {editCategory ? "Atualizar" : "Adicionar"}
-                        </Button>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
-                </CardTitle>
-                <CardDescription>
-                  Gerencie as categorias de produtos disponíveis no sistema
-                </CardDescription>
-                <div className="relative mt-4">
-                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Buscar por nome da categoria"
-                    className="pl-8"
-                    value={categorySearchTerm}
-                    onChange={(e) => setCategorySearchTerm(e.target.value)}
-                  />
                 </div>
-              </CardHeader>
-              <CardContent>
-                {categoryLoading ? (
-                  <div className="py-8 text-center">Carregando categorias...</div>
-                ) : (
-                  <>
-                    {filteredCategories.length === 0 ? (
-                      <Alert variant="default" className="bg-muted/50">
-                        <AlertDescription>
-                          Nenhuma categoria encontrada. Adicione uma nova categoria para começar.
-                        </AlertDescription>
-                      </Alert>
-                    ) : (
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Nome</TableHead>
-                            <TableHead>Descrição</TableHead>
-                            <TableHead>Criada em</TableHead>
-                            <TableHead className="w-[100px]">Ações</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {filteredCategories.map((category) => (
-                            <TableRow key={category.id}>
-                              <TableCell className="font-medium">{category.name}</TableCell>
-                              <TableCell>{category.description || 'N/A'}</TableCell>
-                              <TableCell>
-                                {new Date(category.created_at).toLocaleDateString('pt-BR')}
-                              </TableCell>
-                              <TableCell>
-                                <div className="flex gap-2">
-                                  <Button 
-                                    variant="ghost" 
-                                    size="icon"
-                                    onClick={() => {
-                                      setEditCategory(category);
-                                      setCategoryDialogOpen(true);
-                                    }}
-                                  >
-                                    <Pencil className="h-4 w-4" />
-                                  </Button>
-                                  <Button 
-                                    variant="ghost" 
-                                    size="icon"
-                                    className="text-destructive hover:text-destructive-foreground hover:bg-destructive"
-                                    onClick={() => handleDeleteCategory(category.id)}
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    )}
-                  </>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-          
-          {/* Tab de Configurações */}
-          <TabsContent value="settings">
-            <Card>
-              <CardHeader>
-                <CardTitle>Configurações do Sistema</CardTitle>
-                <CardDescription>
-                  Configure parâmetros globais do sistema
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">
-                  Esta funcionalidade será implementada em breve.
+              </div>
+            ) : (
+              <div className="text-center py-8 px-4">
+                <UserCog className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <p className="text-muted-foreground mb-4 text-sm sm:text-base">
+                  Nenhum usuário encontrado
                 </p>
-              </CardContent>
-            </Card>
-          </TabsContent>
-          
-          {/* Tab de Logs */}
-          <TabsContent value="logs">
-            <Card>
-              <CardHeader>
-                <CardTitle>Logs do Sistema</CardTitle>
-                <CardDescription>
-                  Visualize os registros de atividade do sistema
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">
-                  Esta funcionalidade será implementada em breve.
-                </p>
-              </CardContent>
-            </Card>
-          </TabsContent>
-          
-          {/* Developer Tab - Only visible to developers */}
-          {isDeveloper() && (
-            <TabsContent value="developer">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <Code className="mr-2" />
-                    Área do Desenvolvedor
-                  </CardTitle>
-                  <CardDescription>
-                    Ferramentas avançadas para configuração e desenvolvimento do sistema
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <Card className="bg-background/50">
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-lg flex items-center">
-                          <Database className="mr-2 h-5 w-5" /> Gerenciamento de Banco de Dados
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <p className="text-sm text-muted-foreground mb-4">
-                          Ferramentas para gerenciar diretamente o banco de dados do sistema.
-                        </p>
-                        <div className="flex flex-col space-y-2">
-                          <Button variant="outline" className="justify-start">
-                            Visualizar Estrutura do BD
-                          </Button>
-                          <Button variant="outline" className="justify-start">
-                            Executar Query SQL
-                          </Button>
-                          <Button variant="outline" className="justify-start">
-                            Backup de Dados
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                    
-                    <Card className="bg-background/50">
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-lg flex items-center">
-                          <Code className="mr-2 h-5 w-5" /> Configurações Avançadas
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <p className="text-sm text-muted-foreground mb-4">
-                          Opções avançadas para administração do sistema.
-                        </p>
-                        <div className="flex flex-col space-y-2">
-                          <Button variant="outline" className="justify-start">
-                            Gerenciar API Tokens
-                          </Button>
-                          <Button variant="outline" className="justify-start">
-                            Configurar Integrações
-                          </Button>
-                          <Button 
-                            className="justify-start text-destructive hover:text-destructive-foreground hover:bg-destructive">
-                            Modo de Manutenção
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-                  
-                  <Card className="bg-background/50">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-lg">Logs do Sistema</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-muted-foreground mb-4">
-                        Visualize os registros de atividade do sistema.
-                      </p>
-                      <div className="bg-muted p-3 rounded-md text-xs font-mono h-48 overflow-y-auto">
-                        <p className="text-green-500">[INFO] Sistema iniciado corretamente</p>
-                        <p className="text-blue-500">[DEBUG] Conexão com banco de dados estabelecida</p>
-                        <p className="text-yellow-500">[WARN] Uso de memória acima de 70%</p>
-                        <p className="text-muted-foreground">[INFO] 3 novos usuários registrados nas últimas 24h</p>
-                        <p className="text-red-500">[ERROR] Falha ao processar backup automático</p>
-                        <p className="text-muted-foreground">[INFO] 27 produtos com estoque baixo</p>
-                      </div>
-                      <div className="flex justify-end mt-2">
-                        <Button variant="outline" size="sm">Ver Todos os Logs</Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          )}
-        </Tabs>
+                <Button onClick={() => setIsCreateDialogOpen(true)} className="text-sm sm:text-base">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Adicionar usuário
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Edit User Dialog */}
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent className="mx-4 sm:mx-0 max-w-md">
+            <DialogHeader>
+              <DialogTitle className="text-lg sm:text-xl">Editar Usuário</DialogTitle>
+              <DialogDescription className="text-sm sm:text-base">
+                Altere as permissões do usuário {selectedUser?.full_name}
+              </DialogDescription>
+            </DialogHeader>
+            {selectedUser && (
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="role" className="text-sm">Role</Label>
+                  <Select
+                    value={selectedUser.role}
+                    onValueChange={(value) =>
+                      setSelectedUser({ ...selectedUser, role: value })
+                    }
+                  >
+                    <SelectTrigger className="text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="employee">Employee</SelectItem>
+                      <SelectItem value="admin">Admin</SelectItem>
+                      <SelectItem value="developer">Developer</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
+            <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
+              <Button
+                variant="outline"
+                onClick={() => setIsEditDialogOpen(false)}
+                className="w-full sm:w-auto text-sm sm:text-base"
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={handleUpdateRole}
+                disabled={updateUserRole.isPending}
+                className="w-full sm:w-auto text-sm sm:text-base"
+              >
+                {updateUserRole.isPending ? "Salvando..." : "Salvar"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Create User Dialog */}
+        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+          <DialogContent className="mx-4 sm:mx-0 max-w-md">
+            <DialogHeader>
+              <DialogTitle className="text-lg sm:text-xl">Novo Usuário</DialogTitle>
+              <DialogDescription className="text-sm sm:text-base">
+                Crie um novo usuário no sistema
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="full_name" className="text-sm">Nome Completo</Label>
+                <Input
+                  id="full_name"
+                  value={newUser.full_name}
+                  onChange={(e) => setNewUser({ ...newUser, full_name: e.target.value })}
+                  placeholder="Digite o nome completo"
+                  className="text-sm"
+                />
+              </div>
+              <div>
+                <Label htmlFor="new_role" className="text-sm">Role</Label>
+                <Select
+                  value={newUser.role}
+                  onValueChange={(value) => setNewUser({ ...newUser, role: value })}
+                >
+                  <SelectTrigger className="text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="employee">Employee</SelectItem>
+                    <SelectItem value="admin">Admin</SelectItem>
+                    <SelectItem value="developer">Developer</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
+              <Button
+                variant="outline"
+                onClick={() => setIsCreateDialogOpen(false)}
+                className="w-full sm:w-auto text-sm sm:text-base"
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={handleCreateUser}
+                disabled={createProfile.isPending || !newUser.full_name}
+                className="w-full sm:w-auto text-sm sm:text-base"
+              >
+                {createProfile.isPending ? "Criando..." : "Criar"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete confirmation dialog */}
+        <Dialog open={!!deleteUserId} onOpenChange={(open) => !open && setDeleteUserId(null)}>
+          <DialogContent className="mx-4 sm:mx-0 max-w-md">
+            <DialogHeader>
+              <DialogTitle className="text-lg sm:text-xl flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-red-500" />
+                Confirmar exclusão
+              </DialogTitle>
+              <DialogDescription className="text-sm sm:text-base">
+                Tem certeza que deseja excluir este usuário? Esta ação não pode ser desfeita.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
+              <Button
+                variant="outline"
+                onClick={() => setDeleteUserId(null)}
+                disabled={deleteProfile.isPending}
+                className="w-full sm:w-auto text-sm sm:text-base"
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleDeleteUser}
+                disabled={deleteProfile.isPending}
+                className="w-full sm:w-auto text-sm sm:text-base"
+              >
+                {deleteProfile.isPending ? "Excluindo..." : "Excluir"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </AppLayout>
   );

@@ -24,7 +24,7 @@ const mapDbSupplierToSupplier = (dbSupplier: any): Supplier => ({
 /**
  * Helper function to convert Supplier type to database format
  */
-const mapSupplierToDbSupplier = (supplier: SupplierFormData) => {
+const mapSupplierToDbSupplier = (supplier: SupplierFormData, userId?: string) => {
   const dbSupplier: any = {};
   
   if (supplier.name !== undefined) dbSupplier.name = supplier.name;
@@ -33,6 +33,7 @@ const mapSupplierToDbSupplier = (supplier: SupplierFormData) => {
   if (supplier.phone !== undefined) dbSupplier.phone = supplier.phone;
   if (supplier.address !== undefined) dbSupplier.address = supplier.address;
   if (supplier.notes !== undefined) dbSupplier.notes = supplier.notes;
+  if (userId) dbSupplier.created_by = userId;
   
   return dbSupplier;
 };
@@ -58,6 +59,7 @@ export function useSuppliers() {
         const { data, error } = await query;
 
         if (error) {
+          console.error('Error fetching suppliers:', error);
           throw new Error(`Error fetching suppliers: ${error.message}`);
         }
 
@@ -81,6 +83,7 @@ export function useSuppliers() {
           .single();
           
         if (error) {
+          console.error('Error fetching supplier:', error);
           throw new Error(`Error fetching supplier: ${error.message}`);
         }
         
@@ -98,10 +101,10 @@ export function useSuppliers() {
           throw new Error("User not authenticated");
         }
 
-        const dbSupplier = mapSupplierToDbSupplier(supplier);
+        console.log('Creating supplier with user ID:', user.id);
+        const dbSupplier = mapSupplierToDbSupplier(supplier, user.id);
         
-        // Adicionar ID do usuário como created_by
-        dbSupplier.created_by = user.id;
+        console.log('Supplier data to insert:', dbSupplier);
         
         const { data, error } = await supabase
           .from('suppliers')
@@ -110,6 +113,7 @@ export function useSuppliers() {
           .single();
           
         if (error) {
+          console.error('Error creating supplier:', error);
           throw new Error(`Error creating supplier: ${error.message}`);
         }
         
@@ -123,6 +127,7 @@ export function useSuppliers() {
         });
       },
       onError: (error) => {
+        console.error('Mutation error:', error);
         toast({
           variant: "destructive",
           title: "Erro ao criar fornecedor",
@@ -146,6 +151,7 @@ export function useSuppliers() {
           .single();
           
         if (error) {
+          console.error('Error updating supplier:', error);
           throw new Error(`Error updating supplier: ${error.message}`);
         }
         
@@ -160,6 +166,7 @@ export function useSuppliers() {
         });
       },
       onError: (error) => {
+        console.error('Update error:', error);
         toast({
           variant: "destructive",
           title: "Erro ao atualizar fornecedor",
@@ -179,6 +186,7 @@ export function useSuppliers() {
           .eq('id', id);
           
         if (error) {
+          console.error('Error deleting supplier:', error);
           throw new Error(`Error deleting supplier: ${error.message}`);
         }
         
@@ -192,6 +200,7 @@ export function useSuppliers() {
         });
       },
       onError: (error) => {
+        console.error('Delete error:', error);
         toast({
           variant: "destructive",
           title: "Erro ao excluir fornecedor",
