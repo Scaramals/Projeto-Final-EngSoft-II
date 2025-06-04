@@ -1,6 +1,6 @@
 
 import React, { useState } from "react";
-import { useProfile } from "@/hooks/useProfile";
+import { useAdminUsers } from "@/hooks/useAdminUsers";
 import { useAuthorization } from "@/hooks/useAuthorization";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -49,7 +49,7 @@ interface User {
 
 const AdminPage = () => {
   const { isMaster, isDeveloper } = useAuthorization();
-  const { users, isLoading, updateUserRole, createProfile, deleteProfile } = useProfile();
+  const { users, isLoading, updateUserRole, createProfile, deleteProfile } = useAdminUsers();
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -102,56 +102,56 @@ const AdminPage = () => {
 
   return (
     <AppLayout>
-      <div className="container max-w-7xl mx-auto py-4 sm:py-6 lg:py-8 px-4 sm:px-6">
-        <div className="flex flex-col space-y-4 sm:space-y-6 mb-6">
+      <div className="container max-w-7xl mx-auto py-2 sm:py-4 lg:py-6 px-2 sm:px-4 lg:px-6">
+        <div className="flex flex-col space-y-3 sm:space-y-4 lg:space-y-6 mb-4 sm:mb-6">
           <div>
-            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold flex items-center gap-2">
-              <UserCog className="h-6 w-6 sm:h-8 sm:w-8" />
+            <h1 className="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-bold flex items-center gap-2">
+              <UserCog className="h-5 w-5 sm:h-6 sm:w-6 lg:h-8 lg:w-8" />
               Administração
             </h1>
-            <p className="text-sm sm:text-base text-muted-foreground mt-1">
+            <p className="text-xs sm:text-sm lg:text-base text-muted-foreground mt-1">
               Gerencie usuários e permissões do sistema
             </p>
           </div>
 
           <Button 
             onClick={() => setIsCreateDialogOpen(true)}
-            className="w-full sm:w-auto text-sm sm:text-base"
-            size="default"
+            className="w-full sm:w-auto text-xs sm:text-sm lg:text-base"
+            size="sm"
           >
-            <Plus className="h-4 w-4 mr-2" />
+            <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
             Novo Usuário
           </Button>
         </div>
 
         <Card>
-          <CardHeader className="pb-4 sm:pb-6">
-            <CardTitle className="text-lg sm:text-xl">Usuários do Sistema</CardTitle>
-            <CardDescription className="text-sm sm:text-base">
+          <CardHeader className="pb-3 sm:pb-4 lg:pb-6">
+            <CardTitle className="text-base sm:text-lg lg:text-xl">Usuários do Sistema</CardTitle>
+            <CardDescription className="text-xs sm:text-sm lg:text-base">
               {users && users.length > 0
                 ? `Mostrando ${users.length} usuário${users.length > 1 ? "s" : ""}`
                 : "Nenhum usuário encontrado"}
             </CardDescription>
           </CardHeader>
-          <CardContent className="p-0 sm:p-6">
+          <CardContent className="p-0 sm:p-4 lg:p-6">
             {isLoading ? (
-              <div className="space-y-4 p-4 sm:p-0">
+              <div className="space-y-3 sm:space-y-4 p-3 sm:p-0">
                 {[...Array(5)].map((_, i) => (
                   <div key={i} className="flex items-center space-x-4">
-                    <Skeleton className="h-12 w-full" />
+                    <Skeleton className="h-10 sm:h-12 w-full" />
                   </div>
                 ))}
               </div>
             ) : users && users.length > 0 ? (
               <div className="overflow-x-auto">
                 {/* Mobile view - Card layout */}
-                <div className="block sm:hidden space-y-4 p-4">
+                <div className="block lg:hidden space-y-3 p-3 sm:p-4">
                   {users.map((user) => (
-                    <Card key={user.id} className="p-4">
+                    <Card key={user.id} className="p-3 sm:p-4">
                       <div className="space-y-2">
                         <div className="flex items-start justify-between">
-                          <div>
-                            <p className="font-medium text-sm">{user.full_name}</p>
+                          <div className="min-w-0 flex-1">
+                            <p className="font-medium text-xs sm:text-sm truncate">{user.full_name}</p>
                             <p className="text-xs text-muted-foreground capitalize">
                               {user.role}
                               {user.is_master && " (Master)"}
@@ -163,7 +163,7 @@ const AdminPage = () => {
                           Criado em: {new Date(user.created_at).toLocaleDateString('pt-BR')}
                         </p>
                         
-                        <div className="flex space-x-2 pt-2">
+                        <div className="flex flex-col sm:flex-row gap-2 pt-2">
                           <Button
                             variant="outline"
                             size="sm"
@@ -171,7 +171,7 @@ const AdminPage = () => {
                               setSelectedUser(user);
                               setIsEditDialogOpen(true);
                             }}
-                            className="flex-1 text-xs"
+                            className="flex-1 text-xs h-8"
                           >
                             <Pencil className="h-3 w-3 mr-1" />
                             Editar
@@ -180,7 +180,7 @@ const AdminPage = () => {
                             variant="destructive"
                             size="sm"
                             onClick={() => setDeleteUserId(user.id)}
-                            className="flex-1 text-xs"
+                            className="flex-1 text-xs h-8"
                           >
                             <Trash2 className="h-3 w-3 mr-1" />
                             Excluir
@@ -192,7 +192,7 @@ const AdminPage = () => {
                 </div>
 
                 {/* Desktop view - Table layout */}
-                <div className="hidden sm:block">
+                <div className="hidden lg:block">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -206,13 +206,13 @@ const AdminPage = () => {
                     <TableBody>
                       {users.map((user) => (
                         <TableRow key={user.id}>
-                          <TableCell className="font-medium text-sm sm:text-base">
+                          <TableCell className="font-medium text-sm">
                             {user.full_name}
                           </TableCell>
-                          <TableCell className="text-sm sm:text-base capitalize">
+                          <TableCell className="text-sm capitalize">
                             {user.role}
                           </TableCell>
-                          <TableCell className="text-sm sm:text-base">
+                          <TableCell className="text-sm">
                             {user.is_master ? (
                               <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-purple-100 text-purple-800">
                                 Master
@@ -223,7 +223,7 @@ const AdminPage = () => {
                               </span>
                             )}
                           </TableCell>
-                          <TableCell className="text-sm sm:text-base">
+                          <TableCell className="text-sm">
                             {new Date(user.created_at).toLocaleDateString('pt-BR')}
                           </TableCell>
                           <TableCell>
@@ -235,7 +235,7 @@ const AdminPage = () => {
                                   setSelectedUser(user);
                                   setIsEditDialogOpen(true);
                                 }}
-                                className="text-xs"
+                                className="text-xs h-8"
                               >
                                 Editar
                               </Button>
@@ -243,7 +243,7 @@ const AdminPage = () => {
                                 variant="destructive"
                                 size="sm"
                                 onClick={() => setDeleteUserId(user.id)}
-                                className="text-xs"
+                                className="text-xs h-8"
                               >
                                 Excluir
                               </Button>
@@ -256,13 +256,13 @@ const AdminPage = () => {
                 </div>
               </div>
             ) : (
-              <div className="text-center py-8 px-4">
-                <UserCog className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <p className="text-muted-foreground mb-4 text-sm sm:text-base">
+              <div className="text-center py-6 sm:py-8 px-4">
+                <UserCog className="h-10 w-10 sm:h-12 sm:w-12 mx-auto text-muted-foreground mb-4" />
+                <p className="text-muted-foreground mb-4 text-xs sm:text-sm lg:text-base">
                   Nenhum usuário encontrado
                 </p>
-                <Button onClick={() => setIsCreateDialogOpen(true)} className="text-sm sm:text-base">
-                  <Plus className="h-4 w-4 mr-2" />
+                <Button onClick={() => setIsCreateDialogOpen(true)} className="text-xs sm:text-sm" size="sm">
+                  <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                   Adicionar usuário
                 </Button>
               </div>
@@ -272,24 +272,24 @@ const AdminPage = () => {
 
         {/* Edit User Dialog */}
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-          <DialogContent className="mx-4 sm:mx-0 max-w-md">
+          <DialogContent className="mx-2 sm:mx-4 max-w-sm sm:max-w-md">
             <DialogHeader>
-              <DialogTitle className="text-lg sm:text-xl">Editar Usuário</DialogTitle>
-              <DialogDescription className="text-sm sm:text-base">
+              <DialogTitle className="text-base sm:text-lg lg:text-xl">Editar Usuário</DialogTitle>
+              <DialogDescription className="text-xs sm:text-sm lg:text-base">
                 Altere as permissões do usuário {selectedUser?.full_name}
               </DialogDescription>
             </DialogHeader>
             {selectedUser && (
               <div className="space-y-4">
                 <div>
-                  <Label htmlFor="role" className="text-sm">Role</Label>
+                  <Label htmlFor="role" className="text-xs sm:text-sm">Role</Label>
                   <Select
                     value={selectedUser.role}
                     onValueChange={(value) =>
                       setSelectedUser({ ...selectedUser, role: value })
                     }
                   >
-                    <SelectTrigger className="text-sm">
+                    <SelectTrigger className="text-xs sm:text-sm">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -305,14 +305,14 @@ const AdminPage = () => {
               <Button
                 variant="outline"
                 onClick={() => setIsEditDialogOpen(false)}
-                className="w-full sm:w-auto text-sm sm:text-base"
+                className="w-full sm:w-auto text-xs sm:text-sm h-8 sm:h-10"
               >
                 Cancelar
               </Button>
               <Button
                 onClick={handleUpdateRole}
                 disabled={updateUserRole.isPending}
-                className="w-full sm:w-auto text-sm sm:text-base"
+                className="w-full sm:w-auto text-xs sm:text-sm h-8 sm:h-10"
               >
                 {updateUserRole.isPending ? "Salvando..." : "Salvar"}
               </Button>
@@ -322,31 +322,31 @@ const AdminPage = () => {
 
         {/* Create User Dialog */}
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogContent className="mx-4 sm:mx-0 max-w-md">
+          <DialogContent className="mx-2 sm:mx-4 max-w-sm sm:max-w-md">
             <DialogHeader>
-              <DialogTitle className="text-lg sm:text-xl">Novo Usuário</DialogTitle>
-              <DialogDescription className="text-sm sm:text-base">
+              <DialogTitle className="text-base sm:text-lg lg:text-xl">Novo Usuário</DialogTitle>
+              <DialogDescription className="text-xs sm:text-sm lg:text-base">
                 Crie um novo usuário no sistema
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div>
-                <Label htmlFor="full_name" className="text-sm">Nome Completo</Label>
+                <Label htmlFor="full_name" className="text-xs sm:text-sm">Nome Completo</Label>
                 <Input
                   id="full_name"
                   value={newUser.full_name}
                   onChange={(e) => setNewUser({ ...newUser, full_name: e.target.value })}
                   placeholder="Digite o nome completo"
-                  className="text-sm"
+                  className="text-xs sm:text-sm"
                 />
               </div>
               <div>
-                <Label htmlFor="new_role" className="text-sm">Role</Label>
+                <Label htmlFor="new_role" className="text-xs sm:text-sm">Role</Label>
                 <Select
                   value={newUser.role}
                   onValueChange={(value) => setNewUser({ ...newUser, role: value })}
                 >
-                  <SelectTrigger className="text-sm">
+                  <SelectTrigger className="text-xs sm:text-sm">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -361,14 +361,14 @@ const AdminPage = () => {
               <Button
                 variant="outline"
                 onClick={() => setIsCreateDialogOpen(false)}
-                className="w-full sm:w-auto text-sm sm:text-base"
+                className="w-full sm:w-auto text-xs sm:text-sm h-8 sm:h-10"
               >
                 Cancelar
               </Button>
               <Button
                 onClick={handleCreateUser}
                 disabled={createProfile.isPending || !newUser.full_name}
-                className="w-full sm:w-auto text-sm sm:text-base"
+                className="w-full sm:w-auto text-xs sm:text-sm h-8 sm:h-10"
               >
                 {createProfile.isPending ? "Criando..." : "Criar"}
               </Button>
@@ -378,13 +378,13 @@ const AdminPage = () => {
 
         {/* Delete confirmation dialog */}
         <Dialog open={!!deleteUserId} onOpenChange={(open) => !open && setDeleteUserId(null)}>
-          <DialogContent className="mx-4 sm:mx-0 max-w-md">
+          <DialogContent className="mx-2 sm:mx-4 max-w-sm sm:max-w-md">
             <DialogHeader>
-              <DialogTitle className="text-lg sm:text-xl flex items-center gap-2">
-                <AlertTriangle className="h-5 w-5 text-red-500" />
+              <DialogTitle className="text-base sm:text-lg lg:text-xl flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5 text-red-500" />
                 Confirmar exclusão
               </DialogTitle>
-              <DialogDescription className="text-sm sm:text-base">
+              <DialogDescription className="text-xs sm:text-sm lg:text-base">
                 Tem certeza que deseja excluir este usuário? Esta ação não pode ser desfeita.
               </DialogDescription>
             </DialogHeader>
@@ -393,7 +393,7 @@ const AdminPage = () => {
                 variant="outline"
                 onClick={() => setDeleteUserId(null)}
                 disabled={deleteProfile.isPending}
-                className="w-full sm:w-auto text-sm sm:text-base"
+                className="w-full sm:w-auto text-xs sm:text-sm h-8 sm:h-10"
               >
                 Cancelar
               </Button>
@@ -401,7 +401,7 @@ const AdminPage = () => {
                 variant="destructive"
                 onClick={handleDeleteUser}
                 disabled={deleteProfile.isPending}
-                className="w-full sm:w-auto text-sm sm:text-base"
+                className="w-full sm:w-auto text-xs sm:text-sm h-8 sm:h-10"
               >
                 {deleteProfile.isPending ? "Excluindo..." : "Excluir"}
               </Button>
