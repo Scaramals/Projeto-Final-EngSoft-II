@@ -77,7 +77,7 @@ const AdminPage = () => {
   }
 
   const handleUpdateRole = async () => {
-    if (selectedUser) {
+    if (selectedUser && updateUserRole) {
       await updateUserRole.mutateAsync({
         userId: selectedUser.id,
         role: selectedUser.role,
@@ -88,13 +88,21 @@ const AdminPage = () => {
   };
 
   const handleCreateUser = async () => {
-    await createProfile.mutateAsync(newUser);
-    setIsCreateDialogOpen(false);
-    setNewUser({ full_name: '', role: 'employee' });
+    if (createProfile) {
+      // Generate a UUID for the new user
+      const newUserId = crypto.randomUUID();
+      await createProfile.mutateAsync({
+        id: newUserId,
+        full_name: newUser.full_name,
+        role: newUser.role
+      });
+      setIsCreateDialogOpen(false);
+      setNewUser({ full_name: '', role: 'employee' });
+    }
   };
 
   const handleDeleteUser = async () => {
-    if (deleteUserId) {
+    if (deleteUserId && deleteProfile) {
       await deleteProfile.mutateAsync(deleteUserId);
       setDeleteUserId(null);
     }
@@ -311,10 +319,10 @@ const AdminPage = () => {
               </Button>
               <Button
                 onClick={handleUpdateRole}
-                disabled={updateUserRole.isPending}
+                disabled={updateUserRole?.isPending}
                 className="w-full sm:w-auto text-xs sm:text-sm h-8 sm:h-10"
               >
-                {updateUserRole.isPending ? "Salvando..." : "Salvar"}
+                {updateUserRole?.isPending ? "Salvando..." : "Salvar"}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -367,10 +375,10 @@ const AdminPage = () => {
               </Button>
               <Button
                 onClick={handleCreateUser}
-                disabled={createProfile.isPending || !newUser.full_name}
+                disabled={createProfile?.isPending || !newUser.full_name}
                 className="w-full sm:w-auto text-xs sm:text-sm h-8 sm:h-10"
               >
-                {createProfile.isPending ? "Criando..." : "Criar"}
+                {createProfile?.isPending ? "Criando..." : "Criar"}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -392,7 +400,7 @@ const AdminPage = () => {
               <Button
                 variant="outline"
                 onClick={() => setDeleteUserId(null)}
-                disabled={deleteProfile.isPending}
+                disabled={deleteProfile?.isPending}
                 className="w-full sm:w-auto text-xs sm:text-sm h-8 sm:h-10"
               >
                 Cancelar
@@ -400,10 +408,10 @@ const AdminPage = () => {
               <Button
                 variant="destructive"
                 onClick={handleDeleteUser}
-                disabled={deleteProfile.isPending}
+                disabled={deleteProfile?.isPending}
                 className="w-full sm:w-auto text-xs sm:text-sm h-8 sm:h-10"
               >
-                {deleteProfile.isPending ? "Excluindo..." : "Excluir"}
+                {deleteProfile?.isPending ? "Excluindo..." : "Excluir"}
               </Button>
             </DialogFooter>
           </DialogContent>

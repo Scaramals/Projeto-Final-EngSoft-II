@@ -18,6 +18,7 @@ interface UpdateUserRoleData {
 }
 
 interface CreateProfileData {
+  id: string;
   full_name: string;
   role: string;
 }
@@ -83,12 +84,11 @@ export function useAdminUsers() {
 
   // Criar novo perfil
   const createProfile = useMutation({
-    mutationFn: async ({ full_name, role }: CreateProfileData) => {
-      // Para criar um novo usuário, você precisaria criar primeiro na tabela auth.users
-      // Por enquanto, vamos apenas criar o perfil (assumindo que o usuário já foi criado)
+    mutationFn: async ({ id, full_name, role }: CreateProfileData) => {
       const { data, error } = await supabase
         .from('profiles')
         .insert({
+          id: id,
           full_name: full_name,
           role: role
         })
