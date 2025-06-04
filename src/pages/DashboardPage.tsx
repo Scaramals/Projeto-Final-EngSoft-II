@@ -4,6 +4,7 @@ import { Package, BarChart, AlertTriangle, ArrowUpDown, RefreshCw } from "lucide
 import { StatsCard } from "@/components/dashboard/StatsCard";
 import { LowStockAlert } from "@/components/dashboard/LowStockAlert";
 import { RecentMovements } from "@/components/dashboard/RecentMovements";
+import { OptimizedMovementsReport } from "@/components/reports/OptimizedMovementsReport";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/utils";
@@ -11,17 +12,19 @@ import { useOptimizedDashboard } from "@/hooks/useOptimizedDashboard";
 import { useDashboard } from "@/hooks/useDashboard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { OptimizedApiService } from "@/services/optimizedApi";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 
 const DashboardPage: React.FC = () => {
-  const { stats, isLoading, refreshAll } = useOptimizedDashboard();
-  const { lowStockProducts, recentMovements } = useDashboard();
+  const { stats, isLoading: isOptimizedLoading, refreshAll: refreshOptimized } = useOptimizedDashboard();
+  const { lowStockProducts, recentMovements, refreshAll: refreshDashboard } = useDashboard();
   const { toast } = useToast();
+
+  const isLoading = isOptimizedLoading;
 
   const handleRefresh = async () => {
     try {
       OptimizedApiService.clearCache();
-      await refreshAll();
+      await Promise.all([refreshOptimized(), refreshDashboard()]);
       toast({
         title: "Dashboard atualizado",
         description: "Os dados foram atualizados com sucesso!",
@@ -37,7 +40,7 @@ const DashboardPage: React.FC = () => {
 
   return (
     <AppLayout>
-      <div className="space-y-4 md:space-y-6 p-2 md:p-0">
+      <div className="space-y-4 md:space-y-6 p-2 md:p-0 max-w-full overflow-hidden">
         {/* Header responsivo */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
           <div>
@@ -89,17 +92,23 @@ const DashboardPage: React.FC = () => {
                 title="Valor Total"
                 value={formatCurrency(Number(stats?.totalValue) || 0)}
                 icon={<BarChart size={20} className="md:w-6 md:h-6" />}
+                trend={{ value: 8, isPositive: true }}
                 className="text-xs md:text-sm"
               />
               <StatsCard
                 title="Movimentações"
                 value={Number(stats?.recentMovementsCount) || 0}
                 icon={<ArrowUpDown size={20} className="md:w-6 md:h-6" />}
-                trend={{ value: 8, isPositive: true }}
+                trend={{ value: 15, isPositive: true }}
                 className="text-xs md:text-sm"
               />
             </>
           )}
+        </div>
+
+        {/* Gráfico de movimentações responsivo */}
+        <div className="w-full">
+          <OptimizedMovementsReport />
         </div>
 
         {/* Grid responsivo para alertas e movimentações */}

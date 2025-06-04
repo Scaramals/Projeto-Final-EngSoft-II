@@ -2,7 +2,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Supplier, SupplierFormData } from "@/types";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 
 /**
@@ -93,7 +93,7 @@ export function useSuppliers() {
     });
   };
 
-  // Criar um novo fornecedor
+  // Criar um novo fornecedor - CORRIGIDO: removido referência à tabela users
   const useCreateSupplier = () => {
     return useMutation({
       mutationFn: async (supplier: SupplierFormData) => {
@@ -102,7 +102,8 @@ export function useSuppliers() {
         }
 
         console.log('Creating supplier with user ID:', user.id);
-        const dbSupplier = mapSupplierToDbSupplier(supplier, user.id);
+        // Não incluir user ID para evitar erro de permissão
+        const dbSupplier = mapSupplierToDbSupplier(supplier);
         
         console.log('Supplier data to insert:', dbSupplier);
         

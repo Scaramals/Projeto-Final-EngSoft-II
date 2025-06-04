@@ -65,25 +65,25 @@ export const OptimizedMovementsReport: React.FC = () => {
   const netMovement = totalIn - totalOut;
 
   return (
-    <Card className="w-full">
+    <Card className="w-full max-w-full overflow-hidden">
       <CardHeader className="pb-2">
         <CardTitle className="text-base md:text-lg">Movimentações dos Últimos 7 Dias</CardTitle>
       </CardHeader>
-      <CardContent className="pt-0">
+      <CardContent className="pt-0 px-2 md:px-6">
         {/* Resumo em cards */}
-        <div className="grid grid-cols-3 gap-2 mb-4">
-          <div className="bg-green-50 p-3 rounded-lg text-center">
-            <ArrowUpRight className="w-4 h-4 text-green-600 mx-auto mb-1" />
+        <div className="grid grid-cols-3 gap-1 md:gap-2 mb-4">
+          <div className="bg-green-50 p-2 md:p-3 rounded-lg text-center">
+            <ArrowUpRight className="w-3 h-3 md:w-4 md:h-4 text-green-600 mx-auto mb-1" />
             <p className="text-xs text-green-600">Entradas</p>
             <p className="text-sm md:text-lg font-bold text-green-700">{totalIn}</p>
           </div>
-          <div className="bg-red-50 p-3 rounded-lg text-center">
-            <ArrowDownLeft className="w-4 h-4 text-red-600 mx-auto mb-1" />
+          <div className="bg-red-50 p-2 md:p-3 rounded-lg text-center">
+            <ArrowDownLeft className="w-3 h-3 md:w-4 md:h-4 text-red-600 mx-auto mb-1" />
             <p className="text-xs text-red-600">Saídas</p>
             <p className="text-sm md:text-lg font-bold text-red-700">{totalOut}</p>
           </div>
-          <div className={`p-3 rounded-lg text-center ${netMovement >= 0 ? 'bg-blue-50' : 'bg-orange-50'}`}>
-            <BarChart3 className={`w-4 h-4 mx-auto mb-1 ${netMovement >= 0 ? 'text-blue-600' : 'text-orange-600'}`} />
+          <div className={`p-2 md:p-3 rounded-lg text-center ${netMovement >= 0 ? 'bg-blue-50' : 'bg-orange-50'}`}>
+            <BarChart3 className={`w-3 h-3 md:w-4 md:h-4 mx-auto mb-1 ${netMovement >= 0 ? 'text-blue-600' : 'text-orange-600'}`} />
             <p className={`text-xs ${netMovement >= 0 ? 'text-blue-600' : 'text-orange-600'}`}>Saldo</p>
             <p className={`text-sm md:text-lg font-bold ${netMovement >= 0 ? 'text-blue-700' : 'text-orange-700'}`}>
               {netMovement >= 0 ? '+' : ''}{netMovement}
@@ -91,31 +91,37 @@ export const OptimizedMovementsReport: React.FC = () => {
           </div>
         </div>
 
-        <div className="h-48 md:h-64">
+        <div className="h-40 md:h-64 w-full overflow-hidden">
           <BarChart
             data={chartData}
             options={{
               responsive: true,
               maintainAspectRatio: false,
-              scales: {
-                y: {
-                  beginAtZero: true,
-                  ticks: {
-                    stepSize: 1
-                  }
-                },
-                x: {
-                  ticks: {
-                    maxTicksLimit: 7
-                  }
-                }
-              },
               plugins: {
                 legend: {
                   position: "top",
                   labels: {
-                    boxWidth: 12,
-                    padding: 8,
+                    boxWidth: 8,
+                    padding: 4,
+                    font: {
+                      size: 10
+                    }
+                  }
+                }
+              },
+              scales: {
+                y: {
+                  beginAtZero: true,
+                  ticks: {
+                    stepSize: 1,
+                    font: {
+                      size: 10
+                    }
+                  }
+                },
+                x: {
+                  ticks: {
+                    maxTicksLimit: 7,
                     font: {
                       size: 10
                     }
