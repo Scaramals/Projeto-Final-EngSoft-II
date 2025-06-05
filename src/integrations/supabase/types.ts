@@ -139,7 +139,6 @@ export type Database = {
           address: string | null
           contact_name: string | null
           created_at: string
-          created_by: string | null
           email: string | null
           id: string
           name: string
@@ -151,7 +150,6 @@ export type Database = {
           address?: string | null
           contact_name?: string | null
           created_at?: string
-          created_by?: string | null
           email?: string | null
           id?: string
           name: string
@@ -163,7 +161,6 @@ export type Database = {
           address?: string | null
           contact_name?: string | null
           created_at?: string
-          created_by?: string | null
           email?: string | null
           id?: string
           name?: string
@@ -270,6 +267,10 @@ export type Database = {
       get_user_role: {
         Args: { user_id: string }
         Returns: string
+      }
+      is_admin_or_master: {
+        Args: { user_id: string }
+        Returns: boolean
       }
       is_permanent_admin: {
         Args: { user_id: string }

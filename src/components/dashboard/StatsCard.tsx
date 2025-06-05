@@ -19,25 +19,6 @@ export const StatsCard: React.FC<StatsCardProps> = ({
   trend,
   className = "",
 }) => {
-  // Calcular tendência baseada no mês anterior (simulação)
-  const calculateTrend = () => {
-    if (trend) return trend;
-    
-    // Simulação de dados de tendência baseados no valor atual
-    const currentValue = typeof value === 'number' ? value : 0;
-    const previousMonthValue = Math.max(0, currentValue - Math.floor(Math.random() * 20));
-    const percentChange = previousMonthValue > 0 
-      ? Math.round(((currentValue - previousMonthValue) / previousMonthValue) * 100)
-      : 0;
-    
-    return {
-      value: Math.abs(percentChange),
-      isPositive: percentChange >= 0
-    };
-  };
-
-  const trendData = calculateTrend();
-
   return (
     <div className={`data-card ${className}`}>
       <div className="flex justify-between items-start">
@@ -47,15 +28,15 @@ export const StatsCard: React.FC<StatsCardProps> = ({
             {value}
           </h3>
           
-          {trendData && trendData.value > 0 && (
+          {trend && trend.value > 0 && (
             <div className="flex items-center mt-1 md:mt-2">
               <span
                 className={`text-xs font-medium ${
-                  trendData.isPositive ? "text-green-600" : "text-red-600"
+                  trend.isPositive ? "text-green-600" : "text-red-600"
                 }`}
               >
-                {trendData.isPositive ? "+" : "-"}{trendData.value}%
-                {trendData.isPositive ? " ↑" : " ↓"}
+                {trend.isPositive ? "+" : "-"}{trend.value}%
+                {trend.isPositive ? " ↑" : " ↓"}
               </span>
               <span className="text-xs text-muted-foreground ml-1 hidden md:inline">
                 desde o mês passado

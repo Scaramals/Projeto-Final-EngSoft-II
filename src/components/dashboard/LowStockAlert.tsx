@@ -2,23 +2,43 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Product } from "@/types";
 import { AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
-interface LowStockAlertProps {
-  products: Product[];
+interface LowStockProduct {
+  id: string;
+  name: string;
+  quantity: number;
+  minimum_stock: number | null;
 }
 
-export const LowStockAlert: React.FC<LowStockAlertProps> = ({ products }) => {
+export const LowStockAlert: React.FC = () => {
   const { toast } = useToast();
 
-  // Simular produtos com estoque baixo se não houver dados
-  const lowStockProducts = products?.length > 0 ? products : [
-    { id: '1', name: 'Produto A', quantity: 2, minimum_stock: 5 },
-    { id: '2', name: 'Produto B', quantity: 1, minimum_stock: 10 },
-    { id: '3', name: 'Produto C', quantity: 3, minimum_stock: 8 },
-  ];
+  // Buscar produtos com estoque baixo da API
+  const { data: lowStockProducts = [], isLoading } = useQuery({
+    queryKey: ['low-stock-products'],
+    queryFn: async () => {
+      console.log('Fetching low stock products from API...');
+      
+      const { data, error } = await supabase
+        .from('products')
+        .select('id, name, quantity, minimum_stock')
+        .not('minimum_stock', 'is', null)
+        .lt('quantity', 'minimum_stock')
+        .order('quantity', { ascending: true });
+
+      if (error) {
+        console.error('Error fetching low stock products:', error);
+        throw new Error(`Error fetching low stock products: ${error.message}`);
+      }
+
+      console.log('Low stock products fetched:', data);
+      return data as LowStockProduct[];
+    },
+  });
 
   const handleViewProduct = (productId: string) => {
     toast({
@@ -26,6 +46,18 @@ export const LowStockAlert: React.FC<LowStockAlertProps> = ({ products }) => {
       description: "Redirecionando para detalhes do produto...",
     });
   };
+
+  if (isLoading) {
+    return (
+      <div className="data-card">
+        <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">
+          <AlertTriangle className="h-5 w-5 text-orange-500" />
+          Alertas de Estoque
+        </h3>
+        <p className="text-muted-foreground">Carregando...</p>
+      </div>
+    );
+  }
 
   if (lowStockProducts.length === 0) {
     return (

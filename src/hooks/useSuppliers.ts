@@ -3,7 +3,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Supplier, SupplierFormData } from "@/types";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/contexts/AuthContext";
 
 /**
  * Helper function to convert database response to Supplier type
@@ -18,13 +17,12 @@ const mapDbSupplierToSupplier = (dbSupplier: any): Supplier => ({
   notes: dbSupplier.notes,
   createdAt: dbSupplier.created_at,
   updatedAt: dbSupplier.updated_at,
-  createdBy: dbSupplier.created_by,
 });
 
 /**
  * Helper function to convert Supplier type to database format
  */
-const mapSupplierToDbSupplier = (supplier: SupplierFormData, userId?: string) => {
+const mapSupplierToDbSupplier = (supplier: SupplierFormData) => {
   const dbSupplier: any = {};
   
   if (supplier.name !== undefined) dbSupplier.name = supplier.name;
@@ -33,7 +31,6 @@ const mapSupplierToDbSupplier = (supplier: SupplierFormData, userId?: string) =>
   if (supplier.phone !== undefined) dbSupplier.phone = supplier.phone;
   if (supplier.address !== undefined) dbSupplier.address = supplier.address;
   if (supplier.notes !== undefined) dbSupplier.notes = supplier.notes;
-  if (userId) dbSupplier.created_by = userId;
   
   return dbSupplier;
 };
@@ -41,13 +38,14 @@ const mapSupplierToDbSupplier = (supplier: SupplierFormData, userId?: string) =>
 export function useSuppliers() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const { user } = useAuth();
 
   // Fetch all suppliers
   const useAllSuppliers = (search?: string) => {
     return useQuery({
       queryKey: ['suppliers', search],
       queryFn: async () => {
+        console.log('Fetching suppliers from API...');
+        
         let query = supabase.from('suppliers').select('*');
 
         if (search) {
@@ -63,9 +61,9 @@ export function useSuppliers() {
           throw new Error(`Error fetching suppliers: ${error.message}`);
         }
 
+        console.log('Suppliers fetched successfully:', data);
         return (data || []).map(mapDbSupplierToSupplier) as Supplier[];
       },
-      enabled: !!user,
     });
   };
 
@@ -89,20 +87,16 @@ export function useSuppliers() {
         
         return mapDbSupplierToSupplier(data);
       },
-      enabled: !!user && !!supplierId,
+      enabled: !!supplierId,
     });
   };
 
-  // Criar um novo fornecedor - CORRIGIDO: removido referência à tabela users
+  // Criar um novo fornecedor
   const useCreateSupplier = () => {
     return useMutation({
       mutationFn: async (supplier: SupplierFormData) => {
-        if (!user) {
-          throw new Error("User not authenticated");
-        }
-
-        console.log('Creating supplier with user ID:', user.id);
-        // Não incluir user ID para evitar erro de permissão
+        console.log('Creating supplier:', supplier);
+        
         const dbSupplier = mapSupplierToDbSupplier(supplier);
         
         console.log('Supplier data to insert:', dbSupplier);
@@ -118,6 +112,7 @@ export function useSuppliers() {
           throw new Error(`Error creating supplier: ${error.message}`);
         }
         
+        console.log('Supplier created successfully:', data);
         return mapDbSupplierToSupplier(data);
       },
       onSuccess: () => {
