@@ -36,30 +36,35 @@ const DashboardPage: React.FC = () => {
         throw new Error(`Erro ao buscar estatísticas: ${error.message}`);
       }
 
-      SecureLogger.info('Estatísticas do dashboard obtidas com sucesso');
+      SecureLogger.success('Estatísticas do dashboard obtidas com sucesso');
       return data as unknown as DashboardStats;
     },
   });
 
-  // Buscar produtos com estoque baixo
+  // Buscar produtos com estoque baixo usando consulta corrigida
   const { data: lowStockCount, refetch: refetchLowStock } = useQuery({
     queryKey: ['low-stock-count'],
     queryFn: async () => {
       SecureLogger.info('Buscando contagem de produtos com estoque baixo');
       
+      // Buscar todos os produtos e filtrar no cliente
       const { data, error } = await supabase
         .from('products')
-        .select('id', { count: 'exact' })
-        .not('minimum_stock', 'is', null)
-        .lt('quantity', 'minimum_stock');
+        .select('id, quantity, minimum_stock')
+        .not('minimum_stock', 'is', null);
 
       if (error) {
-        SecureLogger.error('Erro ao buscar produtos com estoque baixo', error);
+        SecureLogger.error('Erro ao buscar produtos', error);
         return 0;
       }
 
-      SecureLogger.info(`Produtos com estoque baixo encontrados: ${data.length}`);
-      return data.length || 0;
+      // Filtrar produtos com estoque baixo no lado do cliente
+      const lowStockItems = (data || []).filter(product => 
+        product.minimum_stock && product.quantity < product.minimum_stock
+      );
+
+      SecureLogger.success(`Produtos com estoque baixo encontrados: ${lowStockItems.length}`);
+      return lowStockItems.length;
     },
   });
 
@@ -76,7 +81,7 @@ const DashboardPage: React.FC = () => {
         title: "Dashboard atualizado",
         description: "Os dados foram atualizados com sucesso!",
       });
-      SecureLogger.info('Dashboard atualizado com sucesso');
+      SecureLogger.success('Dashboard atualizado com sucesso');
     } catch (error) {
       SecureLogger.error('Erro ao atualizar dashboard', error);
       toast({

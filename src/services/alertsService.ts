@@ -37,18 +37,21 @@ export class AlertsService {
     try {
       SecureLogger.info('Gerando alertas de estoque baixo');
       
+      // Corrigir a consulta para evitar erro de sintaxe SQL
       const { data: lowStockProducts, error } = await supabase
         .from('products')
         .select('id, name, quantity, minimum_stock')
         .not('minimum_stock', 'is', null)
-        .lt('quantity', 'minimum_stock');
+        .filter('quantity', 'lt', 'minimum_stock');
 
       if (error) {
         SecureLogger.error('Erro ao buscar produtos com estoque baixo', error);
         return [];
       }
 
-      return lowStockProducts.map(product => ({
+      SecureLogger.success(`Produtos com estoque baixo encontrados: ${lowStockProducts?.length || 0}`);
+
+      return (lowStockProducts || []).map(product => ({
         id: `low_stock_${product.id}`,
         type: 'low_stock' as const,
         title: 'Estoque Baixo',
@@ -119,6 +122,7 @@ export class AlertsService {
         }
       });
 
+      SecureLogger.success(`Alertas de alto valor gerados: ${alerts.length}`);
       return alerts;
     } catch (error) {
       SecureLogger.error('Erro ao gerar alertas de movimentações de alto valor', error);
@@ -141,7 +145,7 @@ export class AlertsService {
       // Ordenar por data (mais recentes primeiro)
       allAlerts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       
-      SecureLogger.info(`Total de alertas gerados: ${allAlerts.length}`);
+      SecureLogger.success(`Total de alertas processados: ${allAlerts.length}`);
       
       return allAlerts;
     } catch (error) {
@@ -228,6 +232,7 @@ export class AlertsService {
         }
       });
 
+      SecureLogger.success('Indicadores do sistema gerados com sucesso');
       return indicators;
     } catch (error) {
       SecureLogger.error('Erro ao gerar indicadores do sistema', error);

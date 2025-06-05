@@ -24,25 +24,29 @@ export const LowStockAlert: React.FC = () => {
     queryFn: async () => {
       SecureLogger.info('Buscando produtos com estoque baixo para alertas');
       
+      // Usar uma consulta mais simples que funciona corretamente
       const { data, error } = await supabase
         .from('products')
         .select('id, name, quantity, minimum_stock')
-        .not('minimum_stock', 'is', null)
-        .lt('quantity', 'minimum_stock')
-        .order('quantity', { ascending: true });
+        .not('minimum_stock', 'is', null);
 
       if (error) {
-        SecureLogger.error('Erro ao buscar produtos com estoque baixo', error);
+        SecureLogger.error('Erro ao buscar produtos', error);
         throw new Error(`Erro ao buscar produtos: ${error.message}`);
       }
 
-      SecureLogger.info(`Produtos com estoque baixo encontrados: ${data.length}`);
-      return data as LowStockProduct[];
+      // Filtrar no lado do cliente produtos com estoque baixo
+      const lowStockItems = (data || []).filter(product => 
+        product.minimum_stock && product.quantity < product.minimum_stock
+      ).sort((a, b) => a.quantity - b.quantity);
+
+      SecureLogger.success(`Produtos com estoque baixo encontrados: ${lowStockItems.length}`);
+      return lowStockItems as LowStockProduct[];
     },
   });
 
   const handleViewProduct = (productId: string) => {
-    SecureLogger.info('Visualizando produto com estoque baixo');
+    SecureLogger.info('Ação: Visualizar produto selecionado');
     toast({
       title: "Produto visualizado",
       description: "Redirecionando para detalhes do produto...",

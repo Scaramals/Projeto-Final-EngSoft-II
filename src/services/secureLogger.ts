@@ -16,6 +16,10 @@ export class SecureLogger {
       if (data.length > 20 && (data.includes('-') || data.match(/^[a-f0-9]+$/i))) {
         return '[SANITIZED_ID]';
       }
+      // Mascarar emails
+      if (data.includes('@')) {
+        return '[SANITIZED_EMAIL]';
+      }
       return data;
     }
     
@@ -27,9 +31,13 @@ export class SecureLogger {
       const sanitized: any = {};
       for (const [key, value] of Object.entries(data)) {
         // Campos sensíveis que devem ser mascarados
-        const sensitiveFields = ['id', 'user_id', 'email', 'phone', 'password', 'token', 'key'];
+        const sensitiveFields = [
+          'id', 'user_id', 'email', 'phone', 'password', 'token', 'key', 
+          'full_name', 'fullName', 'role', 'created_at', 'updated_at',
+          'createdAt', 'updatedAt', 'profile', 'user'
+        ];
         
-        if (sensitiveFields.some(field => key.toLowerCase().includes(field))) {
+        if (sensitiveFields.some(field => key.toLowerCase().includes(field.toLowerCase()))) {
           sanitized[key] = '[SANITIZED]';
         } else {
           sanitized[key] = this.sanitizeData(value);
@@ -43,19 +51,53 @@ export class SecureLogger {
   
   static info(message: string, data?: any): void {
     if (this.isDevelopment) {
-      console.log(`[INFO] ${message}`, data ? this.sanitizeData(data) : '');
+      if (data) {
+        console.log(`[INFO] ${message}`, this.sanitizeData(data));
+      } else {
+        console.log(`[INFO] ${message}`);
+      }
     }
   }
   
   static error(message: string, error?: any): void {
     if (this.isDevelopment) {
-      console.error(`[ERROR] ${message}`, error?.message || error);
+      if (error?.message) {
+        console.error(`[ERROR] ${message}`, error.message);
+      } else if (error) {
+        console.error(`[ERROR] ${message}`, this.sanitizeData(error));
+      } else {
+        console.error(`[ERROR] ${message}`);
+      }
     }
   }
   
   static warn(message: string, data?: any): void {
     if (this.isDevelopment) {
-      console.warn(`[WARN] ${message}`, data ? this.sanitizeData(data) : '');
+      if (data) {
+        console.warn(`[WARN] ${message}`, this.sanitizeData(data));
+      } else {
+        console.warn(`[WARN] ${message}`);
+      }
+    }
+  }
+  
+  static success(message: string, data?: any): void {
+    if (this.isDevelopment) {
+      if (data) {
+        console.log(`[SUCCESS] ${message}`, this.sanitizeData(data));
+      } else {
+        console.log(`[SUCCESS] ${message}`);
+      }
+    }
+  }
+  
+  static debug(message: string, data?: any): void {
+    if (this.isDevelopment) {
+      if (data) {
+        console.debug(`[DEBUG] ${message}`, this.sanitizeData(data));
+      } else {
+        console.debug(`[DEBUG] ${message}`);
+      }
     }
   }
 }
