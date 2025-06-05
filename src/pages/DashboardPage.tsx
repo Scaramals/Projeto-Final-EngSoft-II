@@ -5,6 +5,8 @@ import { StatsCard } from "@/components/dashboard/StatsCard";
 import { LowStockAlert } from "@/components/dashboard/LowStockAlert";
 import { RecentMovements } from "@/components/dashboard/RecentMovements";
 import { OptimizedMovementsReport } from "@/components/reports/OptimizedMovementsReport";
+import { AlertsPanel } from "@/components/dashboard/AlertsPanel";
+import { SystemIndicators } from "@/components/dashboard/SystemIndicators";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/utils";
@@ -16,6 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { DashboardStats } from "@/types";
+import { SecureLogger } from "@/services/secureLogger";
 
 const DashboardPage: React.FC = () => {
   const { toast } = useToast();
@@ -24,17 +27,16 @@ const DashboardPage: React.FC = () => {
   const { data: dashboardStats, isLoading: isStatsLoading, refetch: refetchStats } = useQuery({
     queryKey: ['dashboard-stats'],
     queryFn: async () => {
-      console.log('Fetching dashboard stats from API...');
+      SecureLogger.info('Buscando estatísticas do dashboard');
       
       const { data, error } = await supabase.rpc('get_dashboard_stats');
 
       if (error) {
-        console.error('Error fetching dashboard stats:', error);
-        throw new Error(`Error fetching dashboard stats: ${error.message}`);
+        SecureLogger.error('Erro ao buscar estatísticas do dashboard', error);
+        throw new Error(`Erro ao buscar estatísticas: ${error.message}`);
       }
 
-      console.log('Dashboard stats fetched:', data);
-      // Properly cast the Json response to our DashboardStats type
+      SecureLogger.info('Estatísticas do dashboard obtidas com sucesso');
       return data as unknown as DashboardStats;
     },
   });
@@ -43,7 +45,7 @@ const DashboardPage: React.FC = () => {
   const { data: lowStockCount, refetch: refetchLowStock } = useQuery({
     queryKey: ['low-stock-count'],
     queryFn: async () => {
-      console.log('Fetching low stock count...');
+      SecureLogger.info('Buscando contagem de produtos com estoque baixo');
       
       const { data, error } = await supabase
         .from('products')
@@ -52,11 +54,11 @@ const DashboardPage: React.FC = () => {
         .lt('quantity', 'minimum_stock');
 
       if (error) {
-        console.error('Error fetching low stock count:', error);
+        SecureLogger.error('Erro ao buscar produtos com estoque baixo', error);
         return 0;
       }
 
-      console.log('Low stock count:', data);
+      SecureLogger.info(`Produtos com estoque baixo encontrados: ${data.length}`);
       return data.length || 0;
     },
   });
@@ -67,13 +69,16 @@ const DashboardPage: React.FC = () => {
 
   const handleRefresh = async () => {
     try {
+      SecureLogger.info('Iniciando atualização do dashboard');
       OptimizedApiService.clearCache();
       await Promise.all([refetchStats(), refetchLowStock(), refreshDashboard()]);
       toast({
         title: "Dashboard atualizado",
         description: "Os dados foram atualizados com sucesso!",
       });
+      SecureLogger.info('Dashboard atualizado com sucesso');
     } catch (error) {
+      SecureLogger.error('Erro ao atualizar dashboard', error);
       toast({
         variant: "destructive",
         title: "Erro ao atualizar",
@@ -150,15 +155,23 @@ const DashboardPage: React.FC = () => {
           )}
         </div>
 
+        {/* Indicadores do Sistema */}
+        <SystemIndicators />
+
         {/* Gráfico de movimentações responsivo */}
         <div className="w-full">
           <OptimizedMovementsReport />
         </div>
 
         {/* Grid responsivo para alertas e movimentações */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
+          {/* Alertas do Sistema */}
+          <AlertsPanel />
+          
+          {/* Alertas de Estoque Baixo */}
           <LowStockAlert />
           
+          {/* Movimentações Recentes */}
           {isLoading ? (
             <div className="p-4 md:p-6 bg-white rounded-lg shadow space-y-4">
               <Skeleton className="h-5 md:h-6 w-40 md:w-48 mb-4" />

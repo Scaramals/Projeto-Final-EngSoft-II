@@ -6,6 +6,7 @@ import { AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { SecureLogger } from "@/services/secureLogger";
 
 interface LowStockProduct {
   id: string;
@@ -21,7 +22,7 @@ export const LowStockAlert: React.FC = () => {
   const { data: lowStockProducts = [], isLoading } = useQuery({
     queryKey: ['low-stock-products'],
     queryFn: async () => {
-      console.log('Fetching low stock products from API...');
+      SecureLogger.info('Buscando produtos com estoque baixo para alertas');
       
       const { data, error } = await supabase
         .from('products')
@@ -31,16 +32,17 @@ export const LowStockAlert: React.FC = () => {
         .order('quantity', { ascending: true });
 
       if (error) {
-        console.error('Error fetching low stock products:', error);
-        throw new Error(`Error fetching low stock products: ${error.message}`);
+        SecureLogger.error('Erro ao buscar produtos com estoque baixo', error);
+        throw new Error(`Erro ao buscar produtos: ${error.message}`);
       }
 
-      console.log('Low stock products fetched:', data);
+      SecureLogger.info(`Produtos com estoque baixo encontrados: ${data.length}`);
       return data as LowStockProduct[];
     },
   });
 
   const handleViewProduct = (productId: string) => {
+    SecureLogger.info('Visualizando produto com estoque baixo');
     toast({
       title: "Produto visualizado",
       description: "Redirecionando para detalhes do produto...",
