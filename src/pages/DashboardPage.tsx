@@ -15,6 +15,7 @@ import { OptimizedApiService } from "@/services/optimizedApi";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { DashboardStats } from "@/types";
 
 const DashboardPage: React.FC = () => {
   const { toast } = useToast();
@@ -33,7 +34,8 @@ const DashboardPage: React.FC = () => {
       }
 
       console.log('Dashboard stats fetched:', data);
-      return data;
+      // Properly cast the Json response to our DashboardStats type
+      return data as unknown as DashboardStats;
     },
   });
 
