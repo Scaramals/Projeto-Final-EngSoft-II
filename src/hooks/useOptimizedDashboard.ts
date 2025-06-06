@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { OptimizedApiService } from "@/services/optimizedApi";
 import { useAuth } from "@/contexts/AuthContext";
 import { DashboardStats, MovementSummary, CategoryAnalysis } from "@/types";
+import { supabase } from "@/integrations/supabase/client";
 
 export function useOptimizedDashboard() {
   const { user } = useAuth();
@@ -33,19 +34,64 @@ export function useOptimizedDashboard() {
     gcTime: 20 * 60 * 1000, // 20 minutos
     enabled: !!user,
   });
+
+  // Buscar dados de tendência mensal
+  const { data: monthlyTrends, isLoading: isTrendsLoading, refetch: refetchTrends } = useQuery({
+    queryKey: ["monthly-trends"],
+    queryFn: async () => {
+      const now = new Date();
+      const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 6, 1);
+      
+      const { data, error } = await supabase
+        .from('stock_movements')
+        .select('quantity, type, created_at')
+        .gte('created_at', sixMonthsAgo.toISOString())
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+
+      // Agrupar por mês
+      const monthlyData: { [key: string]: { in: number, out: number } } = {};
+      
+      data?.forEach(movement => {
+        const monthKey = new Date(movement.created_at).toISOString().slice(0, 7); // YYYY-MM
+        if (!monthlyData[monthKey]) {
+          monthlyData[monthKey] = { in: 0, out: 0 };
+        }
+        
+        if (movement.type === 'in') {
+          monthlyData[monthKey].in += movement.quantity;
+        } else {
+          monthlyData[monthKey].out += movement.quantity;
+        }
+      });
+
+      return Object.entries(monthlyData).map(([month, data]) => ({
+        month,
+        totalIn: data.in,
+        totalOut: data.out,
+        net: data.in - data.out
+      }));
+    },
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    enabled: !!user,
+  });
   
   // Função para forçar refresh de todos os dados
   const refreshAll = () => {
     refetchStats();
     refetchMovements();
     refetchCategory();
+    refetchTrends();
   };
 
   return {
     stats,
     movementsSummary,
     categoryAnalysis,
-    isLoading: isStatsLoading || isMovementsLoading || isCategoryLoading,
+    monthlyTrends,
+    isLoading: isStatsLoading || isMovementsLoading || isCategoryLoading || isTrendsLoading,
     refreshAll,
   };
 }

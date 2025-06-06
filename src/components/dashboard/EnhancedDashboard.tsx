@@ -39,7 +39,8 @@ export const EnhancedDashboard: React.FC = () => {
   const { 
     stats, 
     movementsSummary, 
-    categoryAnalysis, 
+    categoryAnalysis,
+    monthlyTrends,
     isLoading 
   } = useOptimizedDashboard();
   
@@ -47,12 +48,12 @@ export const EnhancedDashboard: React.FC = () => {
   
   const dashboardRef = useRef<HTMLDivElement>(null);
 
-  // Transform data for charts
-  const monthlyTrends = movementsSummary?.slice(0, 6).reverse().map(item => ({
-    month: new Date(item.movement_date).toLocaleDateString('pt-BR', { month: 'short' }),
-    entrada: item.total_in,
-    saida: item.total_out,
-    valor: Math.random() * 60000 + 40000 // Sample data - replace with real value calculation
+  // Transform data for charts using real data
+  const chartData = monthlyTrends?.slice(-6).map(item => ({
+    month: new Date(item.month + '-01').toLocaleDateString('pt-BR', { month: 'short' }),
+    entrada: item.totalIn,
+    saida: item.totalOut,
+    saldo: item.net
   })) || [];
 
   const categoryDistribution = categoryAnalysis?.map(item => ({
@@ -86,56 +87,6 @@ export const EnhancedDashboard: React.FC = () => {
 
   return (
     <div ref={dashboardRef} className="space-y-6">
-      {/* Metrics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <MetricsCard
-          title="Total de Produtos"
-          value={stats?.totalProducts || 0}
-          description="Produtos cadastrados"
-          icon={Package}
-          trend={{
-            value: 12,
-            isPositive: true,
-            label: "último mês"
-          }}
-        />
-        
-        <MetricsCard
-          title="Valor Total do Estoque"
-          value={formatCurrency(stats?.totalValue || 0)}
-          description="Valor total em produtos"
-          icon={DollarSign}
-          trend={{
-            value: 8.5,
-            isPositive: true,
-            label: "último mês"
-          }}
-        />
-        
-        <MetricsCard
-          title="Produtos com Estoque Baixo"
-          value={stats?.lowStockProducts || 0}
-          description="Necessitam reposição"
-          icon={AlertTriangle}
-          badge={{
-            text: "Atenção",
-            variant: "destructive"
-          }}
-        />
-        
-        <MetricsCard
-          title="Movimentações Recentes"
-          value={stats?.recentMovementsCount || 0}
-          description="Últimos 30 dias"
-          icon={TrendingUp}
-          trend={{
-            value: 15,
-            isPositive: true,
-            label: "vs mês anterior"
-          }}
-        />
-      </div>
-
       {/* Charts Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Monthly Trends */}
@@ -146,13 +97,13 @@ export const EnhancedDashboard: React.FC = () => {
               Tendências de Movimentação
             </CardTitle>
             <CardDescription>
-              Entradas vs saídas nos últimos dias
+              Entradas vs saídas nos últimos 6 meses
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={monthlyTrends}>
+                <AreaChart data={chartData}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="month" />
                   <YAxis />
@@ -278,7 +229,7 @@ export const EnhancedDashboard: React.FC = () => {
         </Card>
       </div>
 
-      {/* Recent Movements */}
+      {/* Recent Movements Table */}
       <Card>
         <CardHeader>
           <CardTitle>Movimentações Recentes</CardTitle>
@@ -289,7 +240,7 @@ export const EnhancedDashboard: React.FC = () => {
         <CardContent>
           <div className="space-y-4">
             {recentMovements?.slice(0, 5).map((movement, index) => (
-              <div key={index} className="flex items-center justify-between p-3 rounded-lg border">
+              <div key={index} className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors">
                 <div className="flex items-center gap-3">
                   <div className={`w-2 h-2 rounded-full ${
                     movement.type === 'in' ? 'bg-green-500' : 'bg-red-500'

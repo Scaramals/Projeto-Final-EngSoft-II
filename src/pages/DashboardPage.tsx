@@ -1,29 +1,28 @@
 
 import React from "react";
 import { Package, BarChart, AlertTriangle, ArrowUpDown, RefreshCw } from "lucide-react";
-import { StatsCard } from "@/components/dashboard/StatsCard";
-import { LowStockAlert } from "@/components/dashboard/LowStockAlert";
-import { RecentMovements } from "@/components/dashboard/RecentMovements";
-import { OptimizedMovementsReport } from "@/components/reports/OptimizedMovementsReport";
-import { AlertsPanel } from "@/components/dashboard/AlertsPanel";
-import { SystemIndicators } from "@/components/dashboard/SystemIndicators";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { formatCurrency } from "@/lib/utils";
 import { useOptimizedDashboard } from "@/hooks/useOptimizedDashboard";
 import { useDashboard } from "@/hooks/useDashboard";
-import { Skeleton } from "@/components/ui/skeleton";
 import { OptimizedApiService } from "@/services/optimizedApi";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { DashboardStats } from "@/types";
 import { SecureLogger } from "@/services/secureLogger";
+import { MetricsCard } from "@/components/dashboard/MetricsCard";
+import { EnhancedDashboard } from "@/components/dashboard/EnhancedDashboard";
 
 const DashboardPage: React.FC = () => {
   const { toast } = useToast();
+  const { refreshAll: refreshOptimized } = useOptimizedDashboard();
 
-  // Buscar estatísticas reais da API
+  // Buscar estatísticas reais da API com comparação mensal
   const { data: dashboardStats, isLoading: isStatsLoading, refetch: refetchStats } = useQuery({
     queryKey: ['dashboard-stats'],
     queryFn: async () => {
@@ -41,13 +40,53 @@ const DashboardPage: React.FC = () => {
     },
   });
 
-  // Buscar produtos com estoque baixo usando consulta corrigida
+  // Buscar dados de comparação mensal
+  const { data: monthlyComparison, isLoading: isComparisonLoading } = useQuery({
+    queryKey: ['monthly-comparison'],
+    queryFn: async () => {
+      SecureLogger.info('Buscando dados de comparação mensal');
+      
+      const now = new Date();
+      const currentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      
+      // Buscar movimentações do mês atual
+      const { data: currentData, error: currentError } = await supabase
+        .from('stock_movements')
+        .select('quantity, type')
+        .gte('created_at', currentMonth.toISOString());
+
+      // Buscar movimentações do mês passado
+      const { data: lastData, error: lastError } = await supabase
+        .from('stock_movements')
+        .select('quantity, type')
+        .gte('created_at', lastMonth.toISOString())
+        .lt('created_at', currentMonth.toISOString());
+
+      if (currentError || lastError) {
+        throw new Error('Erro ao buscar dados de comparação');
+      }
+
+      const currentIn = currentData?.filter(m => m.type === 'in').reduce((sum, m) => sum + m.quantity, 0) || 0;
+      const currentOut = currentData?.filter(m => m.type === 'out').reduce((sum, m) => sum + m.quantity, 0) || 0;
+      const lastIn = lastData?.filter(m => m.type === 'in').reduce((sum, m) => sum + m.quantity, 0) || 0;
+      const lastOut = lastData?.filter(m => m.type === 'out').reduce((sum, m) => sum + m.quantity, 0) || 0;
+
+      return {
+        entriesGrowth: lastIn === 0 ? 100 : ((currentIn - lastIn) / lastIn) * 100,
+        exitsGrowth: lastOut === 0 ? 100 : ((currentOut - lastOut) / lastOut) * 100,
+        movementsGrowth: (currentIn + currentOut) === 0 || (lastIn + lastOut) === 0 ? 0 : 
+          (((currentIn + currentOut) - (lastIn + lastOut)) / (lastIn + lastOut)) * 100
+      };
+    },
+  });
+
+  // Buscar contagem de produtos com estoque baixo
   const { data: lowStockCount, refetch: refetchLowStock } = useQuery({
     queryKey: ['low-stock-count'],
     queryFn: async () => {
       SecureLogger.info('Buscando contagem de produtos com estoque baixo');
       
-      // Buscar todos os produtos e filtrar no cliente
       const { data, error } = await supabase
         .from('products')
         .select('id, quantity, minimum_stock')
@@ -58,25 +97,23 @@ const DashboardPage: React.FC = () => {
         return 0;
       }
 
-      // Filtrar produtos com estoque baixo no lado do cliente
       const lowStockItems = (data || []).filter(product => 
         product.minimum_stock && product.quantity < product.minimum_stock
       );
 
-      SecureLogger.success(`Produtos com estoque baixo encontrados: ${lowStockItems.length}`);
       return lowStockItems.length;
     },
   });
 
   const { recentMovements, refreshAll: refreshDashboard } = useDashboard();
 
-  const isLoading = isStatsLoading;
+  const isLoading = isStatsLoading || isComparisonLoading;
 
   const handleRefresh = async () => {
     try {
       SecureLogger.info('Iniciando atualização do dashboard');
       OptimizedApiService.clearCache();
-      await Promise.all([refetchStats(), refetchLowStock(), refreshDashboard()]);
+      await Promise.all([refetchStats(), refetchLowStock(), refreshDashboard(), refreshOptimized()]);
       toast({
         title: "Dashboard atualizado",
         description: "Os dados foram atualizados com sucesso!",
@@ -114,94 +151,68 @@ const DashboardPage: React.FC = () => {
           </Button>
         </div>
 
-        {/* Cards de estatísticas responsivos */}
+        {/* Cards de métricas modernos */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
           {isLoading ? (
             <>
               {[...Array(4)].map((_, i) => (
-                <div key={i} className="p-4 md:p-6 bg-white rounded-lg shadow">
-                  <Skeleton className="h-4 md:h-6 w-24 md:w-32 mb-2" />
-                  <Skeleton className="h-6 md:h-8 w-16 md:w-20 mb-3" />
-                  <Skeleton className="h-3 md:h-5 w-20 md:w-28" />
-                </div>
+                <Skeleton key={i} className="h-32" />
               ))}
             </>
           ) : (
             <>
-              <StatsCard
+              <MetricsCard
                 title="Total de Produtos"
                 value={Number(dashboardStats?.totalProducts) || 0}
-                icon={<Package size={20} className="md:w-6 md:h-6" />}
-                trend={{ value: Math.floor(Math.random() * 20) + 5, isPositive: Math.random() > 0.5 }}
-                className="text-xs md:text-sm"
+                description="Produtos cadastrados"
+                icon={Package}
+                trend={{
+                  value: monthlyComparison?.movementsGrowth || 0,
+                  isPositive: (monthlyComparison?.movementsGrowth || 0) >= 0,
+                  label: "vs mês anterior"
+                }}
               />
-              <StatsCard
+              
+              <MetricsCard
                 title="Estoque Baixo"
                 value={lowStockCount || 0}
-                icon={<AlertTriangle size={20} className="md:w-6 md:h-6" />}
-                trend={{ value: Math.floor(Math.random() * 15) + 2, isPositive: false }}
-                className="text-xs md:text-sm"
+                description="Necessitam reposição"
+                icon={AlertTriangle}
+                badge={{
+                  text: "Atenção",
+                  variant: "destructive"
+                }}
               />
-              <StatsCard
+              
+              <MetricsCard
                 title="Valor Total"
                 value={formatCurrency(Number(dashboardStats?.totalValue) || 0)}
-                icon={<BarChart size={20} className="md:w-6 md:h-6" />}
-                trend={{ value: Math.floor(Math.random() * 25) + 8, isPositive: true }}
-                className="text-xs md:text-sm"
+                description="Valor em estoque"
+                icon={BarChart}
+                trend={{
+                  value: Math.abs(monthlyComparison?.entriesGrowth || 0),
+                  isPositive: (monthlyComparison?.entriesGrowth || 0) >= 0,
+                  label: "vs mês anterior"
+                }}
               />
-              <StatsCard
+              
+              <MetricsCard
                 title="Movimentações"
                 value={Number(dashboardStats?.recentMovementsCount) || 0}
-                icon={<ArrowUpDown size={20} className="md:w-6 md:h-6" />}
-                trend={{ value: Math.floor(Math.random() * 30) + 10, isPositive: Math.random() > 0.3 }}
-                className="text-xs md:text-sm"
+                description="Últimos 30 dias"
+                icon={ArrowUpDown}
+                trend={{
+                  value: Math.abs(monthlyComparison?.movementsGrowth || 0),
+                  isPositive: (monthlyComparison?.movementsGrowth || 0) >= 0,
+                  label: "vs mês anterior"
+                }}
               />
             </>
           )}
         </div>
 
-        {/* Indicadores do Sistema */}
-        <SystemIndicators />
-
-        {/* Gráfico de movimentações responsivo */}
-        <div className="w-full">
-          <OptimizedMovementsReport />
-        </div>
-
-        {/* Grid responsivo para alertas e movimentações */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
-          {/* Alertas do Sistema */}
-          <AlertsPanel />
-          
-          {/* Alertas de Estoque Baixo */}
-          <LowStockAlert />
-          
-          {/* Movimentações Recentes */}
-          {isLoading ? (
-            <div className="p-4 md:p-6 bg-white rounded-lg shadow space-y-4">
-              <Skeleton className="h-5 md:h-6 w-40 md:w-48 mb-4" />
-              <div className="space-y-3">
-                {[...Array(3)].map((_, i) => (
-                  <div key={i} className="flex justify-between border-b pb-3">
-                    <div className="flex items-center">
-                      <Skeleton className="h-6 md:h-8 w-6 md:w-8 rounded-full" />
-                      <div className="ml-3">
-                        <Skeleton className="h-4 md:h-5 w-24 md:w-32 mb-1" />
-                        <Skeleton className="h-3 md:h-4 w-20 md:w-24" />
-                      </div>
-                    </div>
-                    <div>
-                      <Skeleton className="h-4 md:h-5 w-12 md:w-16 mb-1" />
-                      <Skeleton className="h-3 md:h-4 w-16 md:w-24" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <RecentMovements movements={recentMovements || []} />
-          )}
-        </div>
+        {/* Dashboard aprimorado */}
+        <EnhancedDashboard />
       </div>
     </AppLayout>
   );

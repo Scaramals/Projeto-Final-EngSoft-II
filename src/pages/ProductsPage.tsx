@@ -1,8 +1,9 @@
-import React, { useState } from "react";
+
+import React, { useState, useRef } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { ProductCard } from "@/components/products/ProductCard";
 import { Button } from "@/components/ui/button";
-import { Plus, Filter, Search as SearchIcon } from "lucide-react";
+import { Plus, Filter, Search as SearchIcon, SlidersHorizontal, Grid3X3, List } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Link } from "react-router-dom";
 import { useProducts } from "@/hooks/useProducts";
@@ -16,10 +17,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
 
 const ProductsPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
+  const [sortBy, setSortBy] = useState("name");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const searchRef = useRef<HTMLInputElement>(null);
   
   // Get all categories for filter dropdown
   const { data: categories = [], isLoading: loadingCategories } = useQuery({
@@ -43,11 +54,20 @@ const ProductsPage: React.FC = () => {
   const { useAllProducts } = useProducts();
   const { data: products = [], isLoading, error } = useAllProducts({
     search: searchQuery,
-    category: selectedCategory || undefined
+    category: selectedCategory || undefined,
+    sortBy
   });
-  
-  // Filter products based on search and category - handled by the database query now
-  const filteredProducts = products;
+
+  const handleClearFilters = () => {
+    setSearchQuery("");
+    setSelectedCategory("");
+    setSortBy("name");
+    if (searchRef.current) {
+      searchRef.current.focus();
+    }
+  };
+
+  const activeFiltersCount = [searchQuery, selectedCategory].filter(Boolean).length;
 
   return (
     <AppLayout>
@@ -67,22 +87,21 @@ const ProductsPage: React.FC = () => {
           </Button>
         </div>
         
-        <div className="flex flex-col sm:flex-row gap-4">
+        {/* Filtros e Busca */}
+        <div className="flex flex-col lg:flex-row gap-4">
           <div className="relative flex-1">
             <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             <Input
+              ref={searchRef}
               placeholder="Pesquisar produtos..."
               className="pl-9"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          <div className="flex space-x-2">
-            <Button variant="outline" className="flex items-center">
-              <Filter className="mr-2 h-4 w-4" />
-              Filtros
-            </Button>
-            
+          
+          <div className="flex flex-wrap gap-2">
+            {/* Filtro de Categoria */}
             {loadingCategories ? (
               <Skeleton className="h-10 w-40" />
             ) : (
@@ -91,11 +110,10 @@ const ProductsPage: React.FC = () => {
                 onValueChange={setSelectedCategory}
               >
                 <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Todas Categorias" />
+                  <SelectValue placeholder="Categoria" />
                 </SelectTrigger>
                 <SelectContent>
-                  {/* Fix: Use "all" instead of empty string for the "all categories" option */}
-                  <SelectItem value="all">Todas Categorias</SelectItem>
+                  <SelectItem value="">Todas Categorias</SelectItem>
                   {categories.map((category) => (
                     <SelectItem key={category} value={category}>
                       {category}
@@ -104,11 +122,70 @@ const ProductsPage: React.FC = () => {
                 </SelectContent>
               </Select>
             )}
+
+            {/* Ordenação */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline">
+                  <SlidersHorizontal className="mr-2 h-4 w-4" />
+                  Ordenar
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem onClick={() => setSortBy("name")}>
+                  Nome A-Z
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setSortBy("price")}>
+                  Menor Preço
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setSortBy("quantity")}>
+                  Maior Estoque
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setSortBy("created_at")}>
+                  Mais Recente
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Visualização */}
+            <div className="flex border rounded-md">
+              <Button
+                variant={viewMode === "grid" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setViewMode("grid")}
+                className="rounded-r-none"
+              >
+                <Grid3X3 className="h-4 w-4" />
+              </Button>
+              <Button
+                variant={viewMode === "list" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setViewMode("list")}
+                className="rounded-l-none"
+              >
+                <List className="h-4 w-4" />
+              </Button>
+            </div>
+
+            {/* Limpar Filtros */}
+            {activeFiltersCount > 0 && (
+              <Button variant="outline" onClick={handleClearFilters}>
+                Limpar Filtros
+                <Badge variant="secondary" className="ml-2">
+                  {activeFiltersCount}
+                </Badge>
+              </Button>
+            )}
           </div>
         </div>
         
+        {/* Produtos */}
         {isLoading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div className={`grid gap-6 ${
+            viewMode === "grid" 
+              ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" 
+              : "grid-cols-1"
+          }`}>
             {Array(8).fill(0).map((_, index) => (
               <Skeleton key={index} className="h-64 w-full rounded-lg" />
             ))}
@@ -122,22 +199,27 @@ const ProductsPage: React.FC = () => {
               Tentar novamente
             </Button>
           </div>
-        ) : filteredProducts.length === 0 ? (
+        ) : products.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-muted-foreground text-lg">
               Nenhum produto encontrado
             </p>
-            <Button className="mt-4" variant="outline" onClick={() => {
-              setSearchQuery("");
-              setSelectedCategory("");
-            }}>
+            <Button className="mt-4" variant="outline" onClick={handleClearFilters}>
               Limpar filtros
             </Button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {filteredProducts.map((product) => (
-              <ProductCard key={product.id} product={product} />
+          <div className={`grid gap-6 ${
+            viewMode === "grid" 
+              ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" 
+              : "grid-cols-1 max-w-4xl"
+          }`}>
+            {products.map((product) => (
+              <ProductCard 
+                key={product.id} 
+                product={product} 
+                variant={viewMode}
+              />
             ))}
           </div>
         )}
