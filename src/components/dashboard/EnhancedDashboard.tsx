@@ -1,262 +1,256 @@
 
-import React, { useRef } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { MetricsCard } from "./MetricsCard";
+import React from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useOptimizedDashboard } from "@/hooks/useOptimizedDashboard";
 import { 
-  BarChart, 
-  Bar, 
+  LineChart, 
+  Line, 
   XAxis, 
   YAxis, 
   CartesianGrid, 
   Tooltip, 
   ResponsiveContainer,
+  BarChart,
+  Bar,
   PieChart,
   Pie,
-  Cell,
-  LineChart,
-  Line,
-  AreaChart,
-  Area
+  Cell
 } from "recharts";
-import { TrendingUp, Package, DollarSign, AlertTriangle, Users, Boxes } from "lucide-react";
-import { useOptimizedDashboard } from "@/hooks/useOptimizedDashboard";
-import { useDashboard } from "@/hooks/useDashboard";
-import { Skeleton } from "@/components/ui/skeleton";
-import { formatCurrency } from "@/lib/utils";
+import { TrendingUp, TrendingDown, Package, AlertTriangle } from "lucide-react";
 
-const COLORS = {
-  primary: '#3b82f6',
-  secondary: '#10b981',
-  warning: '#f59e0b',
-  danger: '#ef4444',
-  purple: '#8b5cf6',
-  indigo: '#6366f1'
-};
-
-const PIE_COLORS = [COLORS.primary, COLORS.secondary, COLORS.warning, COLORS.danger, COLORS.purple, COLORS.indigo];
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
 
 export const EnhancedDashboard: React.FC = () => {
   const { 
     stats, 
     movementsSummary, 
-    categoryAnalysis,
+    categoryAnalysis, 
     monthlyTrends,
+    monthlyComparison,
     isLoading 
   } = useOptimizedDashboard();
-  
-  const { recentMovements } = useDashboard();
-  
-  const dashboardRef = useRef<HTMLDivElement>(null);
-
-  // Transform data for charts using real data
-  const chartData = monthlyTrends?.slice(-6).map(item => ({
-    month: new Date(item.month + '-01').toLocaleDateString('pt-BR', { month: 'short' }),
-    entrada: item.totalIn,
-    saida: item.totalOut,
-    saldo: item.net
-  })) || [];
-
-  const categoryDistribution = categoryAnalysis?.map(item => ({
-    category: item.category_name,
-    count: item.product_count,
-    value: item.total_value
-  })) || [];
-
-  const stockLevels = [
-    { status: 'Adequado', count: Math.max(0, (stats?.totalProducts || 0) - (stats?.lowStockProducts || 0)), color: COLORS.secondary },
-    { status: 'Baixo', count: stats?.lowStockProducts || 0, color: COLORS.warning },
-    { status: 'Crítico', count: Math.floor((stats?.lowStockProducts || 0) * 0.3), color: COLORS.danger },
-  ];
 
   if (isLoading) {
     return (
-      <div className="grid gap-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {Array(4).fill(0).map((_, i) => (
-            <Skeleton key={i} className="h-32" />
-          ))}
-        </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {Array(4).fill(0).map((_, i) => (
-            <Skeleton key={i} className="h-80" />
-          ))}
-        </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {Array(6).fill(0).map((_, i) => (
+          <Skeleton key={i} className="h-64" />
+        ))}
       </div>
     );
   }
 
+  // Transform data for charts
+  const movementsChartData = movementsSummary?.slice(0, 7).reverse().map(item => ({
+    date: new Date(item.movement_date).toLocaleDateString('pt-BR'),
+    entradas: item.total_in,
+    saidas: item.total_out,
+    liquido: item.net_movement
+  })) || [];
+
+  const categoryChartData = categoryAnalysis?.map(item => ({
+    name: item.category_name,
+    value: Number(item.total_value),
+    products: Number(item.product_count)
+  })) || [];
+
+  const monthlyTrendsData = monthlyTrends?.slice(-6).map(item => ({
+    month: new Date(item.month + '-01').toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }),
+    entradas: item.totalIn,
+    saidas: item.totalOut,
+    liquido: item.net
+  })) || [];
+
   return (
-    <div ref={dashboardRef} className="space-y-6">
-      {/* Charts Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Monthly Trends */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5" />
-              Tendências de Movimentação
-            </CardTitle>
-            <CardDescription>
-              Entradas vs saídas nos últimos 6 meses
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <Tooltip />
-                  <Area 
-                    type="monotone" 
-                    dataKey="entrada" 
-                    stackId="1"
-                    stroke={COLORS.secondary} 
-                    fill={COLORS.secondary}
-                    fillOpacity={0.6}
-                  />
-                  <Area 
-                    type="monotone" 
-                    dataKey="saida" 
-                    stackId="1"
-                    stroke={COLORS.danger} 
-                    fill={COLORS.danger}
-                    fillOpacity={0.6}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Movimentações Recentes */}
+      <Card className="lg:col-span-2">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Package className="h-5 w-5" />
+            Movimentações dos Últimos 7 Dias
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={movementsChartData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" />
+                <YAxis />
+                <Tooltip />
+                <Line 
+                  type="monotone" 
+                  dataKey="entradas" 
+                  stroke="#00C49F" 
+                  strokeWidth={2}
+                  name="Entradas"
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="saidas" 
+                  stroke="#FF8042" 
+                  strokeWidth={2}
+                  name="Saídas"
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="liquido" 
+                  stroke="#0088FE" 
+                  strokeWidth={2}
+                  name="Líquido"
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </CardContent>
+      </Card>
 
-        {/* Stock Status Distribution */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Boxes className="h-5 w-5" />
-              Distribuição do Estoque
-            </CardTitle>
-            <CardDescription>
-              Status atual dos produtos em estoque
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={stockLevels}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ status, count, percent }) => 
-                      `${status}: ${count} (${(percent * 100).toFixed(0)}%)`
-                    }
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="count"
-                  >
-                    {stockLevels.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Category Distribution */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Package className="h-5 w-5" />
-              Produtos por Categoria
-            </CardTitle>
-            <CardDescription>
-              Distribuição de produtos nas diferentes categorias
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={categoryDistribution} layout="horizontal">
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis type="number" />
-                  <YAxis dataKey="category" type="category" width={80} />
-                  <Tooltip />
-                  <Bar dataKey="count" fill={COLORS.primary} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Value by Category */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <DollarSign className="h-5 w-5" />
-              Valor por Categoria
-            </CardTitle>
-            <CardDescription>
-              Valor total do estoque por categoria
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={categoryDistribution}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="category" />
-                  <YAxis />
-                  <Tooltip 
-                    formatter={(value) => [formatCurrency(Number(value)), 'Valor Total']}
-                  />
-                  <Line 
-                    type="monotone" 
-                    dataKey="value" 
-                    stroke={COLORS.purple} 
-                    strokeWidth={3}
-                    dot={{ fill: COLORS.purple, strokeWidth: 2, r: 6 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Recent Movements Table */}
+      {/* Análise por Categoria */}
       <Card>
         <CardHeader>
-          <CardTitle>Movimentações Recentes</CardTitle>
-          <CardDescription>
-            Últimas {recentMovements?.length || 0} movimentações de estoque
-          </CardDescription>
+          <CardTitle>Distribuição por Categoria</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={categoryChartData}
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                >
+                  {categoryChartData.map((_, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(value) => [`R$ ${Number(value).toLocaleString('pt-BR')}`, 'Valor']} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Tendência Mensal */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Tendência Mensal</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={monthlyTrendsData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="month" />
+                <YAxis />
+                <Tooltip />
+                <Bar dataKey="entradas" fill="#00C49F" name="Entradas" />
+                <Bar dataKey="saidas" fill="#FF8042" name="Saídas" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Resumo de Performance */}
+      <Card className="lg:col-span-2">
+        <CardHeader>
+          <CardTitle>Resumo de Performance</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Entradas este mês</span>
+                <div className="flex items-center gap-1">
+                  {monthlyComparison?.entriesGrowth >= 0 ? (
+                    <TrendingUp className="h-4 w-4 text-green-500" />
+                  ) : (
+                    <TrendingDown className="h-4 w-4 text-red-500" />
+                  )}
+                  <span className={`text-sm ${
+                    monthlyComparison?.entriesGrowth >= 0 ? 'text-green-500' : 'text-red-500'
+                  }`}>
+                    {Math.abs(monthlyComparison?.entriesGrowth || 0).toFixed(1)}%
+                  </span>
+                </div>
+              </div>
+              <Progress value={Math.min(Math.abs(monthlyComparison?.entriesGrowth || 0), 100)} />
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Saídas este mês</span>
+                <div className="flex items-center gap-1">
+                  {monthlyComparison?.exitsGrowth >= 0 ? (
+                    <TrendingUp className="h-4 w-4 text-red-500" />
+                  ) : (
+                    <TrendingDown className="h-4 w-4 text-green-500" />
+                  )}
+                  <span className={`text-sm ${
+                    monthlyComparison?.exitsGrowth >= 0 ? 'text-red-500' : 'text-green-500'
+                  }`}>
+                    {Math.abs(monthlyComparison?.exitsGrowth || 0).toFixed(1)}%
+                  </span>
+                </div>
+              </div>
+              <Progress value={Math.min(Math.abs(monthlyComparison?.exitsGrowth || 0), 100)} />
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Movimentações totais</span>
+                <div className="flex items-center gap-1">
+                  {monthlyComparison?.movementsGrowth >= 0 ? (
+                    <TrendingUp className="h-4 w-4 text-blue-500" />
+                  ) : (
+                    <TrendingDown className="h-4 w-4 text-blue-500" />
+                  )}
+                  <span className="text-sm text-blue-500">
+                    {Math.abs(monthlyComparison?.movementsGrowth || 0).toFixed(1)}%
+                  </span>
+                </div>
+              </div>
+              <Progress value={Math.min(Math.abs(monthlyComparison?.movementsGrowth || 0), 100)} />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Alertas de Categoria */}
+      <Card className="lg:col-span-2">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5" />
+            Análise de Categorias
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {recentMovements?.slice(0, 5).map((movement, index) => (
-              <div key={index} className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors">
+            {categoryAnalysis?.slice(0, 5).map((category, index) => (
+              <div key={category.category_name} className="flex items-center justify-between p-3 border rounded-lg">
                 <div className="flex items-center gap-3">
-                  <div className={`w-2 h-2 rounded-full ${
-                    movement.type === 'in' ? 'bg-green-500' : 'bg-red-500'
-                  }`} />
+                  <div 
+                    className="w-4 h-4 rounded-full" 
+                    style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                  />
                   <div>
-                    <p className="font-medium">{movement.productName}</p>
+                    <p className="font-medium">{category.category_name}</p>
                     <p className="text-sm text-muted-foreground">
-                      {movement.type === 'in' ? 'Entrada' : 'Saída'} de {movement.quantity} unidades
+                      {category.product_count} produtos • {category.total_quantity} unidades
                     </p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-sm text-muted-foreground">
-                    {new Date(movement.date).toLocaleDateString('pt-BR')}
-                  </p>
-                </div>
+                <Badge variant="secondary">
+                  R$ {Number(category.total_value).toLocaleString('pt-BR')}
+                </Badge>
               </div>
             ))}
           </div>

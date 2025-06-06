@@ -25,10 +25,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 
+type SortOption = "name" | "price" | "quantity" | "created_at";
+
 const ProductsPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
-  const [sortBy, setSortBy] = useState("name");
+  const [sortBy, setSortBy] = useState<SortOption>("name");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const searchRef = useRef<HTMLInputElement>(null);
   
@@ -113,7 +115,7 @@ const ProductsPage: React.FC = () => {
                   <SelectValue placeholder="Categoria" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todas Categorias</SelectItem>
+                  <SelectItem value="all">Todas Categorias</SelectItem>
                   {categories.map((category) => (
                     <SelectItem key={category} value={category}>
                       {category}
@@ -217,8 +219,7 @@ const ProductsPage: React.FC = () => {
             {products.map((product) => (
               <ProductCard 
                 key={product.id} 
-                product={product} 
-                variant={viewMode}
+                product={product}
               />
             ))}
           </div>

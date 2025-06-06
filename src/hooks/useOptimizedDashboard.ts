@@ -44,9 +44,9 @@ export function useOptimizedDashboard() {
       
       const { data, error } = await supabase
         .from('stock_movements')
-        .select('quantity, type, created_at')
-        .gte('created_at', sixMonthsAgo.toISOString())
-        .order('created_at', { ascending: true });
+        .select('quantity, type, date')
+        .gte('date', sixMonthsAgo.toISOString())
+        .order('date', { ascending: true });
 
       if (error) throw error;
 
@@ -54,7 +54,7 @@ export function useOptimizedDashboard() {
       const monthlyData: { [key: string]: { in: number, out: number } } = {};
       
       data?.forEach(movement => {
-        const monthKey = new Date(movement.created_at).toISOString().slice(0, 7); // YYYY-MM
+        const monthKey = new Date(movement.date).toISOString().slice(0, 7); // YYYY-MM
         if (!monthlyData[monthKey]) {
           monthlyData[monthKey] = { in: 0, out: 0 };
         }
@@ -77,6 +77,48 @@ export function useOptimizedDashboard() {
     gcTime: 10 * 60 * 1000,
     enabled: !!user,
   });
+
+  // Buscar comparação mensal para métricas
+  const { data: monthlyComparison, isLoading: isComparisonLoading } = useQuery({
+    queryKey: ["monthly-comparison"],
+    queryFn: async () => {
+      const now = new Date();
+      const currentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      
+      // Buscar movimentações do mês atual
+      const { data: currentData, error: currentError } = await supabase
+        .from('stock_movements')
+        .select('quantity, type')
+        .gte('date', currentMonth.toISOString());
+
+      // Buscar movimentações do mês passado
+      const { data: lastData, error: lastError } = await supabase
+        .from('stock_movements')
+        .select('quantity, type')
+        .gte('date', lastMonth.toISOString())
+        .lt('date', currentMonth.toISOString());
+
+      if (currentError || lastError) {
+        throw new Error('Erro ao buscar dados de comparação');
+      }
+
+      const currentIn = currentData?.filter(m => m.type === 'in').reduce((sum, m) => sum + m.quantity, 0) || 0;
+      const currentOut = currentData?.filter(m => m.type === 'out').reduce((sum, m) => sum + m.quantity, 0) || 0;
+      const lastIn = lastData?.filter(m => m.type === 'in').reduce((sum, m) => sum + m.quantity, 0) || 0;
+      const lastOut = lastData?.filter(m => m.type === 'out').reduce((sum, m) => sum + m.quantity, 0) || 0;
+
+      return {
+        entriesGrowth: lastIn === 0 ? 100 : ((currentIn - lastIn) / lastIn) * 100,
+        exitsGrowth: lastOut === 0 ? 100 : ((currentOut - lastOut) / lastOut) * 100,
+        movementsGrowth: (currentIn + currentOut) === 0 || (lastIn + lastOut) === 0 ? 0 : 
+          (((currentIn + currentOut) - (lastIn + lastOut)) / (lastIn + lastOut)) * 100
+      };
+    },
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    enabled: !!user,
+  });
   
   // Função para forçar refresh de todos os dados
   const refreshAll = () => {
@@ -91,7 +133,8 @@ export function useOptimizedDashboard() {
     movementsSummary,
     categoryAnalysis,
     monthlyTrends,
-    isLoading: isStatsLoading || isMovementsLoading || isCategoryLoading || isTrendsLoading,
+    monthlyComparison,
+    isLoading: isStatsLoading || isMovementsLoading || isCategoryLoading || isTrendsLoading || isComparisonLoading,
     refreshAll,
   };
 }
