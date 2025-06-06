@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -33,7 +33,19 @@ const stockMovementSchema = z.object({
   }),
   quantity: z.coerce.number().int().positive("A quantidade deve ser maior que zero"),
   notes: z.string().optional(),
-  supplierId: z.string().optional(),
+  supplierId: z.string().refine((val) => {
+    return val !== "none" && val.length > 0;
+  }, {
+    message: "Selecione um fornecedor para entrada de estoque",
+  }).optional(),
+}).refine((data) => {
+  if (data.type === 'in') {
+    return data.supplierId && data.supplierId !== "none";
+  }
+  return true;
+}, {
+  message: "Fornecedor é obrigatório para entradas de estoque",
+  path: ["supplierId"],
 });
 
 type StockMovementFormValues = z.infer<typeof stockMovementSchema>;
@@ -50,6 +62,7 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
   const { mutate: addStockMovement, isPending: isLoading } = useAddStockMovement();
   
   const { data: suppliers = [] } = useAllSuppliers();
+  const formRef = useRef<HTMLFormElement>(null);
 
   const form = useForm<StockMovementFormValues>({
     resolver: zodResolver(stockMovementSchema),
@@ -67,6 +80,13 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
   // Check if there's enough stock for outgoing movements
   const hasInsufficientStock = watchType === 'out' && watchQuantity > currentStock;
 
+  // Reset supplier when changing to 'out'
+  React.useEffect(() => {
+    if (watchType === 'out') {
+      form.setValue('supplierId', '');
+    }
+  }, [watchType, form]);
+
   const handleSubmit = (values: StockMovementFormValues) => {
     if (values.type === 'out' && values.quantity > currentStock) {
       toast({
@@ -80,8 +100,7 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
     const movement: Partial<StockMovement> = {
       ...values,
       productId,
-      // Convert "none" back to undefined/null for the API
-      supplierId: values.supplierId === "none" ? undefined : values.supplierId,
+      supplierId: values.type === 'out' ? undefined : values.supplierId,
     };
     
     addStockMovement(movement, {
@@ -93,7 +112,7 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+      <form ref={formRef} onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
         <div className="space-y-4">
           <FormField
             control={form.control}
@@ -155,18 +174,18 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
               name="supplierId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Fornecedor</FormLabel>
+                  <FormLabel>Fornecedor *</FormLabel>
                   <Select
                     onValueChange={field.onChange}
                     value={field.value}
+                    required
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Selecione o fornecedor (opcional)" />
+                        <SelectValue placeholder="Selecione o fornecedor (obrigatório)" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="none">Nenhum fornecedor</SelectItem>
                       {suppliers.map((supplier) => (
                         <SelectItem key={supplier.id} value={supplier.id}>
                           {supplier.name} {supplier.cnpj && `- ${supplier.cnpj}`}
@@ -175,7 +194,7 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
                     </SelectContent>
                   </Select>
                   <FormDescription>
-                    Para entradas de estoque, você pode informar o fornecedor
+                    O fornecedor é obrigatório para entradas de estoque
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
