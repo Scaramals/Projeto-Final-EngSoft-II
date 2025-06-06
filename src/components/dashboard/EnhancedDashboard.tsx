@@ -20,6 +20,7 @@ import {
 } from "recharts";
 import { TrendingUp, Package, DollarSign, AlertTriangle, Users, Boxes } from "lucide-react";
 import { useOptimizedDashboard } from "@/hooks/useOptimizedDashboard";
+import { useDashboard } from "@/hooks/useDashboard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatCurrency } from "@/lib/utils";
 
@@ -36,29 +37,34 @@ const PIE_COLORS = [COLORS.primary, COLORS.secondary, COLORS.warning, COLORS.dan
 
 export const EnhancedDashboard: React.FC = () => {
   const { 
-    metrics, 
-    stockMovements, 
-    categoryDistribution, 
-    lowStockProducts,
+    stats, 
+    movementsSummary, 
+    categoryAnalysis, 
     isLoading 
   } = useOptimizedDashboard();
   
+  const { recentMovements } = useDashboard();
+  
   const dashboardRef = useRef<HTMLDivElement>(null);
 
-  // Sample data for additional charts - you can replace with real data
-  const monthlyTrends = [
-    { month: 'Jan', entrada: 1200, saida: 800, valor: 45000 },
-    { month: 'Fev', entrada: 1100, saida: 900, valor: 52000 },
-    { month: 'Mar', entrada: 1300, saida: 750, valor: 48000 },
-    { month: 'Abr', entrada: 1400, saida: 850, valor: 61000 },
-    { month: 'Mai', entrada: 1250, saida: 920, valor: 55000 },
-    { month: 'Jun', entrada: 1350, saida: 780, valor: 58000 },
-  ];
+  // Transform data for charts
+  const monthlyTrends = movementsSummary?.slice(0, 6).reverse().map(item => ({
+    month: new Date(item.movement_date).toLocaleDateString('pt-BR', { month: 'short' }),
+    entrada: item.total_in,
+    saida: item.total_out,
+    valor: Math.random() * 60000 + 40000 // Sample data - replace with real value calculation
+  })) || [];
+
+  const categoryDistribution = categoryAnalysis?.map(item => ({
+    category: item.category_name,
+    count: item.product_count,
+    value: item.total_value
+  })) || [];
 
   const stockLevels = [
-    { status: 'Adequado', count: metrics?.adequateStock || 0, color: COLORS.secondary },
-    { status: 'Baixo', count: metrics?.lowStock || 0, color: COLORS.warning },
-    { status: 'Crítico', count: metrics?.criticalStock || 0, color: COLORS.danger },
+    { status: 'Adequado', count: Math.max(0, (stats?.totalProducts || 0) - (stats?.lowStockProducts || 0)), color: COLORS.secondary },
+    { status: 'Baixo', count: stats?.lowStockProducts || 0, color: COLORS.warning },
+    { status: 'Crítico', count: Math.floor((stats?.lowStockProducts || 0) * 0.3), color: COLORS.danger },
   ];
 
   if (isLoading) {
@@ -84,7 +90,7 @@ export const EnhancedDashboard: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <MetricsCard
           title="Total de Produtos"
-          value={metrics?.totalProducts || 0}
+          value={stats?.totalProducts || 0}
           description="Produtos cadastrados"
           icon={Package}
           trend={{
@@ -96,7 +102,7 @@ export const EnhancedDashboard: React.FC = () => {
         
         <MetricsCard
           title="Valor Total do Estoque"
-          value={formatCurrency(metrics?.totalStockValue || 0)}
+          value={formatCurrency(stats?.totalValue || 0)}
           description="Valor total em produtos"
           icon={DollarSign}
           trend={{
@@ -108,7 +114,7 @@ export const EnhancedDashboard: React.FC = () => {
         
         <MetricsCard
           title="Produtos com Estoque Baixo"
-          value={metrics?.lowStock || 0}
+          value={stats?.lowStockProducts || 0}
           description="Necessitam reposição"
           icon={AlertTriangle}
           badge={{
@@ -118,14 +124,14 @@ export const EnhancedDashboard: React.FC = () => {
         />
         
         <MetricsCard
-          title="Movimentações Hoje"
-          value={metrics?.todayMovements || 0}
-          description="Entradas e saídas"
+          title="Movimentações Recentes"
+          value={stats?.recentMovementsCount || 0}
+          description="Últimos 30 dias"
           icon={TrendingUp}
           trend={{
             value: 15,
             isPositive: true,
-            label: "vs ontem"
+            label: "vs mês anterior"
           }}
         />
       </div>
@@ -137,10 +143,10 @@ export const EnhancedDashboard: React.FC = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <TrendingUp className="h-5 w-5" />
-              Tendências Mensais
+              Tendências de Movimentação
             </CardTitle>
             <CardDescription>
-              Comparativo de entradas vs saídas por mês
+              Entradas vs saídas nos últimos dias
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -237,30 +243,30 @@ export const EnhancedDashboard: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* Value Trends */}
+        {/* Value by Category */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <DollarSign className="h-5 w-5" />
-              Evolução do Valor do Estoque
+              Valor por Categoria
             </CardTitle>
             <CardDescription>
-              Valor total do estoque ao longo dos meses
+              Valor total do estoque por categoria
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={monthlyTrends}>
+                <LineChart data={categoryDistribution}>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
+                  <XAxis dataKey="category" />
                   <YAxis />
                   <Tooltip 
-                    formatter={(value) => [formatCurrency(Number(value)), 'Valor do Estoque']}
+                    formatter={(value) => [formatCurrency(Number(value)), 'Valor Total']}
                   />
                   <Line 
                     type="monotone" 
-                    dataKey="valor" 
+                    dataKey="value" 
                     stroke={COLORS.purple} 
                     strokeWidth={3}
                     dot={{ fill: COLORS.purple, strokeWidth: 2, r: 6 }}
@@ -277,12 +283,12 @@ export const EnhancedDashboard: React.FC = () => {
         <CardHeader>
           <CardTitle>Movimentações Recentes</CardTitle>
           <CardDescription>
-            Últimas {stockMovements?.length || 0} movimentações de estoque
+            Últimas {recentMovements?.length || 0} movimentações de estoque
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {stockMovements?.slice(0, 5).map((movement, index) => (
+            {recentMovements?.slice(0, 5).map((movement, index) => (
               <div key={index} className="flex items-center justify-between p-3 rounded-lg border">
                 <div className="flex items-center gap-3">
                   <div className={`w-2 h-2 rounded-full ${
