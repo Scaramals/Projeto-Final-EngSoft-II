@@ -54,10 +54,11 @@ const ProductsPage: React.FC = () => {
   
   // Get products with filters
   const { useAllProducts } = useProducts();
-  const { data: products = [], isLoading, error } = useAllProducts({
+  const { data: products = [], isLoading, error, refetch } = useAllProducts({
     search: searchQuery,
     category: selectedCategory || undefined,
-    sortBy
+    sortBy: sortBy === "created_at" ? "name" : sortBy,
+    sortDirection: "asc"
   });
 
   const handleClearFilters = () => {
@@ -67,6 +68,10 @@ const ProductsPage: React.FC = () => {
     if (searchRef.current) {
       searchRef.current.focus();
     }
+  };
+
+  const handleRefresh = () => {
+    refetch();
   };
 
   const activeFiltersCount = [searchQuery, selectedCategory].filter(Boolean).length;
@@ -81,12 +86,17 @@ const ProductsPage: React.FC = () => {
               Gerencie seu catálogo de produtos
             </p>
           </div>
-          <Button asChild>
-            <Link to="/products/new">
-              <Plus className="mr-2 h-4 w-4" />
-              Novo Produto
-            </Link>
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={handleRefresh}>
+              Atualizar
+            </Button>
+            <Button asChild>
+              <Link to="/products/new">
+                <Plus className="mr-2 h-4 w-4" />
+                Novo Produto
+              </Link>
+            </Button>
+          </div>
         </div>
         
         {/* Filtros e Busca */}
@@ -195,9 +205,7 @@ const ProductsPage: React.FC = () => {
         ) : error ? (
           <div className="text-center py-12">
             <p className="text-destructive text-lg">Erro ao carregar produtos</p>
-            <Button className="mt-4" variant="outline" onClick={() => {
-              window.location.reload();
-            }}>
+            <Button className="mt-4" variant="outline" onClick={handleRefresh}>
               Tentar novamente
             </Button>
           </div>

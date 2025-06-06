@@ -33,14 +33,10 @@ const stockMovementSchema = z.object({
   }),
   quantity: z.coerce.number().int().positive("A quantidade deve ser maior que zero"),
   notes: z.string().optional(),
-  supplierId: z.string().refine((val) => {
-    return val !== "none" && val.length > 0;
-  }, {
-    message: "Selecione um fornecedor para entrada de estoque",
-  }).optional(),
+  supplierId: z.string().optional(),
 }).refine((data) => {
-  if (data.type === 'in') {
-    return data.supplierId && data.supplierId !== "none";
+  if (data.type === 'in' && (!data.supplierId || data.supplierId === "")) {
+    return false;
   }
   return true;
 }, {
@@ -88,6 +84,8 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
   }, [watchType, form]);
 
   const handleSubmit = (values: StockMovementFormValues) => {
+    console.log('Submitting stock movement:', values);
+    
     if (values.type === 'out' && values.quantity > currentStock) {
       toast({
         variant: "destructive",
@@ -103,9 +101,24 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
       supplierId: values.type === 'out' ? undefined : values.supplierId,
     };
     
+    console.log('Final movement object:', movement);
+    
     addStockMovement(movement, {
-      onSuccess: () => {
+      onSuccess: (data) => {
+        console.log('Stock movement created successfully:', data);
+        toast({
+          title: "Movimentação registrada",
+          description: `${values.type === 'in' ? 'Entrada' : 'Saída'} de ${values.quantity} unidades registrada com sucesso!`,
+        });
         onSubmit();
+      },
+      onError: (error) => {
+        console.error('Error creating stock movement:', error);
+        toast({
+          variant: "destructive",
+          title: "Erro ao registrar movimentação",
+          description: error.message || "Ocorreu um erro inesperado",
+        });
       }
     });
   };
@@ -177,8 +190,7 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
                   <FormLabel>Fornecedor *</FormLabel>
                   <Select
                     onValueChange={field.onChange}
-                    value={field.value}
-                    required
+                    value={field.value || ""}
                   >
                     <FormControl>
                       <SelectTrigger>

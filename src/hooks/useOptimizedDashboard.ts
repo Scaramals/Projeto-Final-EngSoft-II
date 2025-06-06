@@ -1,5 +1,5 @@
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { OptimizedApiService } from "@/services/optimizedApi";
 import { useAuth } from "@/contexts/AuthContext";
 import { DashboardStats, MovementSummary, CategoryAnalysis } from "@/types";
@@ -7,11 +7,12 @@ import { supabase } from "@/integrations/supabase/client";
 
 export function useOptimizedDashboard() {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
 
   // Buscar estatísticas otimizadas do dashboard
   const { data: stats, isLoading: isStatsLoading, refetch: refetchStats } = useQuery<DashboardStats>({
     queryKey: ["dashboard-stats-optimized"],
-    queryFn: () => OptimizedApiService.getDashboardStats(),
+    queryFn: () => OptimizedApiService.getDashboardStats(true), // Force refresh
     staleTime: 2 * 60 * 1000, // 2 minutos
     gcTime: 5 * 60 * 1000, // 5 minutos
     enabled: !!user,
@@ -20,7 +21,7 @@ export function useOptimizedDashboard() {
   // Buscar resumo de movimentações
   const { data: movementsSummary, isLoading: isMovementsLoading, refetch: refetchMovements } = useQuery<MovementSummary[]>({
     queryKey: ["movements-summary"],
-    queryFn: () => OptimizedApiService.getMovementsSummary(30),
+    queryFn: () => OptimizedApiService.getMovementsSummary(30, true), // Force refresh
     staleTime: 5 * 60 * 1000, // 5 minutos
     gcTime: 10 * 60 * 1000, // 10 minutos
     enabled: !!user,
@@ -29,7 +30,7 @@ export function useOptimizedDashboard() {
   // Buscar análise de categorias
   const { data: categoryAnalysis, isLoading: isCategoryLoading, refetch: refetchCategory } = useQuery<CategoryAnalysis[]>({
     queryKey: ["category-analysis"],
-    queryFn: () => OptimizedApiService.getCategoryAnalysis(),
+    queryFn: () => OptimizedApiService.getCategoryAnalysis(true), // Force refresh
     staleTime: 10 * 60 * 1000, // 10 minutos
     gcTime: 20 * 60 * 1000, // 20 minutos
     enabled: !!user,
@@ -79,7 +80,7 @@ export function useOptimizedDashboard() {
   });
 
   // Buscar comparação mensal para métricas
-  const { data: monthlyComparison, isLoading: isComparisonLoading } = useQuery({
+  const { data: monthlyComparison, isLoading: isComparisonLoading, refetch: refetchComparison } = useQuery({
     queryKey: ["monthly-comparison"],
     queryFn: async () => {
       const now = new Date();
@@ -122,10 +123,24 @@ export function useOptimizedDashboard() {
   
   // Função para forçar refresh de todos os dados
   const refreshAll = () => {
+    console.log('Refreshing all dashboard data...');
+    
+    // Invalidar todas as queries relacionadas
+    queryClient.invalidateQueries({ queryKey: ["dashboard-stats-optimized"] });
+    queryClient.invalidateQueries({ queryKey: ["movements-summary"] });
+    queryClient.invalidateQueries({ queryKey: ["category-analysis"] });
+    queryClient.invalidateQueries({ queryKey: ["monthly-trends"] });
+    queryClient.invalidateQueries({ queryKey: ["monthly-comparison"] });
+    
+    // Também limpar cache do service
+    OptimizedApiService.clearCache();
+    
+    // Fazer refetch manual
     refetchStats();
     refetchMovements();
     refetchCategory();
     refetchTrends();
+    refetchComparison();
   };
 
   return {
