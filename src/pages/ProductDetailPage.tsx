@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -42,6 +41,22 @@ const ProductDetailPage: React.FC = () => {
   
   const stockStatus = product ? getStockStatus(product.quantity, product.minimumStock) : { class: '', label: '' };
   
+  // Transform product data for ProductForm
+  const getProductFormDefaultValues = () => {
+    if (!product) return undefined;
+    
+    return {
+      name: product.name,
+      description: product.description,
+      quantity: product.quantity,
+      price: product.price,
+      category: product.category,
+      minimumStock: product.minimumStock,
+      imageUrl: product.imageUrl,
+      suppliers: product.suppliers?.map(supplier => supplier.id) || []
+    };
+  };
+
   const handleEditProduct = (updatedProduct: any) => {
     if (!product) return;
     
@@ -113,7 +128,7 @@ const ProductDetailPage: React.FC = () => {
           </div>
           <div className="bg-white rounded-lg shadow p-6">
             <ProductForm
-              defaultValues={product}
+              defaultValues={getProductFormDefaultValues()}
               onSubmit={handleEditProduct}
               onCancel={() => setIsEditing(false)}
               isLoading={isUpdating}
@@ -220,6 +235,21 @@ const ProductDetailPage: React.FC = () => {
                           <p>{formatDate(product.updatedAt)}</p>
                         </div>
                       </div>
+                      {product.suppliers && product.suppliers.length > 0 && (
+                        <div>
+                          <p className="text-sm text-muted-foreground">Fornecedores</p>
+                          <div className="space-y-2">
+                            {product.suppliers.map((supplier) => (
+                              <div key={supplier.id} className="bg-gray-50 p-2 rounded">
+                                <p className="font-medium">{supplier.name}</p>
+                                {supplier.cnpj && (
+                                  <p className="text-sm text-muted-foreground">CNPJ: {supplier.cnpj}</p>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -299,6 +329,9 @@ const ProductDetailPage: React.FC = () => {
                             Data
                           </th>
                           <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
+                            Fornecedor
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
                             Observações
                           </th>
                         </tr>
@@ -324,6 +357,9 @@ const ProductDetailPage: React.FC = () => {
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               {formatDate(movement.date)}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              {movement.supplierName || '-'}
                             </td>
                             <td className="px-6 py-4">
                               {movement.notes || '-'}
