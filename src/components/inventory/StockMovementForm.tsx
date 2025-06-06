@@ -80,6 +80,8 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
     const movement: Partial<StockMovement> = {
       ...values,
       productId,
+      // Convert "none" back to undefined/null for the API
+      supplierId: values.supplierId === "none" ? undefined : values.supplierId,
     };
     
     addStockMovement(movement, {
@@ -164,7 +166,7 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="">Nenhum fornecedor</SelectItem>
+                      <SelectItem value="none">Nenhum fornecedor</SelectItem>
                       {suppliers.map((supplier) => (
                         <SelectItem key={supplier.id} value={supplier.id}>
                           {supplier.name} {supplier.cnpj && `- ${supplier.cnpj}`}
