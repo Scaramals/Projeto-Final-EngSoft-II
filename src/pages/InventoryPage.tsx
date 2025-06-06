@@ -1,8 +1,9 @@
-import React, { useState } from "react";
+
+import React, { useState, useRef, useMemo } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
+import { Search, Plus } from "lucide-react";
 import { formatCurrency, getStockStatus } from "@/lib/utils";
 import { Link } from "react-router-dom";
 import { useProducts } from "@/hooks/useProducts";
@@ -17,13 +18,24 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 
 const InventoryPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<string>("name");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [filter, setFilter] = useState<"all" | "low" | "medium" | "good">("all");
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const { toast } = useToast();
+  const pageRef = useRef<HTMLDivElement>(null);
   
   // Get all categories for filter dropdown
   const { data: categories = [], isLoading: loadingCategories } = useQuery({
@@ -56,18 +68,20 @@ const InventoryPage: React.FC = () => {
   const { useAllProducts } = useProducts();
   const { data: products = [], isLoading, error } = useAllProducts({
     search: searchQuery,
-    category: "",
+    category: selectedCategory === "all" ? "" : selectedCategory,
     sortBy: sortBy as any,
     sortDirection: sortDirection
   });
   
-  // Filter products based on stock status - this needs to be done client-side
-  const filteredProducts = products.filter(product => {
-    if (filter === "all") return true;
-    
-    const status = getStockStatus(product.quantity, product.minimumStock).class.split("-")[1];
-    return filter === status;
-  });
+  // Filter products based on stock status - memoized for performance
+  const filteredProducts = useMemo(() => {
+    return products.filter(product => {
+      if (filter === "all") return true;
+      
+      const status = getStockStatus(product.quantity, product.minimumStock).class.split("-")[1];
+      return filter === status;
+    });
+  }, [products, filter]);
   
   const toggleSort = (field: string) => {
     if (sortBy === field) {
@@ -83,9 +97,15 @@ const InventoryPage: React.FC = () => {
     return sortDirection === "asc" ? "↑" : "↓";
   };
 
+  const handleClearFilters = () => {
+    setSearchQuery("");
+    setFilter("all");
+    setSelectedCategory("all");
+  };
+
   return (
     <AppLayout>
-      <div className="space-y-6">
+      <div ref={pageRef} className="space-y-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <h1 className="text-3xl font-bold">Estoque</h1>
@@ -95,17 +115,15 @@ const InventoryPage: React.FC = () => {
           </div>
           <Button asChild>
             <Link to="/products/new">
-              <span className="flex items-center gap-2">
-                <span className="i-lucide-plus"></span>
-                Novo Produto
-              </span>
+              <Plus className="mr-2 h-4 w-4" />
+              Novo Produto
             </Link>
           </Button>
         </div>
         
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Pesquisar produtos..."
               className="pl-9"
@@ -133,9 +151,8 @@ const InventoryPage: React.FC = () => {
               <Skeleton className="h-10 w-40" />
             ) : (
               <Select
-                onValueChange={(category) => {
-                  // This will trigger a new query with the selected category
-                }}
+                value={selectedCategory}
+                onValueChange={setSelectedCategory}
               >
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Todas categorias" />
@@ -173,103 +190,82 @@ const InventoryPage: React.FC = () => {
             <p className="text-muted-foreground text-lg">
               Nenhum produto encontrado
             </p>
-            <Button className="mt-4" variant="outline" onClick={() => {
-              setSearchQuery("");
-              setFilter("all");
-            }}>
+            <Button className="mt-4" variant="outline" onClick={handleClearFilters}>
               Limpar filtros
             </Button>
           </div>
         ) : (
-          <div className="bg-white rounded-lg shadow overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-muted">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer" onClick={() => toggleSort("name")}>
-                      Nome {getSortIcon("name")}
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
-                      Categoria
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer" onClick={() => toggleSort("quantity")}>
-                      Quantidade {getSortIcon("quantity")}
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer" onClick={() => toggleSort("price")}>
-                      Preço {getSortIcon("price")}
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider">
-                      Ações
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredProducts.map((product) => {
-                    const stockStatus = getStockStatus(product.quantity, product.minimumStock);
-                    
-                    return (
-                      <tr key={product.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <div className="text-sm font-medium text-gray-900">
-                              {product.name}
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-500">
-                            {product.category || "—"}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium">
-                            {product.quantity}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm">
-                            {formatCurrency(product.price)}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`status-badge ${stockStatus.class}`}>
-                            {stockStatus.label}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          <Button 
-                            variant="link" 
-                            asChild
-                            className="text-primary hover:text-primary-foreground"
-                          >
-                            <Link to={`/products/${product.id}`}>
-                              Detalhes
-                            </Link>
-                          </Button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-            
-            {filteredProducts.length === 0 && (
-              <div className="text-center p-6">
-                <p className="text-muted-foreground">
-                  Nenhum produto encontrado com os filtros selecionados
-                </p>
-                <Button className="mt-4" variant="outline" onClick={() => {
-                  setSearchQuery("");
-                  setFilter("all");
-                }}>
-                  Limpar filtros
-                </Button>
-              </div>
-            )}
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead 
+                    className="cursor-pointer hover:bg-muted/50" 
+                    onClick={() => toggleSort("name")}
+                  >
+                    Nome {getSortIcon("name")}
+                  </TableHead>
+                  <TableHead>Categoria</TableHead>
+                  <TableHead 
+                    className="cursor-pointer hover:bg-muted/50" 
+                    onClick={() => toggleSort("quantity")}
+                  >
+                    Quantidade {getSortIcon("quantity")}
+                  </TableHead>
+                  <TableHead 
+                    className="cursor-pointer hover:bg-muted/50" 
+                    onClick={() => toggleSort("price")}
+                  >
+                    Preço {getSortIcon("price")}
+                  </TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredProducts.map((product) => {
+                  const stockStatus = getStockStatus(product.quantity, product.minimumStock);
+                  
+                  return (
+                    <TableRow key={product.id} className="hover:bg-muted/50">
+                      <TableCell className="font-medium">
+                        {product.name}
+                      </TableCell>
+                      <TableCell>
+                        {product.category || "—"}
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        {product.quantity}
+                      </TableCell>
+                      <TableCell>
+                        {formatCurrency(product.price)}
+                      </TableCell>
+                      <TableCell>
+                        <Badge 
+                          variant={
+                            stockStatus.class.includes("red") ? "destructive" :
+                            stockStatus.class.includes("yellow") ? "secondary" : "default"
+                          }
+                        >
+                          {stockStatus.label}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          asChild
+                        >
+                          <Link to={`/products/${product.id}`}>
+                            Detalhes
+                          </Link>
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
           </div>
         )}
       </div>
