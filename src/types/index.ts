@@ -1,4 +1,3 @@
-
 export interface User {
   id: string;
   name: string;
@@ -26,17 +25,33 @@ export interface Product {
   minimumStock?: number;
   createdAt: string;
   updatedAt: string;
+  createdBy?: string;
+  lastModifiedBy?: string;
+  suppliers?: ProductSupplier[];
+}
+
+export interface ProductSupplier {
+  id: string;
+  name: string;
+  cnpj?: string;
+  contactName?: string;
+  email?: string;
+  phone?: string;
 }
 
 export interface StockMovement {
   id: string;
   productId: string;
-  productName?: string; // Nome do produto para exibição
+  productName?: string;
   quantity: number;
   type: 'in' | 'out';
   date: string;
   notes?: string;
   userId?: string;
+  supplierId?: string;
+  supplierName?: string;
+  createdBy?: string;
+  updatedAt?: string;
 }
 
 export interface Category {
@@ -49,6 +64,7 @@ export interface Category {
 export interface Supplier {
   id: string;
   name: string;
+  cnpj?: string;
   contactName?: string;
   email?: string;
   phone?: string;
@@ -57,6 +73,7 @@ export interface Supplier {
   createdAt: string;
   updatedAt: string;
   createdBy?: string;
+  lastModifiedBy?: string;
 }
 
 export interface DashboardStats {
@@ -108,6 +125,7 @@ export interface ProductFormData {
   category?: string;
   minimumStock?: number;
   imageUrl?: string;
+  suppliers?: string[];
 }
 
 export interface StockMovementFormData {
@@ -115,10 +133,12 @@ export interface StockMovementFormData {
   quantity: number;
   notes?: string;
   productId: string;
+  supplierId?: string;
 }
 
 export interface SupplierFormData {
   name: string;
+  cnpj?: string;
   contactName?: string;
   email?: string;
   phone?: string;

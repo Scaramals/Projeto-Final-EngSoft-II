@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Product, StockMovement, FilterParams } from "@/types";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { SecureLogger } from "@/services/secureLogger";
 
 /**
  * Helper function to convert database response to Product type
@@ -19,6 +20,8 @@ const mapDbProductToProduct = (dbProduct: any): Product => ({
   minimumStock: dbProduct.minimum_stock,
   createdAt: dbProduct.created_at,
   updatedAt: dbProduct.updated_at,
+  createdBy: dbProduct.created_by,
+  lastModifiedBy: dbProduct.last_modified_by,
 });
 
 /**
@@ -31,12 +34,15 @@ const mapDbStockMovementToStockMovement = (dbMovement: any): StockMovement => ({
   type: dbMovement.type as 'in' | 'out',
   date: dbMovement.date,
   notes: dbMovement.notes,
+  supplierId: dbMovement.supplier_id,
+  createdBy: dbMovement.created_by,
+  updatedAt: dbMovement.updated_at,
 });
 
 /**
  * Helper function to convert Product type to database format
  */
-const mapProductToDbProduct = (product: Partial<Product>) => {
+const mapProductToDbProduct = (product: Partial<Product>, userId?: string) => {
   const dbProduct: any = {};
   
   if (product.name !== undefined) dbProduct.name = product.name;
@@ -47,19 +53,30 @@ const mapProductToDbProduct = (product: Partial<Product>) => {
   if (product.imageUrl !== undefined) dbProduct.image_url = product.imageUrl;
   if (product.minimumStock !== undefined) dbProduct.minimum_stock = product.minimumStock;
   
+  if (userId) {
+    dbProduct.created_by = userId;
+    dbProduct.last_modified_by = userId;
+  }
+  
   return dbProduct;
 };
 
 /**
  * Helper function to convert StockMovement type to database format
  */
-const mapStockMovementToDbStockMovement = (movement: Partial<StockMovement>) => {
+const mapStockMovementToDbStockMovement = (movement: Partial<StockMovement>, userId?: string) => {
   const dbMovement: any = {};
   
   if (movement.productId !== undefined) dbMovement.product_id = movement.productId;
   if (movement.quantity !== undefined) dbMovement.quantity = movement.quantity;
   if (movement.type !== undefined) dbMovement.type = movement.type;
   if (movement.notes !== undefined) dbMovement.notes = movement.notes;
+  if (movement.supplierId !== undefined) dbMovement.supplier_id = movement.supplierId;
+  
+  if (userId) {
+    dbMovement.created_by = userId;
+    dbMovement.user_id = userId;
+  }
   
   return dbMovement;
 };
@@ -151,14 +168,17 @@ export function useProducts() {
     return useQuery({
       queryKey: ['productMovements', productId],
       queryFn: async () => {
-        if (!productId) throw new Error("Product ID is required");
+        if (!productId) throw new Error("ID do produto é obrigatório");
+        
+        SecureLogger.info('Buscando histórico de movimentações do produto');
         
         const { data, error } = await supabase.rpc('get_product_movement_history', { 
           product_id_param: productId 
         });
         
         if (error) {
-          throw new Error(`Error fetching stock movements: ${error.message}`);
+          SecureLogger.error('Erro ao buscar movimentações', error);
+          throw new Error(`Erro ao buscar movimentações: ${error.message}`);
         }
         
         return data.map(mapDbStockMovementToStockMovement) as StockMovement[];
@@ -171,7 +191,9 @@ export function useProducts() {
   const useCreateProduct = () => {
     return useMutation({
       mutationFn: async (product: Partial<Product>) => {
-        const dbProduct = mapProductToDbProduct(product);
+        SecureLogger.info('Criando novo produto');
+        
+        const dbProduct = mapProductToDbProduct(product, user?.id);
         
         const { data, error } = await supabase
           .from('products')
@@ -180,9 +202,11 @@ export function useProducts() {
           .single();
           
         if (error) {
-          throw new Error(`Error creating product: ${error.message}`);
+          SecureLogger.error('Erro ao criar produto', error);
+          throw new Error(`Erro ao criar produto: ${error.message}`);
         }
         
+        SecureLogger.success('Produto criado com sucesso');
         return mapDbProductToProduct(data);
       },
       onSuccess: () => {
@@ -192,7 +216,8 @@ export function useProducts() {
           description: "O produto foi criado com sucesso!",
         });
       },
-      onError: (error) => {
+      onError: (error: any) => {
+        SecureLogger.error('Erro na criação do produto', error);
         toast({
           variant: "destructive",
           title: "Erro ao criar produto",
@@ -206,7 +231,10 @@ export function useProducts() {
   const useUpdateProduct = () => {
     return useMutation({
       mutationFn: async ({ id, ...updates }: Partial<Product> & { id: string }) => {
-        const dbUpdates = mapProductToDbProduct(updates);
+        SecureLogger.info('Atualizando produto');
+        
+        const dbUpdates = mapProductToDbProduct(updates, user?.id);
+        dbUpdates.last_modified_by = user?.id;
         
         const { data, error } = await supabase
           .from('products')
@@ -216,9 +244,11 @@ export function useProducts() {
           .single();
           
         if (error) {
-          throw new Error(`Error updating product: ${error.message}`);
+          SecureLogger.error('Erro ao atualizar produto', error);
+          throw new Error(`Erro ao atualizar produto: ${error.message}`);
         }
         
+        SecureLogger.success('Produto atualizado com sucesso');
         return mapDbProductToProduct(data);
       },
       onSuccess: (_, variables) => {
@@ -229,7 +259,8 @@ export function useProducts() {
           description: "As alterações foram salvas com sucesso!",
         });
       },
-      onError: (error) => {
+      onError: (error: any) => {
+        SecureLogger.error('Erro na atualização do produto', error);
         toast({
           variant: "destructive",
           title: "Erro ao atualizar produto",
@@ -243,15 +274,19 @@ export function useProducts() {
   const useDeleteProduct = () => {
     return useMutation({
       mutationFn: async (id: string) => {
+        SecureLogger.info('Excluindo produto');
+        
         const { error } = await supabase
           .from('products')
           .delete()
           .eq('id', id);
           
         if (error) {
-          throw new Error(`Error deleting product: ${error.message}`);
+          SecureLogger.error('Erro ao excluir produto', error);
+          throw new Error(`Erro ao excluir produto: ${error.message}`);
         }
         
+        SecureLogger.success('Produto excluído com sucesso');
         return id;
       },
       onSuccess: () => {
@@ -261,7 +296,8 @@ export function useProducts() {
           description: "O produto foi removido com sucesso!",
         });
       },
-      onError: (error) => {
+      onError: (error: any) => {
+        SecureLogger.error('Erro na exclusão do produto', error);
         toast({
           variant: "destructive",
           title: "Erro ao excluir produto",
@@ -275,12 +311,9 @@ export function useProducts() {
   const useAddStockMovement = () => {
     return useMutation({
       mutationFn: async (movement: Partial<StockMovement>) => {
-        const dbMovement = mapStockMovementToDbStockMovement(movement);
+        SecureLogger.info('Registrando movimentação de estoque');
         
-        // Set user_id if not provided
-        if (!dbMovement.user_id && user) {
-          dbMovement.user_id = user.id;
-        }
+        const dbMovement = mapStockMovementToDbStockMovement(movement, user?.id);
         
         const { data, error } = await supabase
           .from('stock_movements')
@@ -289,9 +322,11 @@ export function useProducts() {
           .single();
           
         if (error) {
-          throw new Error(`Error adding stock movement: ${error.message}`);
+          SecureLogger.error('Erro ao registrar movimentação', error);
+          throw new Error(`Erro ao registrar movimentação: ${error.message}`);
         }
         
+        SecureLogger.success('Movimentação registrada com sucesso');
         return mapDbStockMovementToStockMovement(data);
       },
       onSuccess: (_, variables) => {
@@ -303,7 +338,8 @@ export function useProducts() {
           description: `${variables.type === 'in' ? 'Entrada' : 'Saída'} de ${variables.quantity} unidades registrada com sucesso!`,
         });
       },
-      onError: (error) => {
+      onError: (error: any) => {
+        SecureLogger.error('Erro no registro da movimentação', error);
         toast({
           variant: "destructive",
           title: "Erro ao registrar movimentação",

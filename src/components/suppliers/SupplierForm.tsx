@@ -16,8 +16,15 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { SupplierFormData } from '@/types';
 
+const cnpjRegex = /^\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}$/;
+
 const supplierSchema = z.object({
   name: z.string().min(2, 'O nome deve ter pelo menos 2 caracteres'),
+  cnpj: z.string()
+    .optional()
+    .refine((val) => !val || cnpjRegex.test(val), {
+      message: 'CNPJ deve estar no formato 00.000.000/0000-00'
+    }),
   contactName: z.string().optional(),
   email: z.string().email('Email inválido').optional().or(z.literal('')),
   phone: z.string().optional(),
@@ -40,6 +47,7 @@ const SupplierForm: React.FC<SupplierFormProps> = ({
     resolver: zodResolver(supplierSchema),
     defaultValues: {
       name: '',
+      cnpj: '',
       contactName: '',
       email: '',
       phone: '',
@@ -48,6 +56,18 @@ const SupplierForm: React.FC<SupplierFormProps> = ({
       ...defaultValues
     }
   });
+
+  const formatCNPJ = (value: string) => {
+    const numbers = value.replace(/\D/g, '');
+    if (numbers.length <= 14) {
+      return numbers
+        .replace(/(\d{2})(\d)/, '$1.$2')
+        .replace(/(\d{3})(\d)/, '$1.$2')
+        .replace(/(\d{3})(\d)/, '$1/$2')
+        .replace(/(\d{4})(\d)/, '$1-$2');
+    }
+    return value;
+  };
 
   return (
     <Form {...form}>
@@ -73,6 +93,29 @@ const SupplierForm: React.FC<SupplierFormProps> = ({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <FormField
             control={form.control}
+            name="cnpj"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-sm sm:text-base">CNPJ</FormLabel>
+                <FormControl>
+                  <Input 
+                    placeholder="00.000.000/0000-00" 
+                    className="text-sm sm:text-base" 
+                    {...field}
+                    onChange={(e) => {
+                      const formatted = formatCNPJ(e.target.value);
+                      field.onChange(formatted);
+                    }}
+                    maxLength={18}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
             name="contactName"
             render={({ field }) => (
               <FormItem>
@@ -88,7 +131,9 @@ const SupplierForm: React.FC<SupplierFormProps> = ({
               </FormItem>
             )}
           />
+        </div>
 
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <FormField
             control={form.control}
             name="email"
@@ -107,9 +152,7 @@ const SupplierForm: React.FC<SupplierFormProps> = ({
               </FormItem>
             )}
           />
-        </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <FormField
             control={form.control}
             name="phone"
@@ -127,25 +170,25 @@ const SupplierForm: React.FC<SupplierFormProps> = ({
               </FormItem>
             )}
           />
-
-          <FormField
-            control={form.control}
-            name="address"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-sm sm:text-base">Endereço</FormLabel>
-                <FormControl>
-                  <Input 
-                    placeholder="Endereço do fornecedor" 
-                    className="text-sm sm:text-base" 
-                    {...field} 
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
         </div>
+
+        <FormField
+          control={form.control}
+          name="address"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="text-sm sm:text-base">Endereço</FormLabel>
+              <FormControl>
+                <Input 
+                  placeholder="Endereço do fornecedor" 
+                  className="text-sm sm:text-base" 
+                  {...field} 
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <FormField
           control={form.control}

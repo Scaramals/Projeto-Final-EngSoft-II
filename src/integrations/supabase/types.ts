@@ -30,13 +30,54 @@ export type Database = {
         }
         Relationships: []
       }
+      product_suppliers: {
+        Row: {
+          created_at: string
+          id: string
+          product_id: string
+          supplier_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          product_id: string
+          supplier_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          product_id?: string
+          supplier_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_suppliers_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_suppliers_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           category: string | null
           created_at: string
+          created_by: string | null
           description: string | null
           id: string
           image_url: string | null
+          last_modified_by: string | null
           minimum_stock: number | null
           name: string
           price: number
@@ -46,9 +87,11 @@ export type Database = {
         Insert: {
           category?: string | null
           created_at?: string
+          created_by?: string | null
           description?: string | null
           id?: string
           image_url?: string | null
+          last_modified_by?: string | null
           minimum_stock?: number | null
           name: string
           price: number
@@ -58,9 +101,11 @@ export type Database = {
         Update: {
           category?: string | null
           created_at?: string
+          created_by?: string | null
           description?: string | null
           id?: string
           image_url?: string | null
+          last_modified_by?: string | null
           minimum_stock?: number | null
           name?: string
           price?: number
@@ -98,30 +143,39 @@ export type Database = {
       }
       stock_movements: {
         Row: {
+          created_by: string | null
           date: string
           id: string
           notes: string | null
           product_id: string
           quantity: number
+          supplier_id: string | null
           type: string
+          updated_at: string | null
           user_id: string | null
         }
         Insert: {
+          created_by?: string | null
           date?: string
           id?: string
           notes?: string | null
           product_id: string
           quantity: number
+          supplier_id?: string | null
           type: string
+          updated_at?: string | null
           user_id?: string | null
         }
         Update: {
+          created_by?: string | null
           date?: string
           id?: string
           notes?: string | null
           product_id?: string
           quantity?: number
+          supplier_id?: string | null
           type?: string
+          updated_at?: string | null
           user_id?: string | null
         }
         Relationships: [
@@ -132,15 +186,25 @@ export type Database = {
             referencedRelation: "products"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "stock_movements_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
         ]
       }
       suppliers: {
         Row: {
           address: string | null
+          cnpj: string | null
           contact_name: string | null
           created_at: string
+          created_by: string | null
           email: string | null
           id: string
+          last_modified_by: string | null
           name: string
           notes: string | null
           phone: string | null
@@ -148,10 +212,13 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          cnpj?: string | null
           contact_name?: string | null
           created_at?: string
+          created_by?: string | null
           email?: string | null
           id?: string
+          last_modified_by?: string | null
           name: string
           notes?: string | null
           phone?: string | null
@@ -159,10 +226,13 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          cnpj?: string | null
           contact_name?: string | null
           created_at?: string
+          created_by?: string | null
           email?: string | null
           id?: string
+          last_modified_by?: string | null
           name?: string
           notes?: string | null
           phone?: string | null
@@ -193,14 +263,34 @@ export type Database = {
         Returns: {
           category: string | null
           created_at: string
+          created_by: string | null
           description: string | null
           id: string
           image_url: string | null
+          last_modified_by: string | null
           minimum_stock: number | null
           name: string
           price: number
           quantity: number
           updated_at: string
+        }[]
+      }
+      get_movements_report: {
+        Args: {
+          start_date?: string
+          end_date?: string
+          supplier_filter?: string
+        }
+        Returns: {
+          movement_id: string
+          product_name: string
+          supplier_name: string
+          supplier_cnpj: string
+          movement_type: string
+          quantity: number
+          movement_date: string
+          notes: string
+          created_by_id: string
         }[]
       }
       get_movements_summary: {
@@ -215,12 +305,15 @@ export type Database = {
       get_product_movement_history: {
         Args: { product_id_param: string }
         Returns: {
+          created_by: string | null
           date: string
           id: string
           notes: string | null
           product_id: string
           quantity: number
+          supplier_id: string | null
           type: string
+          updated_at: string | null
           user_id: string | null
         }[]
       }
@@ -229,9 +322,11 @@ export type Database = {
         Returns: {
           category: string | null
           created_at: string
+          created_by: string | null
           description: string | null
           id: string
           image_url: string | null
+          last_modified_by: string | null
           minimum_stock: number | null
           name: string
           price: number
@@ -239,15 +334,33 @@ export type Database = {
           updated_at: string
         }[]
       }
+      get_products_with_suppliers: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          product_id: string
+          product_name: string
+          product_description: string
+          product_quantity: number
+          product_price: number
+          product_category: string
+          product_minimum_stock: number
+          product_created_at: string
+          product_updated_at: string
+          suppliers: Json
+        }[]
+      }
       get_recent_movements: {
         Args: { days?: number }
         Returns: {
+          created_by: string | null
           date: string
           id: string
           notes: string | null
           product_id: string
           quantity: number
+          supplier_id: string | null
           type: string
+          updated_at: string | null
           user_id: string | null
         }[]
       }

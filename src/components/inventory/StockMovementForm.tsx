@@ -13,6 +13,7 @@ import {
 import { StockMovement } from "@/types";
 import { useToast } from "@/components/ui/use-toast";
 import { useProducts } from "@/hooks/useProducts";
+import { useSuppliers } from "@/hooks/useSuppliers";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -32,6 +33,7 @@ const stockMovementSchema = z.object({
   }),
   quantity: z.coerce.number().int().positive("A quantidade deve ser maior que zero"),
   notes: z.string().optional(),
+  supplierId: z.string().optional(),
 });
 
 type StockMovementFormValues = z.infer<typeof stockMovementSchema>;
@@ -44,7 +46,10 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
 }) => {
   const { toast } = useToast();
   const { useAddStockMovement } = useProducts();
+  const { useAllSuppliers } = useSuppliers();
   const { mutate: addStockMovement, isPending: isLoading } = useAddStockMovement();
+  
+  const { data: suppliers = [] } = useAllSuppliers();
 
   const form = useForm<StockMovementFormValues>({
     resolver: zodResolver(stockMovementSchema),
@@ -52,6 +57,7 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
       type: 'in',
       quantity: 1,
       notes: '',
+      supplierId: '',
     },
   });
 
@@ -140,6 +146,40 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
               </FormItem>
             )}
           />
+
+          {watchType === 'in' && (
+            <FormField
+              control={form.control}
+              name="supplierId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Fornecedor</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    value={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o fornecedor (opcional)" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="">Nenhum fornecedor</SelectItem>
+                      {suppliers.map((supplier) => (
+                        <SelectItem key={supplier.id} value={supplier.id}>
+                          {supplier.name} {supplier.cnpj && `- ${supplier.cnpj}`}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>
+                    Para entradas de estoque, você pode informar o fornecedor
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          )}
           
           <FormField
             control={form.control}
