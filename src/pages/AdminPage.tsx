@@ -34,9 +34,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { UserCog, Shield, AlertTriangle, Plus, Pencil, Trash2 } from "lucide-react";
+import { UserCog, Shield, AlertTriangle, Pencil, Trash2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface User {
@@ -49,12 +48,10 @@ interface User {
 
 const AdminPage = () => {
   const { isMaster, isDeveloper } = useAuthorization();
-  const { users, isLoading, updateUserRole, createProfile, deleteProfile } = useAdminUsers();
+  const { users, isLoading, updateUserRole, deleteProfile } = useAdminUsers();
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [deleteUserId, setDeleteUserId] = useState<string | null>(null);
-  const [newUser, setNewUser] = useState({ full_name: '', role: 'employee' });
 
   const canManageUsers = isMaster() || isDeveloper();
 
@@ -87,20 +84,6 @@ const AdminPage = () => {
     }
   };
 
-  const handleCreateUser = async () => {
-    if (createProfile) {
-      // Generate a UUID for the new user
-      const newUserId = crypto.randomUUID();
-      await createProfile.mutateAsync({
-        id: newUserId,
-        full_name: newUser.full_name,
-        role: newUser.role
-      });
-      setIsCreateDialogOpen(false);
-      setNewUser({ full_name: '', role: 'employee' });
-    }
-  };
-
   const handleDeleteUser = async () => {
     if (deleteUserId && deleteProfile) {
       await deleteProfile.mutateAsync(deleteUserId);
@@ -120,16 +103,10 @@ const AdminPage = () => {
             <p className="text-xs sm:text-sm lg:text-base text-muted-foreground mt-1">
               Gerencie usuários e permissões do sistema
             </p>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-2 bg-blue-50 p-2 rounded">
+              💡 Para adicionar novos usuários, eles devem se registrar através da página de registro
+            </p>
           </div>
-
-          <Button 
-            onClick={() => setIsCreateDialogOpen(true)}
-            className="w-full sm:w-auto text-xs sm:text-sm lg:text-base"
-            size="sm"
-          >
-            <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-            Novo Usuário
-          </Button>
         </div>
 
         <Card>
@@ -266,13 +243,12 @@ const AdminPage = () => {
             ) : (
               <div className="text-center py-6 sm:py-8 px-4">
                 <UserCog className="h-10 w-10 sm:h-12 sm:w-12 mx-auto text-muted-foreground mb-4" />
-                <p className="text-muted-foreground mb-4 text-xs sm:text-sm lg:text-base">
+                <p className="text-muted-foreground mb-2 text-xs sm:text-sm lg:text-base">
                   Nenhum usuário encontrado
                 </p>
-                <Button onClick={() => setIsCreateDialogOpen(true)} className="text-xs sm:text-sm" size="sm">
-                  <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                  Adicionar usuário
-                </Button>
+                <p className="text-xs text-muted-foreground">
+                  Novos usuários aparecerão aqui após se registrarem
+                </p>
               </div>
             )}
           </CardContent>
@@ -323,62 +299,6 @@ const AdminPage = () => {
                 className="w-full sm:w-auto text-xs sm:text-sm h-8 sm:h-10"
               >
                 {updateUserRole?.isPending ? "Salvando..." : "Salvar"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        {/* Create User Dialog */}
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogContent className="mx-2 sm:mx-4 max-w-sm sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle className="text-base sm:text-lg lg:text-xl">Novo Usuário</DialogTitle>
-              <DialogDescription className="text-xs sm:text-sm lg:text-base">
-                Crie um novo usuário no sistema
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="full_name" className="text-xs sm:text-sm">Nome Completo</Label>
-                <Input
-                  id="full_name"
-                  value={newUser.full_name}
-                  onChange={(e) => setNewUser({ ...newUser, full_name: e.target.value })}
-                  placeholder="Digite o nome completo"
-                  className="text-xs sm:text-sm"
-                />
-              </div>
-              <div>
-                <Label htmlFor="new_role" className="text-xs sm:text-sm">Role</Label>
-                <Select
-                  value={newUser.role}
-                  onValueChange={(value) => setNewUser({ ...newUser, role: value })}
-                >
-                  <SelectTrigger className="text-xs sm:text-sm">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="employee">Employee</SelectItem>
-                    <SelectItem value="admin">Admin</SelectItem>
-                    <SelectItem value="developer">Developer</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
-              <Button
-                variant="outline"
-                onClick={() => setIsCreateDialogOpen(false)}
-                className="w-full sm:w-auto text-xs sm:text-sm h-8 sm:h-10"
-              >
-                Cancelar
-              </Button>
-              <Button
-                onClick={handleCreateUser}
-                disabled={createProfile?.isPending || !newUser.full_name}
-                className="w-full sm:w-auto text-xs sm:text-sm h-8 sm:h-10"
-              >
-                {createProfile?.isPending ? "Criando..." : "Criar"}
               </Button>
             </DialogFooter>
           </DialogContent>
