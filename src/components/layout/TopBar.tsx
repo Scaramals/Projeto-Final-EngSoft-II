@@ -1,30 +1,22 @@
 
 import React, { useState } from "react";
-import { Bell, Menu, Search } from "lucide-react";
+import { Menu, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MobileSidebar } from "./MobileSidebar";
+import { NotificationsPopover } from "@/components/notifications/NotificationsPopover";
 import { useNavigate } from "react-router-dom";
-import { useToast } from "@/hooks/use-toast";
 
 export const TopBar: React.FC = () => {
   const [showMobileSidebar, setShowMobileSidebar] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const navigate = useNavigate();
-  const { toast } = useToast();
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchTerm.trim()) {
       navigate(`/products?search=${encodeURIComponent(searchTerm.trim())}`);
     }
-  };
-
-  const handleNotificationClick = () => {
-    toast({
-      title: "Notificações",
-      description: "Você tem 3 alertas de estoque baixo",
-    });
   };
 
   return (
@@ -55,15 +47,7 @@ export const TopBar: React.FC = () => {
         </div>
 
         <div className="flex items-center space-x-4">
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="relative"
-            onClick={handleNotificationClick}
-          >
-            <Bell className="h-5 w-5" />
-            <span className="absolute top-0 right-0 h-2 w-2 rounded-full bg-red-500"></span>
-          </Button>
+          <NotificationsPopover />
           <div className="flex items-center">
             <span className="text-sm font-medium mr-2 hidden md:inline">
               Admin
