@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -16,6 +17,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { AutoCurrencyInput } from "@/components/ui/auto-currency-input";
 import { ProductFormData } from "@/types";
 import { CategorySelect } from "@/components/products/CategorySelect";
+import { ImageUpload } from "@/components/products/ImageUpload";
 
 const productFormSchema = z.object({
   name: z.string()
@@ -32,7 +34,7 @@ const productFormSchema = z.object({
     .int({ message: "Estoque mínimo deve ser um número inteiro" })
     .min(0, { message: "Estoque mínimo não pode ser negativo" })
     .optional(),
-  imageUrl: z.string().url({ message: "URL de imagem inválida" }).optional().or(z.literal("")),
+  imageUrl: z.string().optional(),
 });
 
 interface ProductFormProps {
@@ -185,11 +187,12 @@ export const ProductForm: React.FC<ProductFormProps> = ({
               name="imageUrl"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>URL da imagem</FormLabel>
+                  <FormLabel>Imagem do produto</FormLabel>
                   <FormControl>
-                    <Input
-                      placeholder="https://exemplo.com/imagem.jpg"
-                      {...field}
+                    <ImageUpload
+                      value={field.value}
+                      onChange={field.onChange}
+                      onRemove={() => field.onChange('')}
                     />
                   </FormControl>
                   <FormMessage />

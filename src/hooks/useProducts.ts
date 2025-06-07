@@ -1,10 +1,9 @@
-
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Product, StockMovement, FilterParams } from "@/types";
-import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { SecureLogger } from "@/services/secureLogger";
+import { toast } from "sonner";
 
 /**
  * Helper function to convert database response to Product type
@@ -83,7 +82,6 @@ const mapStockMovementToDbStockMovement = (movement: Partial<StockMovement>, use
 
 export function useProducts() {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
   const { user } = useAuth();
 
   // Fetch all products with filtering and sorting
@@ -211,18 +209,11 @@ export function useProducts() {
       },
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ['products'] });
-        toast({
-          title: "Produto criado",
-          description: "O produto foi criado com sucesso!",
-        });
+        toast.success("Produto criado com sucesso!");
       },
       onError: (error: any) => {
         SecureLogger.error('Erro na criação do produto', error);
-        toast({
-          variant: "destructive",
-          title: "Erro ao criar produto",
-          description: error.message,
-        });
+        toast.error(`Erro ao criar produto: ${error.message}`);
       }
     });
   };
@@ -254,18 +245,11 @@ export function useProducts() {
       onSuccess: (_, variables) => {
         queryClient.invalidateQueries({ queryKey: ['products'] });
         queryClient.invalidateQueries({ queryKey: ['products', variables.id] });
-        toast({
-          title: "Produto atualizado",
-          description: "As alterações foram salvas com sucesso!",
-        });
+        toast.success("Produto atualizado com sucesso!");
       },
       onError: (error: any) => {
         SecureLogger.error('Erro na atualização do produto', error);
-        toast({
-          variant: "destructive",
-          title: "Erro ao atualizar produto",
-          description: error.message,
-        });
+        toast.error(`Erro ao atualizar produto: ${error.message}`);
       }
     });
   };
@@ -291,18 +275,11 @@ export function useProducts() {
       },
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ['products'] });
-        toast({
-          title: "Produto excluído",
-          description: "O produto foi removido com sucesso!",
-        });
+        toast.success("Produto excluído com sucesso!");
       },
       onError: (error: any) => {
         SecureLogger.error('Erro na exclusão do produto', error);
-        toast({
-          variant: "destructive",
-          title: "Erro ao excluir produto",
-          description: error.message,
-        });
+        toast.error(`Erro ao excluir produto: ${error.message}`);
       }
     });
   };
@@ -333,18 +310,11 @@ export function useProducts() {
         queryClient.invalidateQueries({ queryKey: ['products'] });
         queryClient.invalidateQueries({ queryKey: ['products', variables.productId] });
         queryClient.invalidateQueries({ queryKey: ['productMovements', variables.productId] });
-        toast({
-          title: "Movimentação registrada",
-          description: `${variables.type === 'in' ? 'Entrada' : 'Saída'} de ${variables.quantity} unidades registrada com sucesso!`,
-        });
+        toast.success(`${variables.type === 'in' ? 'Entrada' : 'Saída'} de ${variables.quantity} unidades registrada com sucesso!`);
       },
       onError: (error: any) => {
         SecureLogger.error('Erro no registro da movimentação', error);
-        toast({
-          variant: "destructive",
-          title: "Erro ao registrar movimentação",
-          description: error.message,
-        });
+        toast.error(`Erro ao registrar movimentação: ${error.message}`);
       }
     });
   };
