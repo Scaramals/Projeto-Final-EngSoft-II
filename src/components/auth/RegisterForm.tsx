@@ -64,7 +64,9 @@ export const RegisterForm: React.FC = () => {
     setIsLoading(true);
     
     try {
+      console.log('Starting signup process with:', { email, name });
       await signUp(email, password, name);
+      
       toast({
         title: "Conta criada com sucesso",
         description: "Você pode fazer login agora."

@@ -17,12 +17,6 @@ interface UpdateUserRoleData {
   isMaster: boolean;
 }
 
-interface CreateProfileData {
-  id: string;
-  full_name: string;
-  role: string;
-}
-
 export function useAdminUsers() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -31,6 +25,7 @@ export function useAdminUsers() {
   const users = useQuery({
     queryKey: ['admin-users'],
     queryFn: async () => {
+      console.log('Fetching users from profiles table...');
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -41,6 +36,7 @@ export function useAdminUsers() {
         throw new Error(`Error fetching users: ${error.message}`);
       }
 
+      console.log('Users fetched:', data);
       return data as AdminUser[];
     },
   });
@@ -48,6 +44,7 @@ export function useAdminUsers() {
   // Atualizar role do usuário
   const updateUserRole = useMutation({
     mutationFn: async ({ userId, role, isMaster }: UpdateUserRoleData) => {
+      console.log('Updating user role:', { userId, role, isMaster });
       const { data, error } = await supabase
         .from('profiles')
         .update({ 
@@ -63,6 +60,7 @@ export function useAdminUsers() {
         throw new Error(`Error updating user role: ${error.message}`);
       }
 
+      console.log('User role updated successfully:', data);
       return data;
     },
     onSuccess: () => {
@@ -82,46 +80,10 @@ export function useAdminUsers() {
     }
   });
 
-  // Criar novo perfil
-  const createProfile = useMutation({
-    mutationFn: async ({ id, full_name, role }: CreateProfileData) => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .insert({
-          id: id,
-          full_name: full_name,
-          role: role
-        })
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Error creating profile:', error);
-        throw new Error(`Error creating profile: ${error.message}`);
-      }
-
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
-      toast({
-        title: "Usuário criado",
-        description: "O usuário foi criado com sucesso!",
-      });
-    },
-    onError: (error) => {
-      console.error('Create profile error:', error);
-      toast({
-        variant: "destructive",
-        title: "Erro ao criar usuário",
-        description: error.message,
-      });
-    }
-  });
-
   // Deletar perfil
   const deleteProfile = useMutation({
     mutationFn: async (userId: string) => {
+      console.log('Deleting profile:', userId);
       const { error } = await supabase
         .from('profiles')
         .delete()
@@ -132,6 +94,7 @@ export function useAdminUsers() {
         throw new Error(`Error deleting profile: ${error.message}`);
       }
 
+      console.log('Profile deleted successfully');
       return userId;
     },
     onSuccess: () => {
@@ -155,7 +118,6 @@ export function useAdminUsers() {
     users: users.data,
     isLoading: users.isLoading,
     updateUserRole,
-    createProfile,
     deleteProfile
   };
 }
