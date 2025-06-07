@@ -92,7 +92,7 @@ const SuppliersPage = () => {
 
             {canManageSuppliers && (
               <Button 
-                onClick={() => navigate("/suppliers/new")}
+                onClick={() => navigate("/suppliers/add")}
                 className="w-full sm:w-auto text-sm sm:text-base"
                 size="default"
               >
@@ -169,7 +169,7 @@ const SuppliersPage = () => {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => navigate(`/suppliers/${supplier.id}/edit`)}
+                              onClick={() => navigate(`/suppliers/${supplier.id}`)}
                               className="flex-1 text-xs"
                             >
                               <Edit className="h-3 w-3 mr-1" />
@@ -232,7 +232,7 @@ const SuppliersPage = () => {
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => navigate(`/suppliers/${supplier.id}/edit`)}
+                                  onClick={() => navigate(`/suppliers/${supplier.id}`)}
                                   className="text-xs"
                                 >
                                   Editar
@@ -261,7 +261,7 @@ const SuppliersPage = () => {
                   Nenhum fornecedor encontrado
                 </p>
                 {canManageSuppliers && (
-                  <Button onClick={() => navigate("/suppliers/new")} className="text-sm sm:text-base">
+                  <Button onClick={() => navigate("/suppliers/add")} className="text-sm sm:text-base">
                     <Plus className="h-4 w-4 mr-2" />
                     Adicionar fornecedor
                   </Button>

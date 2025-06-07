@@ -86,7 +86,19 @@ function App() {
                 </ProtectedRoute>
               } />
               
+              <Route path="/suppliers/new" element={
+                <ProtectedRoute>
+                  <AddSupplierPage />
+                </ProtectedRoute>
+              } />
+              
               <Route path="/suppliers/:supplierId" element={
+                <ProtectedRoute>
+                  <SupplierDetailPage />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/suppliers/:supplierId/edit" element={
                 <ProtectedRoute>
                   <SupplierDetailPage />
                 </ProtectedRoute>
