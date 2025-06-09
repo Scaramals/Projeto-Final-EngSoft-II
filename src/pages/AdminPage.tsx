@@ -1,9 +1,7 @@
 
-import React, { useState } from "react";
-import { useAdminUsers } from "@/hooks/useAdminUsers";
+import React from "react";
 import { useAuthorization } from "@/hooks/useAuthorization";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -11,51 +9,17 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
-import { UserCog, Shield, AlertTriangle, Pencil, Trash2 } from "lucide-react";
-import { Skeleton } from "@/components/ui/skeleton";
-
-interface User {
-  id: string;
-  full_name: string;
-  role: string;
-  is_master: boolean;
-  created_at: string;
-}
+import { UserCog, Shield, Database, Settings, BarChart, Users } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
 
 const AdminPage = () => {
   const { isMaster, isDeveloper } = useAuthorization();
-  const { users, isLoading, updateUserRole, deleteProfile } = useAdminUsers();
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [deleteUserId, setDeleteUserId] = useState<string | null>(null);
+  const navigate = useNavigate();
 
-  const canManageUsers = isMaster() || isDeveloper();
+  const canAccess = isMaster() || isDeveloper();
 
-  if (!canManageUsers) {
+  if (!canAccess) {
     return (
       <AppLayout>
         <div className="container max-w-4xl mx-auto py-4 sm:py-6 lg:py-8 px-4 sm:px-6">
@@ -73,23 +37,42 @@ const AdminPage = () => {
     );
   }
 
-  const handleUpdateRole = async () => {
-    if (selectedUser && updateUserRole) {
-      await updateUserRole.mutateAsync({
-        userId: selectedUser.id,
-        role: selectedUser.role,
-        isMaster: selectedUser.is_master,
-      });
-      setIsEditDialogOpen(false);
+  const adminModules = [
+    {
+      title: "Configurações do Sistema",
+      description: "Configurar parâmetros gerais do sistema",
+      icon: Settings,
+      action: () => navigate("/settings"),
+      color: "bg-blue-500"
+    },
+    {
+      title: "Relatórios Avançados",
+      description: "Visualizar relatórios detalhados e análises",
+      icon: BarChart,
+      action: () => navigate("/reports"),
+      color: "bg-green-500"
+    },
+    {
+      title: "Backup do Banco de Dados",
+      description: "Gerenciar backups e restaurações",
+      icon: Database,
+      action: () => {
+        // Implementar funcionalidade de backup
+        console.log("Backup functionality");
+      },
+      color: "bg-purple-500"
+    },
+    {
+      title: "Logs do Sistema",
+      description: "Visualizar logs de atividades e erros",
+      icon: UserCog,
+      action: () => {
+        // Implementar visualização de logs
+        console.log("System logs");
+      },
+      color: "bg-orange-500"
     }
-  };
-
-  const handleDeleteUser = async () => {
-    if (deleteUserId && deleteProfile) {
-      await deleteProfile.mutateAsync(deleteUserId);
-      setDeleteUserId(null);
-    }
-  };
+  ];
 
   return (
     <AppLayout>
@@ -98,244 +81,135 @@ const AdminPage = () => {
           <div>
             <h1 className="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-bold flex items-center gap-2">
               <UserCog className="h-5 w-5 sm:h-6 sm:w-6 lg:h-8 lg:w-8" />
-              Administração
+              Painel de Administração
             </h1>
             <p className="text-xs sm:text-sm lg:text-base text-muted-foreground mt-1">
-              Gerencie usuários e permissões do sistema
-            </p>
-            <p className="text-xs sm:text-sm text-muted-foreground mt-2 bg-blue-50 p-2 rounded">
-              💡 Para adicionar novos usuários, eles devem se registrar através da página de registro
+              Gerencie configurações e monitore o sistema
             </p>
           </div>
         </div>
 
-        <Card>
-          <CardHeader className="pb-3 sm:pb-4 lg:pb-6">
-            <CardTitle className="text-base sm:text-lg lg:text-xl">Usuários do Sistema</CardTitle>
-            <CardDescription className="text-xs sm:text-sm lg:text-base">
-              {users && users.length > 0
-                ? `Mostrando ${users.length} usuário${users.length > 1 ? "s" : ""}`
-                : "Nenhum usuário encontrado"}
+        {/* Overview Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          {adminModules.map((module, index) => (
+            <Card key={index} className="cursor-pointer hover:shadow-lg transition-shadow">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div className={`p-3 rounded-full ${module.color} text-white`}>
+                    <module.icon className="h-6 w-6" />
+                  </div>
+                </div>
+                <CardTitle className="text-base">{module.title}</CardTitle>
+                <CardDescription className="text-sm">
+                  {module.description}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button 
+                  onClick={module.action}
+                  variant="outline" 
+                  size="sm" 
+                  className="w-full"
+                >
+                  Acessar
+                </Button>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* System Information */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Informações do Sistema</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium">Versão do Sistema</span>
+                  <span className="text-sm text-muted-foreground">v2.1.0</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium">Banco de Dados</span>
+                  <span className="text-sm text-green-600">✓ Conectado</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium">Último Backup</span>
+                  <span className="text-sm text-muted-foreground">Hoje, 08:00</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium">Uptime</span>
+                  <span className="text-sm text-muted-foreground">99.9%</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Métricas de Performance</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium">Tempo de Resposta</span>
+                  <span className="text-sm text-green-600">< 200ms</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium">Cache Hit Rate</span>
+                  <span className="text-sm text-green-600">94.5%</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium">Queries/min</span>
+                  <span className="text-sm text-muted-foreground">1,247</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium">Erro Rate</span>
+                  <span className="text-sm text-green-600">0.02%</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Quick Actions */}
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle className="text-lg">Ações Rápidas</CardTitle>
+            <CardDescription>
+              Executar tarefas administrativas comuns
             </CardDescription>
           </CardHeader>
-          <CardContent className="p-0 sm:p-4 lg:p-6">
-            {isLoading ? (
-              <div className="space-y-3 sm:space-y-4 p-3 sm:p-0">
-                {[...Array(5)].map((_, i) => (
-                  <div key={i} className="flex items-center space-x-4">
-                    <Skeleton className="h-10 sm:h-12 w-full" />
-                  </div>
-                ))}
-              </div>
-            ) : users && users.length > 0 ? (
-              <div className="overflow-x-auto">
-                {/* Mobile view - Card layout */}
-                <div className="block lg:hidden space-y-3 p-3 sm:p-4">
-                  {users.map((user) => (
-                    <Card key={user.id} className="p-3 sm:p-4">
-                      <div className="space-y-2">
-                        <div className="flex items-start justify-between">
-                          <div className="min-w-0 flex-1">
-                            <p className="font-medium text-xs sm:text-sm truncate">{user.full_name}</p>
-                            <p className="text-xs text-muted-foreground capitalize">
-                              {user.role}
-                              {user.is_master && " (Master)"}
-                            </p>
-                          </div>
-                        </div>
-                        
-                        <p className="text-xs text-muted-foreground">
-                          Criado em: {new Date(user.created_at).toLocaleDateString('pt-BR')}
-                        </p>
-                        
-                        <div className="flex flex-col sm:flex-row gap-2 pt-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedUser(user);
-                              setIsEditDialogOpen(true);
-                            }}
-                            className="flex-1 text-xs h-8"
-                          >
-                            <Pencil className="h-3 w-3 mr-1" />
-                            Editar
-                          </Button>
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => setDeleteUserId(user.id)}
-                            className="flex-1 text-xs h-8"
-                          >
-                            <Trash2 className="h-3 w-3 mr-1" />
-                            Excluir
-                          </Button>
-                        </div>
-                      </div>
-                    </Card>
-                  ))}
+          <CardContent>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <Button variant="outline" size="sm" className="h-auto py-3">
+                <div className="flex flex-col items-center gap-2">
+                  <Database className="h-5 w-5" />
+                  <span className="text-xs">Backup</span>
                 </div>
-
-                {/* Desktop view - Table layout */}
-                <div className="hidden lg:block">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="text-sm font-medium">Nome</TableHead>
-                        <TableHead className="text-sm font-medium">Role</TableHead>
-                        <TableHead className="text-sm font-medium">Status</TableHead>
-                        <TableHead className="text-sm font-medium">Criado em</TableHead>
-                        <TableHead className="text-sm font-medium">Ações</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {users.map((user) => (
-                        <TableRow key={user.id}>
-                          <TableCell className="font-medium text-sm">
-                            {user.full_name}
-                          </TableCell>
-                          <TableCell className="text-sm capitalize">
-                            {user.role}
-                          </TableCell>
-                          <TableCell className="text-sm">
-                            {user.is_master ? (
-                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-purple-100 text-purple-800">
-                                Master
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">
-                                Ativo
-                              </span>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-sm">
-                            {new Date(user.created_at).toLocaleDateString('pt-BR')}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex space-x-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                  setSelectedUser(user);
-                                  setIsEditDialogOpen(true);
-                                }}
-                                className="text-xs h-8"
-                              >
-                                Editar
-                              </Button>
-                              <Button
-                                variant="destructive"
-                                size="sm"
-                                onClick={() => setDeleteUserId(user.id)}
-                                className="text-xs h-8"
-                              >
-                                Excluir
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+              </Button>
+              <Button variant="outline" size="sm" className="h-auto py-3">
+                <div className="flex flex-col items-center gap-2">
+                  <BarChart className="h-5 w-5" />
+                  <span className="text-xs">Relatórios</span>
                 </div>
-              </div>
-            ) : (
-              <div className="text-center py-6 sm:py-8 px-4">
-                <UserCog className="h-10 w-10 sm:h-12 sm:w-12 mx-auto text-muted-foreground mb-4" />
-                <p className="text-muted-foreground mb-2 text-xs sm:text-sm lg:text-base">
-                  Nenhum usuário encontrado
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Novos usuários aparecerão aqui após se registrarem
-                </p>
-              </div>
-            )}
+              </Button>
+              <Button variant="outline" size="sm" className="h-auto py-3">
+                <div className="flex flex-col items-center gap-2">
+                  <Settings className="h-5 w-5" />
+                  <span className="text-xs">Config</span>
+                </div>
+              </Button>
+              <Button variant="outline" size="sm" className="h-auto py-3">
+                <div className="flex flex-col items-center gap-2">
+                  <Users className="h-5 w-5" />
+                  <span className="text-xs">Logs</span>
+                </div>
+              </Button>
+            </div>
           </CardContent>
         </Card>
-
-        {/* Edit User Dialog */}
-        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-          <DialogContent className="mx-2 sm:mx-4 max-w-sm sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle className="text-base sm:text-lg lg:text-xl">Editar Usuário</DialogTitle>
-              <DialogDescription className="text-xs sm:text-sm lg:text-base">
-                Altere as permissões do usuário {selectedUser?.full_name}
-              </DialogDescription>
-            </DialogHeader>
-            {selectedUser && (
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="role" className="text-xs sm:text-sm">Role</Label>
-                  <Select
-                    value={selectedUser.role}
-                    onValueChange={(value) =>
-                      setSelectedUser({ ...selectedUser, role: value })
-                    }
-                  >
-                    <SelectTrigger className="text-xs sm:text-sm">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="employee">Employee</SelectItem>
-                      <SelectItem value="admin">Admin</SelectItem>
-                      <SelectItem value="developer">Developer</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            )}
-            <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
-              <Button
-                variant="outline"
-                onClick={() => setIsEditDialogOpen(false)}
-                className="w-full sm:w-auto text-xs sm:text-sm h-8 sm:h-10"
-              >
-                Cancelar
-              </Button>
-              <Button
-                onClick={handleUpdateRole}
-                disabled={updateUserRole?.isPending}
-                className="w-full sm:w-auto text-xs sm:text-sm h-8 sm:h-10"
-              >
-                {updateUserRole?.isPending ? "Salvando..." : "Salvar"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        {/* Delete confirmation dialog */}
-        <Dialog open={!!deleteUserId} onOpenChange={(open) => !open && setDeleteUserId(null)}>
-          <DialogContent className="mx-2 sm:mx-4 max-w-sm sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle className="text-base sm:text-lg lg:text-xl flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5 text-red-500" />
-                Confirmar exclusão
-              </DialogTitle>
-              <DialogDescription className="text-xs sm:text-sm lg:text-base">
-                Tem certeza que deseja excluir este usuário? Esta ação não pode ser desfeita.
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
-              <Button
-                variant="outline"
-                onClick={() => setDeleteUserId(null)}
-                disabled={deleteProfile?.isPending}
-                className="w-full sm:w-auto text-xs sm:text-sm h-8 sm:h-10"
-              >
-                Cancelar
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={handleDeleteUser}
-                disabled={deleteProfile?.isPending}
-                className="w-full sm:w-auto text-xs sm:text-sm h-8 sm:h-10"
-              >
-                {deleteProfile?.isPending ? "Excluindo..." : "Excluir"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
       </div>
     </AppLayout>
   );

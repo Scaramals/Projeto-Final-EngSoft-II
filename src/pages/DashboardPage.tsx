@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Package, BarChart, AlertTriangle, ArrowUpDown, RefreshCw } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -17,10 +16,16 @@ import { DashboardStats } from "@/types";
 import { SecureLogger } from "@/services/secureLogger";
 import { MetricsCard } from "@/components/dashboard/MetricsCard";
 import { EnhancedDashboard } from "@/components/dashboard/EnhancedDashboard";
+import { WelcomeMessage } from "@/components/dashboard/WelcomeMessage";
+import { RealTimePerformanceSummary } from "@/components/dashboard/RealTimePerformanceSummary";
+import { useRealTimeNotifications } from "@/hooks/useRealTimeNotifications";
 
 const DashboardPage: React.FC = () => {
   const { toast } = useToast();
   const { refreshAll: refreshOptimized } = useOptimizedDashboard();
+  
+  // Hook de notificações em tempo real
+  useRealTimeNotifications();
 
   // Buscar estatísticas reais da API com comparação mensal
   const { data: dashboardStats, isLoading: isStatsLoading, refetch: refetchStats } = useQuery({
@@ -54,14 +59,14 @@ const DashboardPage: React.FC = () => {
       const { data: currentData, error: currentError } = await supabase
         .from('stock_movements')
         .select('quantity, type')
-        .gte('created_at', currentMonth.toISOString());
+        .gte('date', currentMonth.toISOString());
 
       // Buscar movimentações do mês passado
       const { data: lastData, error: lastError } = await supabase
         .from('stock_movements')
         .select('quantity, type')
-        .gte('created_at', lastMonth.toISOString())
-        .lt('created_at', currentMonth.toISOString());
+        .gte('date', lastMonth.toISOString())
+        .lt('date', currentMonth.toISOString());
 
       if (currentError || lastError) {
         throw new Error('Erro ao buscar dados de comparação');
@@ -132,12 +137,15 @@ const DashboardPage: React.FC = () => {
   return (
     <AppLayout>
       <div className="space-y-4 md:space-y-6 p-2 md:p-0 max-w-full overflow-hidden">
+        {/* Mensagem de boas-vindas */}
+        <WelcomeMessage />
+
         {/* Header responsivo */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold">Dashboard</h1>
             <p className="text-sm md:text-base text-muted-foreground">
-              Visão geral do seu estoque e operações
+              Visão geral do seu estoque e operações em tempo real
             </p>
           </div>
           <Button 
@@ -210,6 +218,9 @@ const DashboardPage: React.FC = () => {
             </>
           )}
         </div>
+
+        {/* Resumo de Performance em Tempo Real */}
+        <RealTimePerformanceSummary />
 
         {/* Dashboard aprimorado */}
         <EnhancedDashboard />

@@ -1,188 +1,212 @@
 
-# Sistema de Gerenciamento de Estoque
+# 📦 Sistema de Gestão de Estoque
 
-## Sobre o Projeto
+Um sistema moderno e eficiente para gerenciamento de estoque, desenvolvido com as melhores práticas de engenharia de software.
 
-Este é um sistema de gerenciamento de estoque completo desenvolvido com tecnologias modernas. O sistema permite controlar produtos, movimentações de estoque, gerar relatórios e visualizar estatísticas em um dashboard intuitivo.
+## 🚀 Tecnologias Utilizadas
 
-## URL do Projeto
+- **Frontend**: React 18 + TypeScript + Vite
+- **UI/UX**: Tailwind CSS + Shadcn/UI
+- **Backend**: Supabase (PostgreSQL + Auth + Real-time)
+- **State Management**: TanStack Query (React Query)
+- **Roteamento**: React Router DOM
+- **Gráficos**: Recharts
+- **Ícones**: Lucide React
 
-**URL**: [https://lovable.dev/projects/689992a5-57c1-4373-aab5-8b2b2fb20af2](https://lovable.dev/projects/689992a5-57c1-4373-aab5-8b2b2fb20af2)
+## ✨ Funcionalidades Principais
 
-## Tecnologias Utilizadas
+### 📊 Dashboard Inteligente
+- Métricas em tempo real
+- Gráficos interativos de movimentações
+- Análise de categorias
+- Alertas de estoque baixo
+- Comparação mensal automatizada
 
-O projeto é construído com:
+### 📦 Gestão de Produtos
+- CRUD completo de produtos
+- Upload de imagens
+- Controle de estoque mínimo
+- Categorização avançada
+- Busca e filtros otimizados
 
-- **Frontend**:
-  - React 18
-  - TypeScript
-  - Vite (para build rápido)
-  - Tailwind CSS (estilização)
-  - Shadcn UI (componentes)
-  - React Router (navegação)
-  - TanStack Query (gerenciamento de estado e requisições)
-  - Recharts (gráficos e visualizações)
+### 🏭 Gestão de Fornecedores
+- Cadastro completo de fornecedores
+- Vinculação produto-fornecedor
+- Histórico de relacionamentos
 
-- **Backend**:
-  - Supabase (banco de dados PostgreSQL)
-  - Autenticação e autorização
-  - Row Level Security (RLS)
-  - Funções SQL para operações complexas
+### 📈 Relatórios Avançados
+- Relatórios de movimentações
+- Análise de valor de estoque
+- Distribuição por categorias
+- Exportação de dados
 
-## Arquitetura do Projeto
+### 🔔 Sistema de Notificações
+- Alertas em tempo real
+- WebSockets para atualizações instantâneas
+- Notificações de estoque baixo
+- Alertas de movimentações de alto valor
 
-### Frontend
+### 👥 Gestão de Usuários
+- Sistema de autenticação segura
+- Controle de permissões (Employee/Admin/Developer)
+- Perfis de usuário
 
-O frontend segue uma arquitetura moderna baseada em componentes, com separação clara de responsabilidades:
+## 🛠️ Otimizações Implementadas
 
-- **Pages**: Componentes de página completos
-- **Components**: Componentes reutilizáveis da UI
-- **Hooks**: Lógica de negócio reutilizável
-- **Services**: Camada de abstração para chamadas à API
-- **Contexts**: Gerenciamento de estado global
-- **Types**: Definições de tipos TypeScript
+### ⚡ Performance
+- **Debounce e Throttle**: Otimização de buscas e atualizações
+- **Cache Inteligente**: Sistema de cache com TTL configurável
+- **Batching**: Agrupamento de consultas para reduzir requisições
+- **Lazy Loading**: Carregamento sob demanda de componentes
+- **WebSockets**: Atualizações em tempo real sem polling
 
-### Backend (Supabase)
+### 📱 Responsividade
+- Design mobile-first
+- Breakpoints otimizados
+- Componentes adaptativos
+- Touch-friendly interfaces
 
-O backend utiliza Supabase, uma plataforma que fornece:
+### 🔒 Segurança
+- Row Level Security (RLS) no Supabase
+- Autenticação JWT
+- Validação de permissões
+- Logs de segurança
 
-- Banco de dados PostgreSQL
-- API RESTful e SDK JavaScript
-- Autenticação e autorização
-- Row Level Security para segurança de dados
-- Funções SQL para lógica de negócios complexa
+## 🏗️ Arquitetura do Projeto
 
-## Funcionalidades Principais
+```
+src/
+├── components/          # Componentes reutilizáveis
+│   ├── auth/           # Componentes de autenticação
+│   ├── dashboard/      # Componentes do dashboard
+│   ├── layout/         # Layout e navegação
+│   ├── notifications/  # Sistema de notificações
+│   └── ui/            # Componentes base (Shadcn)
+├── hooks/              # Custom hooks
+├── pages/              # Páginas da aplicação
+├── services/           # Serviços e APIs
+├── types/              # Definições TypeScript
+└── lib/                # Utilitários e configurações
+```
 
-1. **Gerenciamento de Produtos**:
-   - Cadastro, edição e exclusão de produtos
-   - Controle de estoque mínimo
-   - Categorização de produtos
+## 🚀 Como Executar
 
-2. **Movimentações de Estoque**:
-   - Registrar entradas e saídas
-   - Histórico de movimentações por produto
-   - Anotações para cada movimentação
+### Pré-requisitos
+- Node.js 18+
+- npm ou yarn
+- Conta Supabase
 
-3. **Dashboard**:
-   - Visão geral do estoque
-   - Produtos com estoque baixo
-   - Valor total do estoque
-   - Movimentações recentes
+### Instalação
 
-4. **Relatórios**:
-   - Relatórios de movimentações
-   - Distribuição por categoria
-   - Filtros avançados
+1. Clone o repositório:
+```bash
+git clone <url-do-repositorio>
+cd sistema-estoque
+```
 
-5. **Autenticação e Segurança**:
-   - Login/Logout
-   - Perfis de usuário
-   - Configurações de conta
+2. Instale as dependências:
+```bash
+npm install
+```
 
-## Estrutura de Dados
+3. Configure as variáveis de ambiente:
+```bash
+cp .env.example .env.local
+```
 
-### Tabelas Principais
+4. Configure o Supabase:
+- Crie um projeto no [Supabase](https://supabase.com)
+- Execute as migrações SQL fornecidas
+- Configure as variáveis no arquivo `.env.local`
 
-- **products**: Armazena informações sobre produtos
-- **stock_movements**: Registra movimentações de estoque
-- **profiles**: Informações de perfil de usuários
-- **categories**: Categorias de produtos
-
-## Padrões de Desenvolvimento
-
-O projeto segue diversos padrões e práticas recomendadas:
-
-1. **Separação de Responsabilidades**:
-   - Frontend (UI/UX) separado da lógica de negócios
-   - Serviços de API isolados em uma camada própria
-
-2. **Hooks Personalizados**:
-   - Encapsulamento de lógica de negócios em hooks reutilizáveis
-   - Separação entre obtenção de dados e renderização
-
-3. **Componentes Reutilizáveis**:
-   - Componentes de UI modulares e independentes
-   - Prop drilling minimizado com uso de contextos
-
-4. **Validação de Dados**:
-   - Validações de entrada no frontend e backend
-   - Feedback claro para o usuário em caso de erros
-
-5. **Segurança**:
-   - Row Level Security para controle de acesso a dados
-   - Autenticação e autorização robustas
-
-## Como Executar o Projeto
-
-### Via Lovable
-
-A maneira mais simples é visitar o [Projeto Lovable](https://lovable.dev/projects/689992a5-57c1-4373-aab5-8b2b2fb20af2) e interagir diretamente.
-
-### Localmente
-
-Para trabalhar localmente usando seu IDE preferido:
-
-```sh
-# Passo 1: Clone o repositório
-git clone <URL_DO_GIT>
-
-# Passo 2: Navegue até o diretório do projeto
-cd <NOME_DO_PROJETO>
-
-# Passo 3: Instale as dependências necessárias
-npm i
-
-# Passo 4: Inicie o servidor de desenvolvimento
+5. Execute o projeto:
+```bash
 npm run dev
 ```
 
-## Estrutura de Diretórios
+## 📊 Banco de Dados
 
-```
-├── public/              # Arquivos estáticos
-├── src/
-│   ├── components/      # Componentes reutilizáveis
-│   │   ├── auth/        # Componentes de autenticação
-│   │   ├── dashboard/   # Componentes do dashboard
-│   │   ├── inventory/   # Componentes de inventário
-│   │   ├── layout/      # Componentes de layout
-│   │   ├── products/    # Componentes de produtos
-│   │   ├── reports/     # Componentes de relatórios
-│   │   └── ui/          # Componentes de UI básicos
-│   ├── contexts/        # Contextos React
-│   ├── hooks/           # Hooks personalizados
-│   ├── integrations/    # Integrações com serviços externos
-│   │   └── supabase/    # Integração com Supabase
-│   ├── lib/             # Utilitários e helpers
-│   ├── pages/           # Componentes de páginas
-│   ├── services/        # Serviços de API
-│   └── types/           # Definições de tipos TypeScript
-├── supabase/            # Configurações do Supabase
-├── .gitignore
-├── package.json
-├── README.md
-└── tsconfig.json
+### Tabelas Principais
+- `products`: Produtos e estoque
+- `stock_movements`: Movimentações de estoque
+- `suppliers`: Fornecedores
+- `categories`: Categorias de produtos
+- `profiles`: Perfis de usuário
+
+### Funções Otimizadas
+- `get_dashboard_stats()`: Estatísticas do dashboard
+- `get_movements_summary()`: Resumo de movimentações
+- `get_category_analysis()`: Análise por categorias
+- `get_low_stock_products()`: Produtos com estoque baixo
+
+## 🔧 Scripts Disponíveis
+
+```bash
+npm run dev          # Executa em modo desenvolvimento
+npm run build        # Build para produção
+npm run preview      # Preview da build
+npm run lint         # Linting do código
+npm run type-check   # Verificação de tipos
 ```
 
-## Boas Práticas Implementadas
+## 📝 Padrões de Código
 
-- **Código limpo e bem documentado**
-- **Componentização para reuso**
-- **Tipagem forte com TypeScript**
-- **Gerenciamento de estado otimizado**
-- **Padrão de serviços para operações de API**
-- **Feedback visual para operações assíncronas**
-- **Design responsivo para todos dispositivos**
+### Convenções
+- **Componentes**: PascalCase
+- **Hooks**: camelCase com prefixo `use`
+- **Tipos**: PascalCase com sufixo adequado
+- **Constantes**: UPPER_SNAKE_CASE
 
-## Futuras Melhorias
+### Estrutura de Componentes
+```typescript
+interface ComponentProps {
+  // Props tipadas
+}
 
-- Implementação de testes automatizados
-- Sistema de notificações
-- Dashboard customizável
-- Relatórios exportáveis em PDF
-- Integração com sistemas de fornecedores
+export const Component: React.FC<ComponentProps> = ({ prop }) => {
+  // Hooks
+  // Estados
+  // Efeitos
+  // Handlers
+  // Render
+};
+```
 
-## Licença
+## 🌟 Funcionalidades Futuras
 
-Este projeto está licenciado sob a MIT License.
+- [ ] PWA (Progressive Web App)
+- [ ] Modo offline
+- [ ] Sincronização automática
+- [ ] API REST pública
+- [ ] Integração com ERPs
+- [ ] App mobile nativo
+- [ ] IA para previsão de estoque
+
+## 🤝 Contribuição
+
+1. Fork o projeto
+2. Crie uma branch (`git checkout -b feature/nova-funcionalidade`)
+3. Commit suas mudanças (`git commit -m 'Adiciona nova funcionalidade'`)
+4. Push para a branch (`git push origin feature/nova-funcionalidade`)
+5. Abra um Pull Request
+
+## 📄 Licença
+
+Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
+
+## 👥 Equipe
+
+- **Desenvolvedor Principal**: Victor Gabriel Carvalho Pereira
+- **Arquitetura**: Sistema modular e escalável
+- **Design**: Interface moderna e intuitiva
+
+## 📞 Suporte
+
+Para suporte ou dúvidas:
+- 📧 Email: suporte@sistema-estoque.com
+- 💬 Discord: [Servidor do Projeto](https://discord.gg/projeto)
+- 📖 Documentação: [docs.sistema-estoque.com](https://docs.sistema-estoque.com)
+
+---
+
+**Feito com ❤️ e as melhores práticas de engenharia de software**

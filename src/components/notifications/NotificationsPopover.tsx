@@ -6,14 +6,16 @@ import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useQuery } from "@tanstack/react-query";
-import { AlertsService, Alert } from "@/services/alertsService";
+import { Alert } from "@/services/alertsService";
 import { formatDate } from "@/lib/utils";
+import { optimizedNotificationService } from "@/services/optimizedNotificationService";
 
 export const NotificationsPopover: React.FC = () => {
   const { data: alerts = [], isLoading, refetch } = useQuery({
     queryKey: ['notifications-alerts'],
-    queryFn: () => AlertsService.getAllAlerts(),
-    refetchInterval: 2 * 60 * 1000, // Atualizar a cada 2 minutos
+    queryFn: () => optimizedNotificationService.getAlerts(),
+    refetchInterval: 30 * 1000, // Atualizar a cada 30 segundos
+    staleTime: 15 * 1000, // Considerar fresh por 15 segundos
   });
 
   const getAlertIcon = (type: Alert['type']) => {
@@ -46,13 +48,18 @@ export const NotificationsPopover: React.FC = () => {
 
   const unreadAlerts = alerts.filter(alert => !alert.isRead);
 
+  const handleRefresh = () => {
+    optimizedNotificationService.clearCache();
+    refetch();
+  };
+
   return (
     <Popover>
       <PopoverTrigger asChild>
         <Button variant="ghost" size="icon" className="relative">
           <Bell className="h-5 w-5" />
           {unreadAlerts.length > 0 && (
-            <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center">
+            <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center animate-pulse">
               {unreadAlerts.length > 9 ? '9+' : unreadAlerts.length}
             </span>
           )}
@@ -68,8 +75,9 @@ export const NotificationsPopover: React.FC = () => {
             <Button 
               variant="ghost" 
               size="sm" 
-              onClick={() => refetch()}
+              onClick={handleRefresh}
               className="h-8 w-8 p-0"
+              disabled={isLoading}
             >
               <X className="h-4 w-4" />
             </Button>
@@ -93,6 +101,7 @@ export const NotificationsPopover: React.FC = () => {
             <div className="p-6 text-center text-muted-foreground">
               <Bell className="w-8 h-8 mx-auto mb-2 opacity-50" />
               <p>Nenhuma notificação</p>
+              <p className="text-xs mt-1">Todas as operações estão em ordem!</p>
             </div>
           ) : (
             <div className="divide-y">
@@ -100,7 +109,7 @@ export const NotificationsPopover: React.FC = () => {
                 <div
                   key={alert.id}
                   className={`p-4 hover:bg-gray-50 transition-colors ${
-                    !alert.isRead ? 'bg-blue-50' : ''
+                    !alert.isRead ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''
                   }`}
                 >
                   <div className="flex items-start gap-3">
@@ -125,7 +134,7 @@ export const NotificationsPopover: React.FC = () => {
                           {formatDate(alert.createdAt)}
                         </span>
                         {!alert.isRead && (
-                          <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                          <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
                         )}
                       </div>
                     </div>
@@ -140,6 +149,14 @@ export const NotificationsPopover: React.FC = () => {
           <div className="p-3 border-t bg-gray-50">
             <p className="text-xs text-center text-muted-foreground">
               Mostrando 10 de {alerts.length} notificações
+              <Button 
+                variant="link" 
+                size="sm" 
+                className="text-xs h-auto p-0 ml-2"
+                onClick={() => console.log("Ver todas as notificações")}
+              >
+                Ver todas
+              </Button>
             </p>
           </div>
         )}
