@@ -18,22 +18,19 @@ import { AutoCurrencyInput } from "@/components/ui/auto-currency-input";
 import { ProductFormData } from "@/types";
 import { CategorySelect } from "@/components/products/CategorySelect";
 import { ImageUpload } from "@/components/products/ImageUpload";
+import { 
+  productNameSchema, 
+  currencySchema, 
+  quantitySchema 
+} from "@/utils/validators";
 
 const productFormSchema = z.object({
-  name: z.string()
-    .min(2, { message: "Nome deve ter pelo menos 2 caracteres" })
-    .max(100, { message: "Nome não pode exceder 100 caracteres" }),
+  name: productNameSchema,
   description: z.string().optional(),
-  quantity: z.coerce.number()
-    .int({ message: "Quantidade deve ser um número inteiro" })
-    .min(0, { message: "Quantidade não pode ser negativa" }),
-  price: z.coerce.number()
-    .min(0, { message: "Preço não pode ser negativo" }),
+  quantity: quantitySchema,
+  price: currencySchema,
   category: z.string().optional(),
-  minimumStock: z.coerce.number()
-    .int({ message: "Estoque mínimo deve ser um número inteiro" })
-    .min(0, { message: "Estoque mínimo não pode ser negativo" })
-    .optional(),
+  minimumStock: quantitySchema.optional(),
   imageUrl: z.string().optional(),
 });
 
@@ -117,6 +114,8 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                     <FormControl>
                       <Input
                         type="number"
+                        min="0"
+                        max="999999"
                         {...field}
                         onChange={(e) => field.onChange(e.target.valueAsNumber || 0)}
                       />
@@ -135,6 +134,8 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                     <FormControl>
                       <Input
                         type="number"
+                        min="0"
+                        max="999999"
                         {...field}
                         onChange={(e) => field.onChange(e.target.valueAsNumber || 0)}
                       />
@@ -174,6 +175,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                     <Textarea
                       placeholder="Descreva o produto"
                       className="h-32 resize-none"
+                      maxLength={500}
                       {...field}
                     />
                   </FormControl>
