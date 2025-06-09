@@ -9,7 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { UserCog, Shield, Database, Settings, BarChart, Users } from "lucide-react";
+import { UserCog, Shield, Database, Settings, BarChart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 
@@ -57,7 +57,6 @@ const AdminPage = () => {
       description: "Gerenciar backups e restaurações",
       icon: Database,
       action: () => {
-        // Implementar funcionalidade de backup
         console.log("Backup functionality");
       },
       color: "bg-purple-500"
@@ -67,7 +66,6 @@ const AdminPage = () => {
       description: "Visualizar logs de atividades e erros",
       icon: UserCog,
       action: () => {
-        // Implementar visualização de logs
         console.log("System logs");
       },
       color: "bg-orange-500"
@@ -154,7 +152,7 @@ const AdminPage = () => {
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
                   <span className="text-sm font-medium">Tempo de Resposta</span>
-                  <span className="text-sm text-green-600">< 200ms</span>
+                  <span className="text-sm text-green-600">&lt; 200ms</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm font-medium">Cache Hit Rate</span>
@@ -203,7 +201,7 @@ const AdminPage = () => {
               </Button>
               <Button variant="outline" size="sm" className="h-auto py-3">
                 <div className="flex flex-col items-center gap-2">
-                  <Users className="h-5 w-5" />
+                  <UserCog className="h-5 w-5" />
                   <span className="text-xs">Logs</span>
                 </div>
               </Button>
