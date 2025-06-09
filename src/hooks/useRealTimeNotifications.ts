@@ -45,6 +45,12 @@ export function useRealTimeNotifications() {
               title: "⚠️ Estoque Baixo",
               description: `${product.name} - ${product.quantity} unidades restantes`,
             });
+
+            // Invalidar cache do dashboard quando houver mudanças
+            queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+            queryClient.invalidateQueries({ queryKey: ['dashboard-stats-optimized'] });
+            queryClient.invalidateQueries({ queryKey: ['low-stock-count'] });
+            queryClient.invalidateQueries({ queryKey: ['notifications-alerts'] });
           }
         }
       )
@@ -85,22 +91,17 @@ export function useRealTimeNotifications() {
               };
               
               setAlerts(prev => [newAlert, ...prev]);
+
+              // Invalidar cache do dashboard quando houver mudanças
+              queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+              queryClient.invalidateQueries({ queryKey: ['dashboard-stats-optimized'] });
+              queryClient.invalidateQueries({ queryKey: ['low-stock-count'] });
+              queryClient.invalidateQueries({ queryKey: ['notifications-alerts'] });
             }
           }
         }
       )
       .subscribe();
-
-    // Invalidar cache do dashboard quando houver mudanças
-    const invalidateQueries = () => {
-      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard-stats-optimized'] });
-      queryClient.invalidateQueries({ queryKey: ['low-stock-count'] });
-      queryClient.invalidateQueries({ queryKey: ['notifications-alerts'] });
-    };
-
-    productChannel.on('postgres_changes', {}, invalidateQueries);
-    movementChannel.on('postgres_changes', {}, invalidateQueries);
 
     return () => {
       supabase.removeChannel(productChannel);
