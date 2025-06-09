@@ -50,7 +50,14 @@ function App() {
                 </ProtectedRoute>
               } />
               
+              {/* Product routes - specific routes first */}
               <Route path="/products/add" element={
+                <ProtectedRoute>
+                  <AddProductPage />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/products/new" element={
                 <ProtectedRoute>
                   <AddProductPage />
                 </ProtectedRoute>
@@ -80,6 +87,7 @@ function App() {
                 </ProtectedRoute>
               } />
               
+              {/* Supplier routes - specific routes first */}
               <Route path="/suppliers/add" element={
                 <ProtectedRoute>
                   <AddSupplierPage />
