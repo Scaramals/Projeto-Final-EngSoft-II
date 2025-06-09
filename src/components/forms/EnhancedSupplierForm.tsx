@@ -14,63 +14,58 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { CnpjInput } from "@/components/ui/cnpj-input";
 import { PhoneInput } from "@/components/ui/phone-input";
+import { CnpjInput } from "@/components/ui/cnpj-input";
 import { CepInput } from "@/components/ui/cep-input";
 import { SupplierFormData } from "@/types";
-import { cnpjSchema, phoneSchema, cepSchema } from "@/utils/validators";
+import { 
+  nameSchema, 
+  phoneSchema, 
+  cnpjSchema,
+  cepSchema 
+} from "@/utils/validators";
 
 const supplierFormSchema = z.object({
-  name: z.string()
-    .min(2, "Nome deve ter pelo menos 2 caracteres")
-    .max(100, "Nome não pode exceder 100 caracteres"),
+  name: nameSchema,
+  email: z.string().email("Email inválido").optional().or(z.literal("")),
+  phone: phoneSchema,
   cnpj: cnpjSchema.optional(),
-  contactName: z.string()
-    .min(2, "Nome do contato deve ter pelo menos 2 caracteres")
-    .max(100, "Nome do contato não pode exceder 100 caracteres")
-    .optional(),
-  email: z.string()
-    .email("Email inválido")
-    .optional()
-    .or(z.literal("")),
-  phone: phoneSchema.optional(),
-  address: z.string().max(200, "Endereço não pode exceder 200 caracteres").optional(),
-  cep: cepSchema.optional(),
-  notes: z.string().max(500, "Observações não podem exceder 500 caracteres").optional(),
+  address: z.string().optional(),
+  city: z.string().optional(),
+  state: z.string().optional(),
+  zipCode: cepSchema.optional(),
+  notes: z.string().optional(),
 });
 
 interface EnhancedSupplierFormProps {
   defaultValues?: Partial<SupplierFormData>;
   onSubmit: (data: SupplierFormData) => void;
-  onCancel: () => void;
   isLoading?: boolean;
 }
 
 export const EnhancedSupplierForm: React.FC<EnhancedSupplierFormProps> = ({
   defaultValues,
   onSubmit,
-  onCancel,
   isLoading = false,
 }) => {
-  const form = useForm<SupplierFormData & { cep?: string }>({
+  const form = useForm<SupplierFormData>({
     resolver: zodResolver(supplierFormSchema),
     defaultValues: {
       name: "",
-      cnpj: "",
-      contactName: "",
       email: "",
       phone: "",
+      cnpj: "",
       address: "",
-      cep: "",
+      city: "",
+      state: "",
+      zipCode: "",
       notes: "",
       ...defaultValues,
     },
   });
 
-  const handleSubmit = (data: SupplierFormData & { cep?: string }) => {
-    // Remove o CEP dos dados antes de enviar (pode ser integrado ao endereço se necessário)
-    const { cep, ...supplierData } = data;
-    onSubmit(supplierData);
+  const handleSubmit = (data: SupplierFormData) => {
+    onSubmit(data);
   };
 
   return (
@@ -83,9 +78,12 @@ export const EnhancedSupplierForm: React.FC<EnhancedSupplierFormProps> = ({
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Nome da empresa*</FormLabel>
+                  <FormLabel>Nome do fornecedor*</FormLabel>
                   <FormControl>
-                    <Input placeholder="Digite o nome da empresa" {...field} />
+                    <Input
+                      placeholder="Nome da empresa ou pessoa"
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -100,23 +98,10 @@ export const EnhancedSupplierForm: React.FC<EnhancedSupplierFormProps> = ({
                   <FormLabel>CNPJ</FormLabel>
                   <FormControl>
                     <CnpjInput
-                      value={field.value || ""}
+                      value={field.value || ''}
                       onChange={field.onChange}
+                      placeholder="00.000.000/0000-00"
                     />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="contactName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nome do contato</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Nome da pessoa responsável" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -132,8 +117,26 @@ export const EnhancedSupplierForm: React.FC<EnhancedSupplierFormProps> = ({
                   <FormControl>
                     <Input
                       type="email"
-                      placeholder="contato@empresa.com"
+                      placeholder="email@exemplo.com"
                       {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="phone"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Telefone*</FormLabel>
+                  <FormControl>
+                    <PhoneInput
+                      value={field.value}
+                      onChange={field.onChange}
+                      placeholder="(00) 00000-0000"
                     />
                   </FormControl>
                   <FormMessage />
@@ -145,31 +148,15 @@ export const EnhancedSupplierForm: React.FC<EnhancedSupplierFormProps> = ({
           <div className="space-y-4">
             <FormField
               control={form.control}
-              name="phone"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Telefone</FormLabel>
-                  <FormControl>
-                    <PhoneInput
-                      value={field.value || ""}
-                      onChange={field.onChange}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="cep"
+              name="zipCode"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>CEP</FormLabel>
                   <FormControl>
                     <CepInput
-                      value={field.value || ""}
+                      value={field.value || ''}
                       onChange={field.onChange}
+                      placeholder="00000-000"
                     />
                   </FormControl>
                   <FormMessage />
@@ -184,9 +171,8 @@ export const EnhancedSupplierForm: React.FC<EnhancedSupplierFormProps> = ({
                 <FormItem>
                   <FormLabel>Endereço</FormLabel>
                   <FormControl>
-                    <Textarea
-                      placeholder="Endereço completo"
-                      className="h-20 resize-none"
+                    <Input
+                      placeholder="Rua, número, complemento"
                       {...field}
                     />
                   </FormControl>
@@ -194,6 +180,43 @@ export const EnhancedSupplierForm: React.FC<EnhancedSupplierFormProps> = ({
                 </FormItem>
               )}
             />
+
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="city"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Cidade</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Nome da cidade"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="state"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Estado</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="SP"
+                        maxLength={2}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <FormField
               control={form.control}
@@ -203,7 +226,7 @@ export const EnhancedSupplierForm: React.FC<EnhancedSupplierFormProps> = ({
                   <FormLabel>Observações</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="Informações adicionais"
+                      placeholder="Informações adicionais sobre o fornecedor"
                       className="h-20 resize-none"
                       {...field}
                     />
@@ -216,9 +239,6 @@ export const EnhancedSupplierForm: React.FC<EnhancedSupplierFormProps> = ({
         </div>
 
         <div className="flex justify-end gap-2">
-          <Button type="button" variant="outline" onClick={onCancel}>
-            Cancelar
-          </Button>
           <Button type="submit" disabled={isLoading}>
             {isLoading ? "Salvando..." : "Salvar fornecedor"}
           </Button>

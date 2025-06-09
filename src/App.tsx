@@ -22,6 +22,7 @@ import SupplierDetailPage from "@/pages/SupplierDetailPage";
 import AdminPage from "@/pages/AdminPage";
 import SettingsPage from "@/pages/SettingsPage";
 import NotFound from "@/pages/NotFound";
+import ErrorPage from "@/pages/ErrorPage";
 
 const queryClient = new QueryClient();
 
@@ -123,6 +124,9 @@ function App() {
                   <SettingsPage />
                 </ProtectedRoute>
               } />
+              
+              {/* Error pages */}
+              <Route path="/error/:errorCode" element={<ErrorPage />} />
               
               <Route path="*" element={<NotFound />} />
             </Routes>

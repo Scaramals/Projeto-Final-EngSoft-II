@@ -114,7 +114,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                     <FormControl>
                       <Input
                         type="text"
-                        placeholder="10"
+                        placeholder="Ex: 10"
                         {...field}
                         value={field.value === 0 ? '' : field.value.toString()}
                         onChange={(e) => {
@@ -137,7 +137,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                     <FormControl>
                       <Input
                         type="text"
-                        placeholder="5"
+                        placeholder="Ex: 5"
                         {...field}
                         value={field.value === 0 ? '' : field.value?.toString() || ''}
                         onChange={(e) => {

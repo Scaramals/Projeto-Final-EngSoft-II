@@ -8,7 +8,6 @@ import {
   Package,
   Home,
   LogOut,
-  Users,
   ShieldCheck,
   Code,
   Truck
@@ -92,20 +91,12 @@ export const Sidebar: React.FC = () => {
           active={currentPath.startsWith("/reports")}
         />
         {canAccessAdmin && (
-          <>
-            <NavItem
-              to="/users"
-              icon={<Users size={20} />}
-              label="Usuários"
-              active={currentPath.startsWith("/users")}
-            />
-            <NavItem
-              to="/admin"
-              icon={<ShieldCheck size={20} />}
-              label="Administração"
-              active={currentPath.startsWith("/admin")}
-            />
-          </>
+          <NavItem
+            to="/admin"
+            icon={<ShieldCheck size={20} />}
+            label="Administração"
+            active={currentPath.startsWith("/admin")}
+          />
         )}
         {isDeveloper() && (
           <NavItem

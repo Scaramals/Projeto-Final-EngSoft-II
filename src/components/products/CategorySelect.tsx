@@ -10,7 +10,7 @@ import {
 import { useCategories } from "@/hooks/useCategories";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Trash2 } from "lucide-react";
+import { PlusCircle, Trash2, Pencil } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -48,18 +48,29 @@ const categorySchema = z.object({
 });
 
 export function CategorySelect({ value, onChange }: CategorySelectProps) {
-  const { useAllCategories, useCreateCategory, useDeleteCategory } = useCategories();
+  const { useAllCategories, useCreateCategory, useUpdateCategory, useDeleteCategory } = useCategories();
   const { isAdmin, isDeveloper, isMaster } = useAuthorization();
   const { data: categories, isLoading } = useAllCategories();
   const createMutation = useCreateCategory();
+  const updateMutation = useUpdateCategory();
   const deleteMutation = useDeleteCategory();
-  const [isDialogOpen, setIsDialogOpen] = React.useState(false);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = React.useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
   const [categoryToDelete, setCategoryToDelete] = React.useState<{id: string, name: string} | null>(null);
+  const [categoryToEdit, setCategoryToEdit] = React.useState<{id: string, name: string, description?: string} | null>(null);
   
   const canManageCategory = isAdmin() || isDeveloper() || isMaster();
 
-  const form = useForm({
+  const createForm = useForm({
+    resolver: zodResolver(categorySchema),
+    defaultValues: {
+      name: "",
+      description: "",
+    },
+  });
+
+  const editForm = useForm({
     resolver: zodResolver(categorySchema),
     defaultValues: {
       name: "",
@@ -71,15 +82,42 @@ export function CategorySelect({ value, onChange }: CategorySelectProps) {
     createMutation.mutate(data, {
       onSuccess: (newCategory) => {
         onChange(newCategory.name);
-        setIsDialogOpen(false);
-        form.reset();
+        setIsCreateDialogOpen(false);
+        createForm.reset();
       },
     });
+  };
+
+  const handleEditCategory = (data: { name: string; description?: string }) => {
+    if (categoryToEdit) {
+      updateMutation.mutate(
+        { id: categoryToEdit.id, ...data },
+        {
+          onSuccess: (updatedCategory) => {
+            if (value === categoryToEdit.name) {
+              onChange(updatedCategory.name);
+            }
+            setIsEditDialogOpen(false);
+            setCategoryToEdit(null);
+            editForm.reset();
+          },
+        }
+      );
+    }
   };
 
   const handleDeleteCategory = (categoryId: string, categoryName: string) => {
     setCategoryToDelete({ id: categoryId, name: categoryName });
     setDeleteDialogOpen(true);
+  };
+
+  const handleEditCategoryDialog = (category: {id: string, name: string, description?: string}) => {
+    setCategoryToEdit(category);
+    editForm.reset({
+      name: category.name,
+      description: category.description || "",
+    });
+    setIsEditDialogOpen(true);
   };
 
   const confirmDelete = () => {
@@ -114,19 +152,34 @@ export function CategorySelect({ value, onChange }: CategorySelectProps) {
                   {category.name}
                 </SelectItem>
                 {canManageCategory && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      handleDeleteCategory(category.id, category.name);
-                    }}
-                  >
-                    <Trash2 className="h-3 w-3 text-red-500" />
-                  </Button>
+                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 w-6 p-0"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleEditCategoryDialog(category);
+                      }}
+                    >
+                      <Pencil className="h-3 w-3 text-blue-500" />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 w-6 p-0"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleDeleteCategory(category.id, category.name);
+                      }}
+                    >
+                      <Trash2 className="h-3 w-3 text-red-500" />
+                    </Button>
+                  </div>
                 )}
               </div>
             ))}
@@ -138,14 +191,15 @@ export function CategorySelect({ value, onChange }: CategorySelectProps) {
             type="button"
             variant="outline"
             size="icon"
-            onClick={() => setIsDialogOpen(true)}
+            onClick={() => setIsCreateDialogOpen(true)}
           >
             <PlusCircle className="h-4 w-4" />
           </Button>
         )}
       </div>
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      {/* Create Dialog */}
+      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Nova Categoria</DialogTitle>
@@ -154,18 +208,18 @@ export function CategorySelect({ value, onChange }: CategorySelectProps) {
             </DialogDescription>
           </DialogHeader>
           
-          <form onSubmit={form.handleSubmit(handleCreateCategory)}>
+          <form onSubmit={createForm.handleSubmit(handleCreateCategory)}>
             <div className="space-y-4 py-2">
               <div className="space-y-2">
                 <Label htmlFor="name">Nome da Categoria*</Label>
                 <Input
                   id="name"
                   placeholder="Digite o nome da categoria"
-                  {...form.register("name")}
+                  {...createForm.register("name")}
                 />
-                {form.formState.errors.name && (
+                {createForm.formState.errors.name && (
                   <p className="text-sm text-red-500">
-                    {form.formState.errors.name.message}
+                    {createForm.formState.errors.name.message}
                   </p>
                 )}
               </div>
@@ -175,7 +229,7 @@ export function CategorySelect({ value, onChange }: CategorySelectProps) {
                 <Textarea
                   id="description"
                   placeholder="Descrição opcional da categoria"
-                  {...form.register("description")}
+                  {...createForm.register("description")}
                 />
               </div>
             </div>
@@ -184,7 +238,7 @@ export function CategorySelect({ value, onChange }: CategorySelectProps) {
               <Button
                 variant="outline"
                 type="button"
-                onClick={() => setIsDialogOpen(false)}
+                onClick={() => setIsCreateDialogOpen(false)}
               >
                 Cancelar
               </Button>
@@ -196,6 +250,59 @@ export function CategorySelect({ value, onChange }: CategorySelectProps) {
         </DialogContent>
       </Dialog>
 
+      {/* Edit Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Categoria</DialogTitle>
+            <DialogDescription>
+              Modifique os dados da categoria selecionada
+            </DialogDescription>
+          </DialogHeader>
+          
+          <form onSubmit={editForm.handleSubmit(handleEditCategory)}>
+            <div className="space-y-4 py-2">
+              <div className="space-y-2">
+                <Label htmlFor="edit-name">Nome da Categoria*</Label>
+                <Input
+                  id="edit-name"
+                  placeholder="Digite o nome da categoria"
+                  {...editForm.register("name")}
+                />
+                {editForm.formState.errors.name && (
+                  <p className="text-sm text-red-500">
+                    {editForm.formState.errors.name.message}
+                  </p>
+                )}
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="edit-description">Descrição</Label>
+                <Textarea
+                  id="edit-description"
+                  placeholder="Descrição opcional da categoria"
+                  {...editForm.register("description")}
+                />
+              </div>
+            </div>
+            
+            <DialogFooter className="mt-4">
+              <Button
+                variant="outline"
+                type="button"
+                onClick={() => setIsEditDialogOpen(false)}
+              >
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={updateMutation.isPending}>
+                {updateMutation.isPending ? "Salvando..." : "Salvar alterações"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
