@@ -99,8 +99,8 @@ export function useRealTimeNotifications() {
       queryClient.invalidateQueries({ queryKey: ['notifications-alerts'] });
     };
 
-    productChannel.on('postgres_changes', invalidateQueries);
-    movementChannel.on('postgres_changes', invalidateQueries);
+    productChannel.on('postgres_changes', {}, invalidateQueries);
+    movementChannel.on('postgres_changes', {}, invalidateQueries);
 
     return () => {
       supabase.removeChannel(productChannel);

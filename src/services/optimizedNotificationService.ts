@@ -37,7 +37,7 @@ class OptimizedNotificationService {
       .from('products')
       .select('id, name, quantity, minimum_stock')
       .not('minimum_stock', 'is', null)
-      .lte('quantity', supabase.rpc('minimum_stock'))
+      .filter('quantity', 'lte', 'minimum_stock')
       .order('quantity', { ascending: true })
       .limit(10);
 
