@@ -10,7 +10,7 @@ import {
 import { useCategories } from "@/hooks/useCategories";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { PlusCircle } from "lucide-react";
+import { PlusCircle, Trash2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -19,6 +19,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -38,13 +48,16 @@ const categorySchema = z.object({
 });
 
 export function CategorySelect({ value, onChange }: CategorySelectProps) {
-  const { useAllCategories, useCreateCategory } = useCategories();
+  const { useAllCategories, useCreateCategory, useDeleteCategory } = useCategories();
   const { isAdmin, isDeveloper, isMaster } = useAuthorization();
   const { data: categories, isLoading } = useAllCategories();
   const createMutation = useCreateCategory();
+  const deleteMutation = useDeleteCategory();
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
+  const [categoryToDelete, setCategoryToDelete] = React.useState<{id: string, name: string} | null>(null);
   
-  const canCreateCategory = isAdmin() || isDeveloper() || isMaster();
+  const canManageCategory = isAdmin() || isDeveloper() || isMaster();
 
   const form = useForm({
     resolver: zodResolver(categorySchema),
@@ -64,6 +77,25 @@ export function CategorySelect({ value, onChange }: CategorySelectProps) {
     });
   };
 
+  const handleDeleteCategory = (categoryId: string, categoryName: string) => {
+    setCategoryToDelete({ id: categoryId, name: categoryName });
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (categoryToDelete) {
+      deleteMutation.mutate(categoryToDelete.id, {
+        onSuccess: () => {
+          if (value === categoryToDelete.name) {
+            onChange("");
+          }
+          setDeleteDialogOpen(false);
+          setCategoryToDelete(null);
+        },
+      });
+    }
+  };
+
   if (isLoading) {
     return <Skeleton className="h-10 w-full" />;
   }
@@ -77,14 +109,31 @@ export function CategorySelect({ value, onChange }: CategorySelectProps) {
           </SelectTrigger>
           <SelectContent>
             {categories?.map((category) => (
-              <SelectItem key={category.id} value={category.name}>
-                {category.name}
-              </SelectItem>
+              <div key={category.id} className="flex items-center justify-between group">
+                <SelectItem value={category.name} className="flex-1">
+                  {category.name}
+                </SelectItem>
+                {canManageCategory && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleDeleteCategory(category.id, category.name);
+                    }}
+                  >
+                    <Trash2 className="h-3 w-3 text-red-500" />
+                  </Button>
+                )}
+              </div>
             ))}
           </SelectContent>
         </Select>
         
-        {canCreateCategory && (
+        {canManageCategory && (
           <Button
             type="button"
             variant="outline"
@@ -146,6 +195,28 @@ export function CategorySelect({ value, onChange }: CategorySelectProps) {
           </form>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Categoria</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir a categoria "{categoryToDelete?.name}"? 
+              Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-red-500 hover:bg-red-600"
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? "Excluindo..." : "Excluir"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

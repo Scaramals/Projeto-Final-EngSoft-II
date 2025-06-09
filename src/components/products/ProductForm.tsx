@@ -113,11 +113,14 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                     <FormLabel>Quantidade*</FormLabel>
                     <FormControl>
                       <Input
-                        type="number"
-                        min="0"
-                        max="999999"
+                        type="text"
+                        placeholder="10"
                         {...field}
-                        onChange={(e) => field.onChange(e.target.valueAsNumber || 0)}
+                        value={field.value === 0 ? '' : field.value.toString()}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/\D/g, '');
+                          field.onChange(value === '' ? 0 : parseInt(value, 10));
+                        }}
                       />
                     </FormControl>
                     <FormMessage />
@@ -133,11 +136,14 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                     <FormLabel>Estoque mínimo</FormLabel>
                     <FormControl>
                       <Input
-                        type="number"
-                        min="0"
-                        max="999999"
+                        type="text"
+                        placeholder="5"
                         {...field}
-                        onChange={(e) => field.onChange(e.target.valueAsNumber || 0)}
+                        value={field.value === 0 ? '' : field.value?.toString() || ''}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/\D/g, '');
+                          field.onChange(value === '' ? 0 : parseInt(value, 10));
+                        }}
                       />
                     </FormControl>
                     <FormMessage />
