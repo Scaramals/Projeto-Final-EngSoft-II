@@ -1,5 +1,4 @@
-
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,6 +31,7 @@ const InventoryPage: React.FC = () => {
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [filter, setFilter] = useState<"all" | "low" | "medium" | "good">("all");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const pageRef = useRef(null);
   
   // Get products with filters using ApiService
   const { data: products = [], isLoading, error, refetch } = useQuery({
@@ -90,7 +90,7 @@ const InventoryPage: React.FC = () => {
 
   return (
     <AppLayout>
-      <div className="space-y-6">
+      <div ref={pageRef} className="space-y-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <h1 className="text-3xl font-bold">Estoque</h1>
@@ -256,7 +256,7 @@ const InventoryPage: React.FC = () => {
                         </TableCell>
                         <TableCell>
                           <Badge className={stockStatus.class}>
-                            {stockStatus.text}
+                            {stockStatus.label}
                           </Badge>
                         </TableCell>
                       </TableRow>
