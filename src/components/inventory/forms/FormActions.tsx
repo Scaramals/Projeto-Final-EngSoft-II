@@ -5,12 +5,14 @@ import { Loader2 } from "lucide-react";
 
 interface FormActionsProps {
   onCancel: () => void;
+  onSubmit?: (e: React.FormEvent) => void | Promise<void>;
   isSubmitting: boolean;
   hasValidationError: boolean;
 }
 
 export const FormActions: React.FC<FormActionsProps> = ({
   onCancel,
+  onSubmit,
   isSubmitting,
   hasValidationError
 }) => {
@@ -29,6 +31,7 @@ export const FormActions: React.FC<FormActionsProps> = ({
         type="submit"
         disabled={isSubmitting || hasValidationError}
         className="flex-1"
+        onClick={onSubmit}
       >
         {isSubmitting ? (
           <>
