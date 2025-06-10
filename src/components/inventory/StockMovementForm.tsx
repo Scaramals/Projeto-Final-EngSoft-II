@@ -57,8 +57,7 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
   const { useAllSuppliers } = useSuppliers();
   const { mutate: addStockMovement, isPending: isLoading } = useAddStockMovement();
   
-  // Buscar dados atuais do produto para mostrar estoque real
-  const { data: currentProduct, refetch: refetchProduct } = useProduct(productId);
+  const { data: currentProduct } = useProduct(productId);
   const realTimeStock = currentProduct?.quantity ?? 0;
   
   const { data: suppliers = [] } = useAllSuppliers();
@@ -77,11 +76,9 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
   const watchType = form.watch('type');
   const watchQuantity = form.watch('quantity');
 
-  // Usar o estoque em tempo real para validações na INTERFACE apenas
   const hasInsufficientStock = watchType === 'out' && watchQuantity > realTimeStock;
-  const isStockEmpty = realTimeStock === 0;
 
-  console.log('📊 StockMovementForm - Estoque REAL mostrado:', realTimeStock, 'Quantidade solicitada:', watchQuantity, 'Tipo:', watchType);
+  console.log('📊 Estoque atual:', realTimeStock, 'Quantidade solicitada:', watchQuantity);
 
   // Reset supplier when changing to 'out'
   React.useEffect(() => {
@@ -90,13 +87,7 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
     }
   }, [watchType, form]);
 
-  // Forçar refetch do produto quando o formulário é montado
-  React.useEffect(() => {
-    console.log('🔄 Forçando refetch do produto para obter estoque atual...');
-    refetchProduct();
-  }, [refetchProduct]);
-
-  // Validação visual para feedback imediato - NÃO BLOQUEIA O ENVIO
+  // Validação visual para feedback imediato
   React.useEffect(() => {
     if (watchType === 'out' && watchQuantity > realTimeStock) {
       form.setError('quantity', {
@@ -109,10 +100,14 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
   }, [watchType, watchQuantity, realTimeStock, form]);
 
   const handleSubmit = (values: StockMovementFormValues) => {
-    console.log('🔍 Enviando movimentação (validação final será feita pelo banco):', values);
-    console.log('📊 Estoque mostrado na interface:', realTimeStock);
+    console.log('🔍 Enviando movimentação UMA VEZ:', values);
     
-    // Apenas validações básicas - deixar o banco fazer a validação final de estoque
+    // Prevenir múltiplas submissões
+    if (isLoading) {
+      console.log('⚠️ Já está processando, ignorando nova submissão');
+      return;
+    }
+    
     if (values.quantity <= 0) {
       toast({
         variant: "destructive",
@@ -128,11 +123,11 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
       supplierId: values.type === 'out' ? undefined : values.supplierId,
     };
     
-    console.log('✅ Enviando movimentação (banco fará validação final):', movement);
+    console.log('✅ Enviando movimentação única:', movement);
     
     addStockMovement(movement, {
       onSuccess: (data) => {
-        console.log('✅ Movimentação registrada com sucesso:', data);
+        console.log('✅ Movimentação registrada:', data);
         toast({
           title: "Movimentação registrada",
           description: `${values.type === 'in' ? 'Entrada' : 'Saída'} de ${values.quantity} unidades registrada com sucesso!`,
@@ -140,14 +135,12 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
         onSubmit();
       },
       onError: (error: any) => {
-        console.error('❌ Erro ao registrar movimentação:', error);
+        console.error('❌ Erro:', error);
         toast({
           variant: "destructive",
-          title: "Erro ao registrar movimentação",
-          description: error.message || "Ocorreu um erro inesperado. Verifique os dados e tente novamente.",
+          title: "Erro ao registrar movimentação", 
+          description: error.message || "Ocorreu um erro inesperado.",
         });
-        // Forçar refetch para sincronizar estoque após erro
-        refetchProduct();
       }
     });
   };
@@ -201,7 +194,7 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
                 {watchType === "out" && (
                   <FormDescription className={hasInsufficientStock ? "text-yellow-600" : ""}>
                     Estoque disponível: {realTimeStock} unidades
-                    {hasInsufficientStock && " - ATENÇÃO: Quantidade solicitada é maior que o estoque mostrado!"}
+                    {hasInsufficientStock && " - ATENÇÃO: Quantidade maior que estoque!"}
                   </FormDescription>
                 )}
                 <FormMessage />

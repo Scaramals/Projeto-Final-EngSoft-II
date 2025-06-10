@@ -281,7 +281,7 @@ export function useProducts() {
     });
   };
 
-  // Add stock movement - REMOVENDO validações duplicadas que estavam causando conflito
+  // Add stock movement - SIMPLIFICADO para evitar execuções duplicadas
   const useAddStockMovement = () => {
     return useMutation({
       mutationFn: async (movement: Partial<StockMovement>) => {
@@ -291,9 +291,7 @@ export function useProducts() {
           throw new Error('Dados de movimentação incompletos');
         }
 
-        // CONFIANDO apenas no trigger do banco para validação de estoque
-        // Removendo validações duplicadas que estavam causando conflitos
-        console.log('💾 Registrando movimentação no banco (confiando no trigger para validação)...');
+        console.log('💾 Registrando ÚNICA movimentação no banco:', movement);
         
         const dbMovement = mapStockMovementToDbStockMovement(movement, user?.id);
         
@@ -307,7 +305,6 @@ export function useProducts() {
           console.error('❌ Erro no banco:', error);
           SecureLogger.error('Erro no banco de dados', error);
           
-          // O trigger do banco já faz a validação correta
           if (error.message && error.message.includes('Estoque insuficiente')) {
             throw new Error(`Estoque insuficiente: ${error.message}`);
           }
@@ -315,29 +312,20 @@ export function useProducts() {
           throw new Error(`Erro ao registrar movimentação: ${error.message}`);
         }
         
-        console.log('✅ Movimentação registrada com sucesso');
+        console.log('✅ Movimentação registrada com sucesso - UMA VEZ');
         SecureLogger.success('Movimentação registrada com sucesso');
         return mapDbStockMovementToStockMovement(data);
       },
       onSuccess: (_, variables) => {
-        console.log('🔄 Invalidando e forçando refetch de TODAS as queries...');
+        console.log('🔄 Invalidando queries uma única vez...');
         
-        // Invalidar e forçar refetch IMEDIATO de TODAS as queries relacionadas
-        queryClient.invalidateQueries({ queryKey: ['products'] });
+        // APENAS invalidar queries necessárias - sem múltiplos refetches
         queryClient.invalidateQueries({ queryKey: ['products', variables.productId] });
         queryClient.invalidateQueries({ queryKey: ['productMovements', variables.productId] });
         queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
-        queryClient.invalidateQueries({ queryKey: ['recent-movements'] });
-        queryClient.invalidateQueries({ queryKey: ['low-stock-products'] });
         
         // Limpar cache da API
         ApiService.clearCache();
-        
-        // Forçar refetch MÚLTIPLO e IMEDIATO
-        setTimeout(() => {
-          queryClient.refetchQueries({ queryKey: ['products', variables.productId] });
-          queryClient.refetchQueries({ queryKey: ['products'] });
-        }, 50);
         
         SecureLogger.success(`Movimentação ${variables.type} de ${variables.quantity} unidades registrada com SUCESSO`);
         toast.success(`${variables.type === 'in' ? 'Entrada' : 'Saída'} de ${variables.quantity} unidades registrada com sucesso!`);
@@ -347,8 +335,8 @@ export function useProducts() {
         SecureLogger.error('ERRO no registro da movimentação', error);
         toast.error(`Operação bloqueada: ${error.message}`);
         
-        // Forçar refetch para sincronizar após erro
-        queryClient.refetchQueries({ queryKey: ['products'] });
+        // Apenas um refetch para sincronizar após erro
+        queryClient.invalidateQueries({ queryKey: ['products'] });
         ApiService.clearCache();
       }
     });
