@@ -16,8 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { useCategories } from "@/hooks/useCategories";
 import {
   Table,
   TableBody,
@@ -37,32 +36,9 @@ const InventoryPage: React.FC = () => {
   const { toast } = useToast();
   const pageRef = useRef<HTMLDivElement>(null);
   
-  // Get all categories for filter dropdown
-  const { data: categories = [], isLoading: loadingCategories } = useQuery({
-    queryKey: ['categories'],
-    queryFn: async () => {
-      try {
-        const { data, error } = await supabase
-          .from('products')
-          .select('category')
-          .not('category', 'is', null);
-        
-        if (error) throw error;
-        
-        // Extract unique categories
-        const uniqueCategories = [...new Set(data.map(item => item.category).filter(Boolean))];
-        return uniqueCategories;
-      } catch (error) {
-        console.error("Error loading categories:", error);
-        toast({
-          variant: "destructive",
-          title: "Erro ao carregar categorias",
-          description: "Não foi possível carregar as categorias do produto.",
-        });
-        return [];
-      }
-    }
-  });
+  // Usar hook de categorias correto
+  const { useAllCategories } = useCategories();
+  const { data: categories = [], isLoading: loadingCategories } = useAllCategories();
   
   // Get products with filters
   const { useAllProducts } = useProducts();
@@ -160,8 +136,8 @@ const InventoryPage: React.FC = () => {
                 <SelectContent>
                   <SelectItem value="all">Todas categorias</SelectItem>
                   {categories.map((category) => (
-                    <SelectItem key={category} value={category}>
-                      {category}
+                    <SelectItem key={category.id} value={category.id}>
+                      {category.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
