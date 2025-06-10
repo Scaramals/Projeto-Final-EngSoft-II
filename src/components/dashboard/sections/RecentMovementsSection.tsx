@@ -1,12 +1,12 @@
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { TrendingUp, TrendingDown } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/contexts/AuthContext";
+import { SecureLogger } from "@/services/secureLogger";
 
 interface RecentMovement {
   id: string;
@@ -19,10 +19,17 @@ interface RecentMovement {
 
 export const RecentMovementsSection: React.FC = () => {
   const { user } = useAuth();
+  const [recentMovements, setRecentMovements] = useState<RecentMovement[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const { data: recentMovements, isLoading } = useQuery({
-    queryKey: ["recent-movements"],
-    queryFn: async () => {
+  const fetchRecentMovements = async () => {
+    if (!user) return;
+    
+    setIsLoading(true);
+    setError(null);
+    
+    try {
       console.log('Fetching recent movements...');
       const { data, error } = await supabase
         .from('stock_movements')
@@ -39,12 +46,13 @@ export const RecentMovementsSection: React.FC = () => {
 
       if (error) {
         console.error('Error fetching recent movements:', error);
+        SecureLogger.error('Erro ao buscar movimentações recentes', error);
         throw error;
       }
 
       console.log('Recent movements data:', data);
 
-      return (data || []).map(movement => ({
+      const movements = (data || []).map(movement => ({
         id: movement.id,
         product_name: movement.products?.name || 'Produto desconhecido',
         quantity: movement.quantity,
@@ -52,10 +60,33 @@ export const RecentMovementsSection: React.FC = () => {
         date: movement.date,
         notes: movement.notes
       })) as RecentMovement[];
-    },
-    staleTime: 2 * 60 * 1000, // 2 minutos
-    enabled: !!user,
-  });
+
+      setRecentMovements(movements);
+    } catch (error) {
+      console.error('Error fetching recent movements:', error);
+      SecureLogger.error('Erro ao buscar movimentações recentes', error);
+      setError('Erro ao carregar movimentações');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchRecentMovements();
+
+    // Escutar eventos customizados para atualização
+    const handleDataUpdate = () => {
+      setTimeout(fetchRecentMovements, 1000); // Delay para permitir que os dados sejam salvos
+    };
+
+    window.addEventListener('dashboard-data-updated', handleDataUpdate);
+    window.addEventListener('movements-updated', handleDataUpdate);
+
+    return () => {
+      window.removeEventListener('dashboard-data-updated', handleDataUpdate);
+      window.removeEventListener('movements-updated', handleDataUpdate);
+    };
+  }, [user]);
 
   if (isLoading) {
     return (
@@ -69,6 +100,19 @@ export const RecentMovementsSection: React.FC = () => {
               <Skeleton key={i} className="h-16 w-full" />
             ))}
           </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Movimentações Recentes</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-muted-foreground">{error}</p>
         </CardContent>
       </Card>
     );
