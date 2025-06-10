@@ -1,5 +1,6 @@
 
-import React from "react";
+import React, { useState } from "react";
+import { useCategories } from "@/hooks/useCategories";
 import {
   Select,
   SelectContent,
@@ -7,323 +8,271 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useCategories } from "@/hooks/useCategories";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Trash2, Pencil } from "lucide-react";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useAuthorization } from "@/hooks/useAuthorization";
+import { Label } from "@/components/ui/label";
+import { Plus, Loader2, AlertCircle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface CategorySelectProps {
   value: string;
   onChange: (value: string) => void;
 }
 
-const categorySchema = z.object({
-  name: z.string().min(2, "O nome precisa ter pelo menos 2 caracteres"),
-  description: z.string().optional(),
-});
-
-export function CategorySelect({ value, onChange }: CategorySelectProps) {
+export const CategorySelect: React.FC<CategorySelectProps> = ({ value, onChange }) => {
   const { useAllCategories, useCreateCategory, useUpdateCategory, useDeleteCategory } = useCategories();
-  const { isAdmin, isDeveloper, isMaster } = useAuthorization();
-  const { data: categories, isLoading } = useAllCategories();
-  const createMutation = useCreateCategory();
-  const updateMutation = useUpdateCategory();
-  const deleteMutation = useDeleteCategory();
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = React.useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
-  const [categoryToDelete, setCategoryToDelete] = React.useState<{id: string, name: string} | null>(null);
-  const [categoryToEdit, setCategoryToEdit] = React.useState<{id: string, name: string, description?: string} | null>(null);
-  
-  const canManageCategory = isAdmin() || isDeveloper() || isMaster();
+  const { data: categories, isLoading, error, refetch } = useAllCategories();
+  const createCategory = useCreateCategory();
+  const updateCategory = useUpdateCategory();
+  const deleteCategory = useDeleteCategory();
 
-  const createForm = useForm({
-    resolver: zodResolver(categorySchema),
-    defaultValues: {
-      name: "",
-      description: "",
-    },
-  });
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<any>(null);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [newCategoryDescription, setNewCategoryDescription] = useState("");
+  const [formError, setFormError] = useState("");
 
-  const editForm = useForm({
-    resolver: zodResolver(categorySchema),
-    defaultValues: {
-      name: "",
-      description: "",
-    },
-  });
-
-  const handleCreateCategory = (data: { name: string; description?: string }) => {
-    createMutation.mutate(data, {
-      onSuccess: (newCategory) => {
-        onChange(newCategory.name);
-        setIsCreateDialogOpen(false);
-        createForm.reset();
-      },
-    });
+  const resetForm = () => {
+    setNewCategoryName("");
+    setNewCategoryDescription("");
+    setFormError("");
+    setIsEditMode(false);
+    setEditingCategory(null);
   };
 
-  const handleEditCategory = (data: { name: string; description?: string }) => {
-    if (categoryToEdit) {
-      updateMutation.mutate(
-        { id: categoryToEdit.id, ...data },
-        {
-          onSuccess: (updatedCategory) => {
-            if (value === categoryToEdit.name) {
-              onChange(updatedCategory.name);
-            }
-            setIsEditDialogOpen(false);
-            setCategoryToEdit(null);
-            editForm.reset();
-          },
-        }
-      );
+  const handleCreateCategory = async () => {
+    if (!newCategoryName.trim()) {
+      setFormError("Nome da categoria é obrigatório");
+      return;
     }
-  };
 
-  const handleDeleteCategory = (categoryId: string, categoryName: string) => {
-    setCategoryToDelete({ id: categoryId, name: categoryName });
-    setDeleteDialogOpen(true);
-  };
-
-  const handleEditCategoryDialog = (category: {id: string, name: string, description?: string}) => {
-    setCategoryToEdit(category);
-    editForm.reset({
-      name: category.name,
-      description: category.description || "",
-    });
-    setIsEditDialogOpen(true);
-  };
-
-  const confirmDelete = () => {
-    if (categoryToDelete) {
-      deleteMutation.mutate(categoryToDelete.id, {
-        onSuccess: () => {
-          if (value === categoryToDelete.name) {
-            onChange("");
-          }
-          setDeleteDialogOpen(false);
-          setCategoryToDelete(null);
-        },
+    try {
+      const newCategory = await createCategory.mutateAsync({
+        name: newCategoryName.trim(),
+        description: newCategoryDescription.trim() || undefined,
       });
+      
+      // Atualizar o estado local e selecionar a nova categoria
+      onChange(newCategory.id);
+      setIsDialogOpen(false);
+      resetForm();
+      
+      // Refazer o fetch para garantir dados atualizados
+      refetch();
+    } catch (error) {
+      setFormError("Erro ao criar categoria. Tente novamente.");
     }
   };
 
+  const handleUpdateCategory = async () => {
+    if (!newCategoryName.trim() || !editingCategory) {
+      setFormError("Nome da categoria é obrigatório");
+      return;
+    }
+
+    try {
+      await updateCategory.mutateAsync({
+        id: editingCategory.id,
+        name: newCategoryName.trim(),
+        description: newCategoryDescription.trim() || undefined,
+      });
+      
+      setIsDialogOpen(false);
+      resetForm();
+      refetch();
+    } catch (error) {
+      setFormError("Erro ao atualizar categoria. Tente novamente.");
+    }
+  };
+
+  const handleDeleteCategory = async (categoryId: string) => {
+    if (window.confirm("Tem certeza que deseja excluir esta categoria?")) {
+      try {
+        await deleteCategory.mutateAsync(categoryId);
+        if (value === categoryId) {
+          onChange("");
+        }
+        refetch();
+      } catch (error) {
+        setFormError("Erro ao excluir categoria. Tente novamente.");
+      }
+    }
+  };
+
+  const startEdit = (category: any) => {
+    setIsEditMode(true);
+    setEditingCategory(category);
+    setNewCategoryName(category.name);
+    setNewCategoryDescription(category.description || "");
+    setIsDialogOpen(true);
+  };
+
+  const startCreate = () => {
+    resetForm();
+    setIsDialogOpen(true);
+  };
+
+  // Validação: verificar se os dados estão carregados
   if (isLoading) {
-    return <Skeleton className="h-10 w-full" />;
+    return (
+      <div className="flex items-center gap-2 p-2 border rounded-md bg-muted">
+        <Loader2 className="h-4 w-4 animate-spin" />
+        <span className="text-sm text-muted-foreground">Carregando categorias...</span>
+      </div>
+    );
   }
 
+  // Tratamento de erro na UI
+  if (error) {
+    return (
+      <div className="space-y-2">
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Erro ao carregar categorias. 
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="ml-2"
+              onClick={() => refetch()}
+            >
+              Tentar novamente
+            </Button>
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+
+  // Evitar render condicional inseguro
+  const safeCategories = categories || [];
+
   return (
-    <div className="space-y-2">
-      <div className="flex items-center gap-2">
-        <Select value={value} onValueChange={onChange}>
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Selecione a categoria" />
-          </SelectTrigger>
-          <SelectContent>
-            {categories?.map((category) => (
-              <div key={category.id} className="flex items-center justify-between group">
-                <SelectItem value={category.name} className="flex-1">
-                  {category.name}
-                </SelectItem>
-                {canManageCategory && (
-                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 w-6 p-0"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        handleEditCategoryDialog(category);
-                      }}
-                    >
-                      <Pencil className="h-3 w-3 text-blue-500" />
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 w-6 p-0"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        handleDeleteCategory(category.id, category.name);
-                      }}
-                    >
-                      <Trash2 className="h-3 w-3 text-red-500" />
-                    </Button>
-                  </div>
-                )}
+    <div className="flex gap-2">
+      <Select value={value} onValueChange={onChange}>
+        <SelectTrigger className="flex-1">
+          <SelectValue placeholder="Selecione uma categoria" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="">Sem categoria</SelectItem>
+          {safeCategories.map((category) => (
+            <SelectItem key={category.id} value={category.id}>
+              <div className="flex items-center justify-between w-full">
+                <span>{category.name}</span>
+                <div className="flex gap-1 ml-2">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      startEdit(category);
+                    }}
+                    className="h-6 w-6 p-0"
+                  >
+                    ✏️
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteCategory(category.id);
+                    }}
+                    className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
+                  >
+                    🗑️
+                  </Button>
+                </div>
               </div>
-            ))}
-          </SelectContent>
-        </Select>
-        
-        {canManageCategory && (
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogTrigger asChild>
           <Button
             type="button"
             variant="outline"
-            size="icon"
-            onClick={() => setIsCreateDialogOpen(true)}
+            size="sm"
+            onClick={startCreate}
           >
-            <PlusCircle className="h-4 w-4" />
+            <Plus className="h-4 w-4" />
           </Button>
-        )}
-      </div>
-
-      {/* Create Dialog */}
-      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        </DialogTrigger>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Nova Categoria</DialogTitle>
-            <DialogDescription>
-              Adicione uma nova categoria para organizar seus produtos
-            </DialogDescription>
+            <DialogTitle>
+              {isEditMode ? "Editar Categoria" : "Nova Categoria"}
+            </DialogTitle>
           </DialogHeader>
-          
-          <form onSubmit={createForm.handleSubmit(handleCreateCategory)}>
-            <div className="space-y-4 py-2">
-              <div className="space-y-2">
-                <Label htmlFor="name">Nome da Categoria*</Label>
-                <Input
-                  id="name"
-                  placeholder="Digite o nome da categoria"
-                  {...createForm.register("name")}
-                />
-                {createForm.formState.errors.name && (
-                  <p className="text-sm text-red-500">
-                    {createForm.formState.errors.name.message}
-                  </p>
-                )}
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="description">Descrição</Label>
-                <Textarea
-                  id="description"
-                  placeholder="Descrição opcional da categoria"
-                  {...createForm.register("description")}
-                />
-              </div>
+          <div className="space-y-4">
+            {formError && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{formError}</AlertDescription>
+              </Alert>
+            )}
+            
+            <div>
+              <Label htmlFor="category-name">Nome da categoria*</Label>
+              <Input
+                id="category-name"
+                value={newCategoryName}
+                onChange={(e) => {
+                  setNewCategoryName(e.target.value);
+                  if (formError) setFormError("");
+                }}
+                placeholder="Digite o nome da categoria"
+                maxLength={100}
+              />
             </div>
             
-            <DialogFooter className="mt-4">
+            <div>
+              <Label htmlFor="category-description">Descrição</Label>
+              <Textarea
+                id="category-description"
+                value={newCategoryDescription}
+                onChange={(e) => setNewCategoryDescription(e.target.value)}
+                placeholder="Descrição opcional da categoria"
+                maxLength={500}
+              />
+            </div>
+            
+            <div className="flex justify-end gap-2">
               <Button
-                variant="outline"
                 type="button"
-                onClick={() => setIsCreateDialogOpen(false)}
+                variant="outline"
+                onClick={() => {
+                  setIsDialogOpen(false);
+                  resetForm();
+                }}
               >
                 Cancelar
               </Button>
-              <Button type="submit" disabled={createMutation.isPending}>
-                {createMutation.isPending ? "Criando..." : "Criar categoria"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Editar Categoria</DialogTitle>
-            <DialogDescription>
-              Modifique os dados da categoria selecionada
-            </DialogDescription>
-          </DialogHeader>
-          
-          <form onSubmit={editForm.handleSubmit(handleEditCategory)}>
-            <div className="space-y-4 py-2">
-              <div className="space-y-2">
-                <Label htmlFor="edit-name">Nome da Categoria*</Label>
-                <Input
-                  id="edit-name"
-                  placeholder="Digite o nome da categoria"
-                  {...editForm.register("name")}
-                />
-                {editForm.formState.errors.name && (
-                  <p className="text-sm text-red-500">
-                    {editForm.formState.errors.name.message}
-                  </p>
-                )}
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="edit-description">Descrição</Label>
-                <Textarea
-                  id="edit-description"
-                  placeholder="Descrição opcional da categoria"
-                  {...editForm.register("description")}
-                />
-              </div>
-            </div>
-            
-            <DialogFooter className="mt-4">
               <Button
-                variant="outline"
                 type="button"
-                onClick={() => setIsEditDialogOpen(false)}
+                onClick={isEditMode ? handleUpdateCategory : handleCreateCategory}
+                disabled={createCategory.isPending || updateCategory.isPending}
               >
-                Cancelar
+                {(createCategory.isPending || updateCategory.isPending) && (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                )}
+                {isEditMode ? "Atualizar" : "Criar"}
               </Button>
-              <Button type="submit" disabled={updateMutation.isPending}>
-                {updateMutation.isPending ? "Salvando..." : "Salvar alterações"}
-              </Button>
-            </DialogFooter>
-          </form>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
-
-      {/* Delete Dialog */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Excluir Categoria</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tem certeza que deseja excluir a categoria "{categoryToDelete?.name}"? 
-              Esta ação não pode ser desfeita.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={confirmDelete}
-              className="bg-red-500 hover:bg-red-600"
-              disabled={deleteMutation.isPending}
-            >
-              {deleteMutation.isPending ? "Excluindo..." : "Excluir"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
-}
+};
