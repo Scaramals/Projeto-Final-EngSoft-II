@@ -1,5 +1,6 @@
 
 import { useQuery } from "@tanstack/react-query";
+import { OptimizedApiService } from "@/services/optimizedApi";
 import { ApiService } from "@/services/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { SecureLogger } from "@/services/secureLogger";
@@ -12,8 +13,8 @@ export function useDashboard() {
     queryKey: ["dashboard-stats"],
     queryFn: async () => {
       try {
-        SecureLogger.info('Buscando estatísticas do dashboard via ApiService');
-        return await ApiService.getDashboardStats();
+        SecureLogger.info('Buscando estatísticas do dashboard via OptimizedApiService');
+        return await OptimizedApiService.getDashboardStats();
       } catch (error) {
         SecureLogger.error('Erro ao buscar estatísticas do dashboard', error);
         // Retornar dados padrão em caso de erro
@@ -38,7 +39,7 @@ export function useDashboard() {
     queryFn: async () => {
       try {
         SecureLogger.info('Buscando produtos com estoque baixo');
-        return await ApiService.getLowStockProducts(5);
+        return await ApiService.getLowStockProducts();
       } catch (error) {
         SecureLogger.error('Erro ao buscar produtos com estoque baixo', error);
         return [];
@@ -57,7 +58,7 @@ export function useDashboard() {
     queryFn: async () => {
       try {
         SecureLogger.info('Buscando movimentações recentes');
-        return await ApiService.getRecentMovements(10);
+        return await OptimizedApiService.getMovementsSummary(10);
       } catch (error) {
         SecureLogger.error('Erro ao buscar movimentações recentes', error);
         return [];
@@ -76,6 +77,7 @@ export function useDashboard() {
       SecureLogger.info('Atualizando todos os dados do dashboard');
       
       // Limpar cache antes de atualizar
+      OptimizedApiService.clearCache();
       ApiService.clearCache();
       
       // Refetch all queries
