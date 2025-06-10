@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -23,8 +22,8 @@ export const SimplifiedStockForm: React.FC<SimplifiedStockFormProps> = ({
   onCancel
 }) => {
   const { toast } = useToast();
-  const { useAllSuppliers } = useSuppliers();
-  const { data: suppliers = [] } = useAllSuppliers();
+  const suppliersHook = useSuppliers();
+  const { data: suppliers = [] } = suppliersHook.useAllSuppliers();
   
   // Estados do formulário
   const [formData, setFormData] = useState({

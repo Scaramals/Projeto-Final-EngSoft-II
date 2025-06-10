@@ -1,15 +1,17 @@
 
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertTriangle, CheckCircle, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { StockService } from "@/services/stockService";
 import { useStockForm } from "@/hooks/useStockForm";
+import { StockLoadingAlert } from "./forms/StockLoadingAlert";
+import { StockStatusAlert } from "./forms/StockStatusAlert";
+import { ValidationAlert } from "./forms/ValidationAlert";
+import { ErrorAlert } from "./forms/ErrorAlert";
+import { MovementTypeSelect } from "./forms/MovementTypeSelect";
+import { QuantityInput } from "./forms/QuantityInput";
+import { NotesInput } from "./forms/NotesInput";
+import { FormActions } from "./forms/FormActions";
 
 interface StockMovementFormNewProps {
   productId: string;
@@ -168,127 +170,59 @@ export const StockMovementFormNew: React.FC<StockMovementFormNewProps> = ({
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Status do estoque */}
-          {isLoadingStock ? (
-            <Alert>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              <AlertDescription>Carregando estoque atual...</AlertDescription>
-            </Alert>
-          ) : (
-            <Alert>
-              <CheckCircle className="h-4 w-4" />
-              <AlertDescription>
-                Estoque atual: <strong>{currentStock} unidades</strong>
-              </AlertDescription>
-            </Alert>
+          {/* Alertas de Status */}
+          <StockLoadingAlert isLoading={isLoadingStock} />
+          
+          {!isLoadingStock && (
+            <StockStatusAlert 
+              currentStock={currentStock} 
+              validationError={null} 
+            />
           )}
 
-          {/* Alertas de erro */}
-          {errors.general && (
-            <Alert variant="destructive">
-              <AlertTriangle className="h-4 w-4" />
-              <AlertDescription>{errors.general}</AlertDescription>
-            </Alert>
-          )}
-
-          {validationMessage && (
-            <Alert variant="destructive">
-              <AlertTriangle className="h-4 w-4" />
-              <AlertDescription>{validationMessage}</AlertDescription>
-            </Alert>
-          )}
+          <ErrorAlert error={errors.general || null} />
+          <ValidationAlert 
+            validationMessage={validationMessage} 
+            isValidating={isValidating} 
+          />
 
           {/* Tipo de movimentação */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Tipo de movimentação</label>
-            <Select
-              value={formData.type}
-              onValueChange={(value: 'in' | 'out') => updateField('type', value)}
-              disabled={isSubmitting}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione o tipo" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="in">Entrada</SelectItem>
-                <SelectItem value="out">Saída</SelectItem>
-              </SelectContent>
-            </Select>
-            {errors.type && (
-              <p className="text-sm font-medium text-destructive">{errors.type}</p>
-            )}
-          </div>
+          <MovementTypeSelect
+            value={formData.type}
+            onChange={(value) => updateField('type', value)}
+            disabled={isSubmitting}
+          />
+          {errors.type && (
+            <p className="text-sm font-medium text-destructive">{errors.type}</p>
+          )}
 
           {/* Quantidade */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Quantidade</label>
-            <Input
-              type="number"
-              min="1"
-              step="1"
-              value={formData.quantity || ''}
-              onChange={(e) => {
-                const value = parseInt(e.target.value, 10);
-                if (!isNaN(value) && value >= 0) {
-                  updateField('quantity', value);
-                }
-              }}
-              disabled={isSubmitting}
-              className={hasInsufficientStock ? "border-red-500" : ""}
-              placeholder="Digite a quantidade"
-            />
-            {formData.type === "out" && (
-              <p className={`text-sm ${hasInsufficientStock ? "text-red-600" : "text-muted-foreground"}`}>
-                Estoque disponível: {currentStock} unidades
-                {isValidating && (
-                  <span className="ml-2">
-                    <Loader2 className="h-3 w-3 animate-spin inline" />
-                  </span>
-                )}
-              </p>
-            )}
-            {errors.quantity && (
-              <p className="text-sm font-medium text-destructive">{errors.quantity}</p>
-            )}
-          </div>
+          <QuantityInput
+            value={formData.quantity}
+            onChange={(value) => updateField('quantity', value)}
+            type={formData.type}
+            currentStock={currentStock}
+            hasInsufficientStock={hasInsufficientStock}
+            disabled={isSubmitting}
+            error={errors.quantity}
+          />
 
           {/* Observações */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Observações (opcional)</label>
-            <Textarea
-              value={formData.notes}
-              onChange={(e) => updateField('notes', e.target.value)}
-              disabled={isSubmitting}
-              placeholder="Adicione observações sobre esta movimentação..."
-            />
-          </div>
+          <NotesInput
+            value={formData.notes}
+            onChange={(value) => updateField('notes', value)}
+            disabled={isSubmitting}
+          />
 
           {/* Ações */}
-          <div className="flex gap-4 pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onCancel}
-              disabled={isSubmitting}
-              className="flex-1"
-            >
-              Cancelar
-            </Button>
-            <Button
-              type="submit"
-              disabled={!canSubmit}
-              className="flex-1"
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  Registrando...
-                </>
-              ) : (
-                "Registrar Movimentação"
-              )}
-            </Button>
-          </div>
+          <FormActions
+            onCancel={onCancel}
+            onSubmit={handleSubmit}
+            isSubmitting={isSubmitting}
+            isValidating={isValidating}
+            hasInsufficientStock={hasInsufficientStock}
+            hasSubmitted={false}
+          />
         </form>
       </CardContent>
     </Card>
