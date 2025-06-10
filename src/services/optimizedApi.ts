@@ -88,19 +88,13 @@ export const OptimizedApiService = {
   },
 
   /**
-   * Obter análise de categorias otimizada - NOVA VERSÃO COM FUNÇÃO CORRIGIDA
+   * Obter análise de categorias otimizada - VERSÃO FINAL CORRIGIDA
    */
   async getCategoryAnalysis(skipCache: boolean = false): Promise<CategoryAnalysis[]> {
     try {
-      const cacheKey = 'category_analysis_v2'; // Mudei o cache key para forçar refresh
+      const cacheKey = 'category_analysis_final_fixed'; // Nova chave para garantir dados frescos
       
-      // SEMPRE limpar cache para garantir dados frescos da função corrigida
-      console.log('OptimizedApiService - Clearing all category analysis cache to use CORRECTED database function');
-      cacheService.delete('category_analysis');
-      cacheService.delete('category_analysis_v2');
-      cacheService.delete(cacheKey);
-      
-      console.log('OptimizedApiService - Fetching category analysis from CORRECTED database function');
+      console.log('OptimizedApiService - Fetching category analysis from FINAL CORRECTED database function');
       const { data, error } = await supabase.rpc('get_category_analysis');
       
       if (error) {
@@ -108,16 +102,16 @@ export const OptimizedApiService = {
         throw error;
       }
       
-      console.log('OptimizedApiService - RAW response from corrected function:', data);
+      console.log('OptimizedApiService - RAW response from final corrected function:', data);
       
       // Properly handle the array type conversion
       const analysis = (data || []) as unknown as CategoryAnalysis[];
       console.log('OptimizedApiService - Processed category analysis:', analysis.length, 'categories');
       
-      // Verificação detalhada se ainda há UUIDs
+      // Verificação final se ainda há UUIDs
       if (analysis.length > 0) {
         analysis.forEach((category, index) => {
-          console.log(`OptimizedApiService - Category ${index}:`, {
+          console.log(`OptimizedApiService - FINAL CHECK Category ${index}:`, {
             name: category.category_name,
             isUUID: category.category_name && category.category_name.length === 36 && category.category_name.includes('-'),
             products: category.product_count,
@@ -125,24 +119,17 @@ export const OptimizedApiService = {
           });
           
           if (category.category_name && category.category_name.length === 36 && category.category_name.includes('-')) {
-            console.error(`OptimizedApiService - STILL GETTING UUID for category ${index}:`, category.category_name);
+            console.error(`OptimizedApiService - ERROR: Still UUID for category ${index}:`, category.category_name);
           } else {
             console.log(`OptimizedApiService - SUCCESS: Proper category name for ${index}:`, category.category_name);
           }
         });
       }
       
-      // Cache por 5 minutos apenas se não foi skipCache E se temos nomes válidos
-      const hasValidNames = analysis.every(cat => 
-        !cat.category_name || 
-        !(cat.category_name.length === 36 && cat.category_name.includes('-'))
-      );
-      
-      if (!skipCache && hasValidNames) {
+      // Sempre fazer cache dos dados corretos
+      if (!skipCache) {
         cacheService.set(cacheKey, analysis, 300);
-        console.log('OptimizedApiService - Cached category analysis with valid names');
-      } else if (!hasValidNames) {
-        console.warn('OptimizedApiService - NOT caching - still receiving UUIDs instead of names');
+        console.log('OptimizedApiService - Cached final corrected category analysis');
       }
       
       return analysis;

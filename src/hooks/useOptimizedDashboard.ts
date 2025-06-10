@@ -34,15 +34,15 @@ export function useOptimizedDashboard() {
     enabled: !!user,
   });
 
-  // Buscar análise de categorias - VERSÃO ATUALIZADA COM FUNÇÃO CORRIGIDA
+  // Buscar análise de categorias - VERSÃO FINAL CORRIGIDA
   const { data: categoryAnalysis, isLoading: isCategoryLoading, refetch: refetchCategory } = useQuery<CategoryAnalysis[]>({
-    queryKey: ["category-analysis-v3"], // Nova query key para forçar refresh
+    queryKey: ["category-analysis-final-fixed"], // Nova query key para função final corrigida
     queryFn: () => {
-      console.log('useOptimizedDashboard - Fetching category analysis with CORRECTED database function...');
-      return OptimizedApiService.getCategoryAnalysis(true); // SEMPRE force refresh
+      console.log('useOptimizedDashboard - Fetching category analysis with FINAL CORRECTED database function...');
+      return OptimizedApiService.getCategoryAnalysis(true); // Force refresh
     },
-    staleTime: 0, // SEM cache local para testar
-    gcTime: 0, // SEM cache local para testar  
+    staleTime: 5 * 60 * 1000, // 5 minutos
+    gcTime: 10 * 60 * 1000, // 10 minutos
     enabled: !!user,
     retry: 1,
   });
@@ -144,13 +144,12 @@ export function useOptimizedDashboard() {
   
   // Função para forçar refresh de todos os dados
   const refreshAll = () => {
-    console.log('useOptimizedDashboard - FORCE REFRESHING all dashboard data...');
+    console.log('useOptimizedDashboard - FINAL FORCE REFRESH with corrected function...');
     
     // Invalidar todas as queries relacionadas
     queryClient.invalidateQueries({ queryKey: ["dashboard-stats-optimized"] });
     queryClient.invalidateQueries({ queryKey: ["movements-summary"] });
-    queryClient.invalidateQueries({ queryKey: ["category-analysis-corrected"] });
-    queryClient.invalidateQueries({ queryKey: ["category-analysis-v3"] });
+    queryClient.invalidateQueries({ queryKey: ["category-analysis-final-fixed"] });
     queryClient.invalidateQueries({ queryKey: ["monthly-trends"] });
     queryClient.invalidateQueries({ queryKey: ["monthly-comparison"] });
     queryClient.invalidateQueries({ queryKey: ["recent-movements"] });
@@ -166,18 +165,18 @@ export function useOptimizedDashboard() {
     refetchComparison();
   };
 
-  // Debug logging detalhado para category analysis
+  // Debug logging final para category analysis
   React.useEffect(() => {
-    console.log('useOptimizedDashboard - Stats:', stats);
-    console.log('useOptimizedDashboard - Movements Summary:', movementsSummary?.length, 'records');
-    console.log('useOptimizedDashboard - Category Analysis with CORRECTED function:', categoryAnalysis?.length, 'categories');
+    console.log('useOptimizedDashboard - FINAL CHECK - Stats:', stats);
+    console.log('useOptimizedDashboard - FINAL CHECK - Movements Summary:', movementsSummary?.length, 'records');
+    console.log('useOptimizedDashboard - FINAL CHECK - Category Analysis:', categoryAnalysis?.length, 'categories');
     
-    // Log detalhado de cada categoria
+    // Log detalhado final de cada categoria
     if (categoryAnalysis && categoryAnalysis.length > 0) {
-      console.log('useOptimizedDashboard - DETAILED Category Analysis:');
+      console.log('useOptimizedDashboard - FINAL DETAILED Category Analysis:');
       categoryAnalysis.forEach((category, index) => {
         const isUUID = category.category_name && category.category_name.length === 36 && category.category_name.includes('-');
-        console.log(`  Category ${index}:`, {
+        console.log(`  FINAL Category ${index}:`, {
           name: category.category_name,
           products: category.product_count,
           value: category.total_value,
@@ -185,16 +184,16 @@ export function useOptimizedDashboard() {
         });
         
         if (isUUID) {
-          console.error(`  ❌ Category ${index} STILL has UUID:`, category.category_name);
+          console.error(`  ❌ FINAL Category ${index} STILL has UUID:`, category.category_name);
         } else {
-          console.log(`  ✅ Category ${index} has proper name:`, category.category_name);
+          console.log(`  ✅ FINAL Category ${index} has proper name:`, category.category_name);
         }
       });
     } else {
-      console.log('useOptimizedDashboard - No category analysis data available');
+      console.log('useOptimizedDashboard - FINAL CHECK - No category analysis data available');
     }
     
-    console.log('useOptimizedDashboard - Monthly Trends:', monthlyTrends?.length, 'months');
+    console.log('useOptimizedDashboard - FINAL CHECK - Monthly Trends:', monthlyTrends?.length, 'months');
   }, [stats, movementsSummary, categoryAnalysis, monthlyTrends]);
 
   return {
