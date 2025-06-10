@@ -7,6 +7,7 @@ import { Plus, Search as SearchIcon, SlidersHorizontal, Grid3X3, List } from "lu
 import { Input } from "@/components/ui/input";
 import { Link } from "react-router-dom";
 import { useProducts } from "@/hooks/useProducts";
+import { useCategories } from "@/hooks/useCategories";
 import { ApiService } from "@/services/api";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -33,25 +34,18 @@ const ProductsPage: React.FC = () => {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const searchRef = useRef<HTMLInputElement>(null);
   
-  // Get products with filters
+  // Get products with filters using React Query
   const { useAllProducts } = useProducts();
   const { data: products = [], isLoading, error, refetch } = useAllProducts({
-    search: searchQuery,
+    search: searchQuery || undefined,
     category: selectedCategory === "all" ? undefined : selectedCategory,
     sortBy: sortBy === "created_at" ? "name" : sortBy,
     sortDirection: "asc"
   });
 
-  // Extract unique categories from products
-  const categories = React.useMemo(() => {
-    const uniqueCategories = new Set<string>();
-    products.forEach(product => {
-      if (product.category && product.category.trim()) {
-        uniqueCategories.add(product.category);
-      }
-    });
-    return Array.from(uniqueCategories).sort();
-  }, [products]);
+  // Get categories using React Query
+  const { useDistinctCategories } = useCategories();
+  const { data: categories = [], isLoading: categoriesLoading } = useDistinctCategories();
 
   const handleClearFilters = () => {
     setSearchQuery("");
@@ -117,11 +111,15 @@ const ProductsPage: React.FC = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todas Categorias</SelectItem>
-                {categories.map((category) => (
-                  <SelectItem key={category} value={category}>
-                    {category}
-                  </SelectItem>
-                ))}
+                {categoriesLoading ? (
+                  <SelectItem value="loading" disabled>Carregando...</SelectItem>
+                ) : (
+                  categories.map((category) => (
+                    <SelectItem key={category} value={category}>
+                      {category}
+                    </SelectItem>
+                  ))
+                )}
               </SelectContent>
             </Select>
 

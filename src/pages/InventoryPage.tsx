@@ -7,6 +7,7 @@ import { Search, Plus } from "lucide-react";
 import { formatCurrency, getStockStatus } from "@/lib/utils";
 import { Link } from "react-router-dom";
 import { useProducts } from "@/hooks/useProducts";
+import { useCategories } from "@/hooks/useCategories";
 import { ApiService } from "@/services/api";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -34,7 +35,7 @@ const InventoryPage: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const pageRef = useRef(null);
   
-  // Get products with filters
+  // Get products with filters using React Query
   const { useAllProducts } = useProducts();
   const { data: products = [], isLoading, error, refetch } = useAllProducts({
     search: searchQuery || undefined,
@@ -43,16 +44,9 @@ const InventoryPage: React.FC = () => {
     sortDirection: sortDirection
   });
 
-  // Extract unique categories from products
-  const categories = React.useMemo(() => {
-    const uniqueCategories = new Set<string>();
-    products.forEach(product => {
-      if (product.category && product.category.trim()) {
-        uniqueCategories.add(product.category);
-      }
-    });
-    return Array.from(uniqueCategories).sort();
-  }, [products]);
+  // Get categories using React Query
+  const { useDistinctCategories } = useCategories();
+  const { data: categories = [], isLoading: categoriesLoading } = useDistinctCategories();
   
   // Filter products based on stock status - memoized for performance
   const filteredProducts = useMemo(() => {
@@ -148,11 +142,15 @@ const InventoryPage: React.FC = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todas</SelectItem>
-                {categories.map((category) => (
-                  <SelectItem key={category} value={category}>
-                    {category}
-                  </SelectItem>
-                ))}
+                {categoriesLoading ? (
+                  <SelectItem value="loading" disabled>Carregando...</SelectItem>
+                ) : (
+                  categories.map((category) => (
+                    <SelectItem key={category} value={category}>
+                      {category}
+                    </SelectItem>
+                  ))
+                )}
               </SelectContent>
             </Select>
             
