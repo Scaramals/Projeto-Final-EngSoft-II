@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
@@ -70,7 +69,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           fullName: data.full_name,
           role: data.role as 'admin' | 'employee' | 'developer',
           createdAt: data.created_at,
-          updatedAt: data.updated_at
+          updatedAt: data.updated_at,
+          is_master: data.is_master || false
         };
         
         // Armazene o perfil em cache por 10 minutos
@@ -127,11 +127,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setProfile(null);
         }
 
-        // Handle auth events
+        // Handle auth events - only navigate if we're not already on the target route
         if (event === 'SIGNED_IN') {
-          navigate('/dashboard');
+          const currentPath = window.location.pathname;
+          if (!currentPath.startsWith('/dashboard') && !currentPath.startsWith('/products') && 
+              !currentPath.startsWith('/inventory') && !currentPath.startsWith('/suppliers') && 
+              !currentPath.startsWith('/reports') && !currentPath.startsWith('/admin') && 
+              !currentPath.startsWith('/settings')) {
+            navigate('/dashboard');
+          }
         } else if (event === 'SIGNED_OUT') {
-          navigate('/login');
+          const currentPath = window.location.pathname;
+          if (currentPath !== '/login' && currentPath !== '/register' && 
+              currentPath !== '/forgot-password' && currentPath !== '/') {
+            navigate('/login');
+          }
           // Clear cache on logout
           cacheService.clear();
         }
