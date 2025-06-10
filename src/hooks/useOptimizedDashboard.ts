@@ -20,10 +20,6 @@ export function useOptimizedDashboard() {
   const [categoryAnalysis, setCategoryAnalysis] = useState<CategoryAnalysis[]>([]);
   const [isCategoryLoading, setIsCategoryLoading] = useState(false);
 
-  // State for monthly trends
-  const [monthlyTrends, setMonthlyTrends] = useState<any[]>([]);
-  const [isTrendsLoading, setIsTrendsLoading] = useState(false);
-
   // State for monthly comparison
   const [monthlyComparison, setMonthlyComparison] = useState<any>(null);
   const [isComparisonLoading, setIsComparisonLoading] = useState(false);
@@ -73,58 +69,6 @@ export function useOptimizedDashboard() {
       console.error('useOptimizedDashboard - Error fetching category analysis:', error);
     } finally {
       setIsCategoryLoading(false);
-    }
-  };
-
-  // Fetch monthly trends
-  const fetchTrends = async () => {
-    if (!user) return;
-    
-    setIsTrendsLoading(true);
-    try {
-      console.log('useOptimizedDashboard - Fetching monthly trends data...');
-      const { data, error } = await supabase.rpc('get_movements_summary', { days_back: 180 });
-
-      if (error) {
-        console.error('useOptimizedDashboard - Error fetching monthly trends:', error);
-        throw error;
-      }
-
-      if (!data || data.length === 0) {
-        console.log('useOptimizedDashboard - No monthly trends data found');
-        setMonthlyTrends([]);
-        return;
-      }
-
-      // Agrupar por mês
-      const monthlyData: { [key: string]: { in: number, out: number } } = {};
-      
-      data.forEach((movement: any) => {
-        const monthKey = new Date(movement.movement_date).toISOString().slice(0, 7); // YYYY-MM
-        if (!monthlyData[monthKey]) {
-          monthlyData[monthKey] = { in: 0, out: 0 };
-        }
-        
-        monthlyData[monthKey].in += movement.total_in || 0;
-        monthlyData[monthKey].out += movement.total_out || 0;
-      });
-
-      const trends = Object.entries(monthlyData)
-        .map(([month, data]) => ({
-          month,
-          totalIn: data.in,
-          totalOut: data.out,
-          net: data.in - data.out
-        }))
-        .sort((a, b) => a.month.localeCompare(b.month))
-        .slice(-6); // Últimos 6 meses
-
-      console.log('useOptimizedDashboard - Monthly trends processed:', trends);
-      setMonthlyTrends(trends);
-    } catch (error) {
-      console.error('useOptimizedDashboard - Error fetching trends:', error);
-    } finally {
-      setIsTrendsLoading(false);
     }
   };
 
@@ -184,7 +128,6 @@ export function useOptimizedDashboard() {
       fetchStats();
       fetchMovements();
       fetchCategory();
-      fetchTrends();
       fetchComparison();
     }
   }, [user]);
@@ -200,7 +143,6 @@ export function useOptimizedDashboard() {
     fetchStats();
     fetchMovements();
     fetchCategory();
-    fetchTrends();
     fetchComparison();
   };
 
@@ -231,17 +173,14 @@ export function useOptimizedDashboard() {
     } else {
       console.log('useOptimizedDashboard - FINAL CHECK - No category analysis data available');
     }
-    
-    console.log('useOptimizedDashboard - FINAL CHECK - Monthly Trends:', monthlyTrends?.length, 'months');
-  }, [stats, movementsSummary, categoryAnalysis, monthlyTrends]);
+  }, [stats, movementsSummary, categoryAnalysis]);
 
-  const isLoading = isStatsLoading || isMovementsLoading || isCategoryLoading || isTrendsLoading || isComparisonLoading;
+  const isLoading = isStatsLoading || isMovementsLoading || isCategoryLoading || isComparisonLoading;
 
   return {
     stats,
     movementsSummary,
     categoryAnalysis,
-    monthlyTrends,
     monthlyComparison,
     isLoading,
     refreshAll,

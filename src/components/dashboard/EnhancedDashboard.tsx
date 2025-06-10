@@ -14,7 +14,6 @@ export const EnhancedDashboard: React.FC = () => {
     stats, 
     movementsSummary, 
     categoryAnalysis, 
-    monthlyTrends,
     monthlyComparison,
     isLoading 
   } = useOptimizedDashboard();
@@ -33,7 +32,7 @@ export const EnhancedDashboard: React.FC = () => {
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <MovementsChart movementsSummary={movementsSummary} />
       <CategoryPieChart categoryAnalysis={categoryAnalysis} />
-      <MonthlyTrendsChart monthlyTrends={monthlyTrends} />
+      <MonthlyTrendsChart />
       <PerformanceSummary monthlyComparison={monthlyComparison} />
       <CategoryAnalysisSection categoryAnalysis={categoryAnalysis} />
       <RecentMovementsSection />
