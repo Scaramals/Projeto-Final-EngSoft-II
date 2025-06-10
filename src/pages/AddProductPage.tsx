@@ -29,16 +29,10 @@ const AddProductPage: React.FC = () => {
         imageUrl: productData.imageUrl,
       };
       
-      createProduct(productToCreate, {
-        onSuccess: () => {
-          navigate("/products");
-        },
-        onError: (error: any) => {
-          setSubmitError(error?.message || "Erro ao criar produto. Tente novamente.");
-        }
-      });
-    } catch (error) {
-      setSubmitError("Erro inesperado. Tente novamente.");
+      await createProduct(productToCreate);
+      navigate("/products");
+    } catch (error: any) {
+      setSubmitError(error?.message || "Erro ao criar produto. Tente novamente.");
     }
   };
 

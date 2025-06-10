@@ -83,19 +83,21 @@ const ProductDetailPage: React.FC = () => {
     };
   };
 
-  const handleEditProduct = (updatedProduct: any) => {
+  const handleEditProduct = async (updatedProduct: any) => {
     if (!product) return;
     
-    updateProduct({
-      id: product.id,
-      ...updatedProduct
-    }, {
-      onSuccess: async () => {
-        setIsEditing(false);
-        // Forçar atualização dos dados
-        await refetchProduct();
-      }
-    });
+    try {
+      await updateProduct({
+        id: product.id,
+        ...updatedProduct
+      });
+      setIsEditing(false);
+      // Forçar atualização dos dados
+      await refetchProduct();
+    } catch (error) {
+      // Error is already handled in the hook with toast
+      console.error('Error updating product:', error);
+    }
   };
   
   const handleAddMovement = async () => {
@@ -110,14 +112,16 @@ const ProductDetailPage: React.FC = () => {
     ]);
   };
   
-  const handleDeleteProduct = () => {
+  const handleDeleteProduct = async () => {
     if (!productId) return;
     
-    deleteProduct(productId, {
-      onSuccess: () => {
-        navigate("/products");
-      }
-    });
+    try {
+      await deleteProduct(productId);
+      navigate("/products");
+    } catch (error) {
+      // Error is already handled in the hook with toast
+      console.error('Error deleting product:', error);
+    }
   };
 
   // Handle loading and error states
