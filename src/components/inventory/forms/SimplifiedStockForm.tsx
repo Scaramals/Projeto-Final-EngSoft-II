@@ -100,9 +100,9 @@ export const SimplifiedStockForm: React.FC<SimplifiedStockFormProps> = ({
       newErrors.quantity = 'Quantidade deve ser maior que zero';
     }
 
-    // Validar fornecedor para entradas
-    if (formData.type === 'in' && !formData.supplierId) {
-      newErrors.supplierId = 'Fornecedor é obrigatório para entradas';
+    // NOVA VALIDAÇÃO: Fornecedor obrigatório para TODAS as movimentações
+    if (!formData.supplierId) {
+      newErrors.supplierId = 'Fornecedor é obrigatório para todas as movimentações';
     }
 
     // Validar estoque para saídas
@@ -138,7 +138,7 @@ export const SimplifiedStockForm: React.FC<SimplifiedStockFormProps> = ({
         quantity: formData.quantity,
         type: formData.type,
         notes: formData.notes.trim() || undefined,
-        supplierId: formData.type === 'in' ? formData.supplierId : undefined
+        supplierId: formData.supplierId // Agora sempre obrigatório
       });
 
       if (result.success) {
@@ -242,31 +242,31 @@ export const SimplifiedStockForm: React.FC<SimplifiedStockFormProps> = ({
             )}
           </div>
 
-          {/* Fornecedor (obrigatório para entradas) */}
-          {formData.type === 'in' && (
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Fornecedor *</label>
-              <Select
-                value={formData.supplierId}
-                onValueChange={(value) => updateField('supplierId', value)}
-                disabled={isLoading}
-              >
-                <SelectTrigger className={errors.supplierId ? "border-destructive" : ""}>
-                  <SelectValue placeholder="Selecione o fornecedor" />
-                </SelectTrigger>
-                <SelectContent>
-                  {suppliers.map(supplier => (
-                    <SelectItem key={supplier.id} value={supplier.id}>
-                      {supplier.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {errors.supplierId && (
-                <p className="text-sm text-destructive">{errors.supplierId}</p>
-              )}
-            </div>
-          )}
+          {/* Fornecedor (SEMPRE obrigatório agora) */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">
+              Fornecedor <span className="text-red-500">*</span>
+            </label>
+            <Select
+              value={formData.supplierId}
+              onValueChange={(value) => updateField('supplierId', value)}
+              disabled={isLoading}
+            >
+              <SelectTrigger className={errors.supplierId ? "border-destructive" : ""}>
+                <SelectValue placeholder="Selecione o fornecedor" />
+              </SelectTrigger>
+              <SelectContent>
+                {suppliers.map(supplier => (
+                  <SelectItem key={supplier.id} value={supplier.id}>
+                    {supplier.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {errors.supplierId && (
+              <p className="text-sm text-destructive">{errors.supplierId}</p>
+            )}
+          </div>
 
           {/* Observações */}
           <div className="space-y-2">

@@ -8,13 +8,15 @@ interface SupplierFieldProps {
   onChange: (value: string) => void;
   disabled?: boolean;
   show: boolean;
+  required?: boolean;
 }
 
 export const SupplierField: React.FC<SupplierFieldProps> = ({
   value,
   onChange,
   disabled = false,
-  show
+  show,
+  required = false
 }) => {
   const { useAllSuppliers } = useSuppliers();
   const { data: suppliers = [] } = useAllSuppliers();
@@ -23,14 +25,17 @@ export const SupplierField: React.FC<SupplierFieldProps> = ({
 
   return (
     <div className="space-y-2">
-      <label className="text-sm font-medium">Fornecedor *</label>
+      <label className="text-sm font-medium">
+        Fornecedor {required && <span className="text-red-500">*</span>}
+      </label>
       <Select
         value={value}
         onValueChange={onChange}
         disabled={disabled}
+        required={required}
       >
-        <SelectTrigger>
-          <SelectValue placeholder="Selecione o fornecedor" />
+        <SelectTrigger className={required && !value ? "border-red-300" : ""}>
+          <SelectValue placeholder={required ? "Selecione o fornecedor (obrigatório)" : "Selecione o fornecedor"} />
         </SelectTrigger>
         <SelectContent>
           {suppliers.map(supplier => (
@@ -40,6 +45,11 @@ export const SupplierField: React.FC<SupplierFieldProps> = ({
           ))}
         </SelectContent>
       </Select>
+      {required && !value && (
+        <p className="text-sm text-red-500">
+          Fornecedor é obrigatório para movimentações de saída
+        </p>
+      )}
     </div>
   );
 };

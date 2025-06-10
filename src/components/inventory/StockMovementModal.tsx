@@ -46,8 +46,13 @@ export const StockMovementModal: React.FC<StockMovementModalProps> = ({
       return false;
     }
 
-    if (formData.type === 'in' && !formData.supplierId) {
-      setValidationError('Fornecedor é obrigatório para entradas de estoque');
+    // NOVA VALIDAÇÃO: Fornecedor obrigatório para TODAS as movimentações (entrada e saída)
+    if (!formData.supplierId) {
+      if (formData.type === 'in') {
+        setValidationError('Fornecedor é obrigatório para entradas de estoque');
+      } else {
+        setValidationError('Fornecedor é obrigatório para saídas de estoque');
+      }
       return false;
     }
 
@@ -68,9 +73,9 @@ export const StockMovementModal: React.FC<StockMovementModalProps> = ({
     setIsSubmitting(true);
 
     try {
-      // Validação adicional para entrada sem fornecedor
-      if (formData.type === 'in' && !formData.supplierId) {
-        setValidationError('Entrada de estoque obrigatoriamente deve ter um fornecedor');
+      // Validação adicional para fornecedor obrigatório
+      if (!formData.supplierId) {
+        setValidationError('Fornecedor é obrigatório para todas as movimentações');
         return;
       }
 
@@ -96,7 +101,7 @@ export const StockMovementModal: React.FC<StockMovementModalProps> = ({
         return;
       }
 
-      // Inserir movimentação diretamente - o trigger cuidará do resto
+      // Inserir movimentação com fornecedor obrigatório
       const { error: insertError } = await supabase
         .from('stock_movements')
         .insert({
@@ -104,7 +109,7 @@ export const StockMovementModal: React.FC<StockMovementModalProps> = ({
           quantity: formData.quantity,
           type: formData.type,
           notes: formData.notes.trim() || null,
-          supplier_id: formData.type === 'in' ? formData.supplierId : null,
+          supplier_id: formData.supplierId, // Sempre obrigatório agora
           date: new Date().toISOString()
         });
 
@@ -186,11 +191,13 @@ export const StockMovementModal: React.FC<StockMovementModalProps> = ({
             disabled={isSubmitting}
           />
 
+          {/* Fornecedor agora é obrigatório para TODAS as movimentações */}
           <SupplierField
             value={formData.supplierId}
             onChange={handleSupplierChange}
             disabled={isSubmitting}
-            show={formData.type === 'in'}
+            show={true} // Sempre mostrar
+            required={true} // Sempre obrigatório
           />
 
           <NotesField
