@@ -1,7 +1,6 @@
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Alert, AlertsService } from "@/services/alertsService";
-import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Bell, AlertTriangle, DollarSign, Activity } from "lucide-react";
@@ -9,11 +8,30 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { formatDate } from "@/lib/utils";
 
 export const AlertsPanel: React.FC = () => {
-  const { data: alerts = [], isLoading } = useQuery({
-    queryKey: ['system-alerts'],
-    queryFn: () => AlertsService.getAllAlerts(),
-    refetchInterval: 5 * 60 * 1000, // Atualizar a cada 5 minutos
-  });
+  const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const fetchAlerts = async () => {
+    setIsLoading(true);
+    try {
+      const data = await AlertsService.getAllAlerts();
+      setAlerts(data);
+    } catch (error) {
+      console.error('Error fetching alerts:', error);
+      setAlerts([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAlerts();
+    
+    // Atualizar a cada 5 minutos
+    const interval = setInterval(fetchAlerts, 5 * 60 * 1000);
+    
+    return () => clearInterval(interval);
+  }, []);
 
   const getAlertIcon = (type: Alert['type']) => {
     switch (type) {

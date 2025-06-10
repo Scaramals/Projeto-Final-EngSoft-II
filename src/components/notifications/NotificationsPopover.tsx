@@ -1,22 +1,39 @@
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Bell, AlertTriangle, DollarSign, Activity, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useQuery } from "@tanstack/react-query";
 import { Alert } from "@/services/alertsService";
 import { formatDate } from "@/lib/utils";
 import { optimizedNotificationService } from "@/services/optimizedNotificationService";
 
 export const NotificationsPopover: React.FC = () => {
-  const { data: alerts = [], isLoading, refetch } = useQuery({
-    queryKey: ['notifications-alerts'],
-    queryFn: () => optimizedNotificationService.getAlerts(),
-    refetchInterval: 30 * 1000, // Atualizar a cada 30 segundos
-    staleTime: 15 * 1000, // Considerar fresh por 15 segundos
-  });
+  const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const fetchAlerts = async () => {
+    setIsLoading(true);
+    try {
+      const data = await optimizedNotificationService.getAlerts();
+      setAlerts(data);
+    } catch (error) {
+      console.error('Error fetching alerts:', error);
+      setAlerts([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAlerts();
+    
+    // Atualizar a cada 30 segundos
+    const interval = setInterval(fetchAlerts, 30 * 1000);
+    
+    return () => clearInterval(interval);
+  }, []);
 
   const getAlertIcon = (type: Alert['type']) => {
     switch (type) {
@@ -50,7 +67,7 @@ export const NotificationsPopover: React.FC = () => {
 
   const handleRefresh = () => {
     optimizedNotificationService.clearCache();
-    refetch();
+    fetchAlerts();
   };
 
   return (
