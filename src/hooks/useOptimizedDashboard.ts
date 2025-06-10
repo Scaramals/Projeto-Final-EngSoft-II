@@ -1,4 +1,3 @@
-
 import React from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { OptimizedApiService } from "@/services/optimizedApi";
@@ -34,12 +33,12 @@ export function useOptimizedDashboard() {
     enabled: !!user,
   });
 
-  // Buscar análise de categorias - usando a função do banco que retorna os nomes
+  // Buscar análise de categorias - agora com nomes corretos das categorias
   const { data: categoryAnalysis, isLoading: isCategoryLoading, refetch: refetchCategory } = useQuery<CategoryAnalysis[]>({
     queryKey: ["category-analysis"],
     queryFn: () => {
-      console.log('useOptimizedDashboard - Fetching category analysis...');
-      return OptimizedApiService.getCategoryAnalysis(true); // Force refresh
+      console.log('useOptimizedDashboard - Fetching category analysis with names...');
+      return OptimizedApiService.getCategoryAnalysis(true); // Force refresh para garantir dados atualizados
     },
     staleTime: 10 * 60 * 1000, // 10 minutos
     gcTime: 20 * 60 * 1000, // 20 minutos
@@ -168,7 +167,8 @@ export function useOptimizedDashboard() {
   React.useEffect(() => {
     console.log('useOptimizedDashboard - Stats:', stats);
     console.log('useOptimizedDashboard - Movements Summary:', movementsSummary?.length, 'records');
-    console.log('useOptimizedDashboard - Category Analysis:', categoryAnalysis?.length, 'categories');
+    console.log('useOptimizedDashboard - Category Analysis with names:', categoryAnalysis?.length, 'categories');
+    console.log('useOptimizedDashboard - Category Analysis data:', categoryAnalysis);
     console.log('useOptimizedDashboard - Monthly Trends:', monthlyTrends?.length, 'months');
   }, [stats, movementsSummary, categoryAnalysis, monthlyTrends]);
 

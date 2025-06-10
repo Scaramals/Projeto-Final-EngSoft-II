@@ -88,11 +88,17 @@ export const OptimizedApiService = {
   },
 
   /**
-   * Obter análise de categorias otimizada - usa a função get_category_analysis que retorna nomes das categorias
+   * Obter análise de categorias otimizada - agora usa a função corrigida que retorna nomes das categorias
    */
   async getCategoryAnalysis(skipCache: boolean = false): Promise<CategoryAnalysis[]> {
     try {
       const cacheKey = 'category_analysis';
+      
+      // Limpar cache se skipCache for true
+      if (skipCache) {
+        console.log('OptimizedApiService - Clearing category analysis cache');
+        cacheService.delete(cacheKey);
+      }
       
       if (!skipCache) {
         const cached = cacheService.get<CategoryAnalysis[]>(cacheKey);
@@ -102,7 +108,7 @@ export const OptimizedApiService = {
         }
       }
       
-      console.log('OptimizedApiService - Fetching fresh category analysis from database');
+      console.log('OptimizedApiService - Fetching fresh category analysis from database (with corrected names)');
       const { data, error } = await supabase.rpc('get_category_analysis');
       
       if (error) {
@@ -112,8 +118,8 @@ export const OptimizedApiService = {
       
       // Properly handle the array type conversion
       const analysis = (data || []) as unknown as CategoryAnalysis[];
-      console.log('OptimizedApiService - Category analysis fetched:', analysis.length, 'categories');
-      console.log('OptimizedApiService - Category analysis data:', analysis);
+      console.log('OptimizedApiService - Category analysis fetched with names:', analysis.length, 'categories');
+      console.log('OptimizedApiService - Category analysis data with names:', analysis);
       
       // Cache por 10 minutos apenas se não foi skipCache
       if (!skipCache) {
