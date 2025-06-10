@@ -151,11 +151,19 @@ export const StockService = {
         };
       }
 
+      // Type cast the JSON response to the expected structure
+      const validation = data as {
+        isValid: boolean;
+        currentStock: number;
+        message?: string;
+        productName?: string;
+      };
+
       return {
-        isValid: data.isValid,
-        currentStock: data.currentStock,
-        message: data.message,
-        productName: data.productName
+        isValid: validation.isValid,
+        currentStock: validation.currentStock,
+        message: validation.message,
+        productName: validation.productName
       };
     } catch (error) {
       console.error('❌ [STOCK_SERVICE] Erro na validação:', error);
