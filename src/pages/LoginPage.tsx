@@ -17,7 +17,7 @@ const LoginPage: React.FC = () => {
   // Show loading state while checking authentication
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="w-full max-w-md space-y-4 p-4">
           <Skeleton className="h-12 w-1/2 mx-auto" />
           <Skeleton className="h-4 w-3/4 mx-auto" />
@@ -30,9 +30,9 @@ const LoginPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col sm:flex-row">
-      <div className="bg-inventory-indigo sm:w-1/2 flex items-center justify-center p-8">
-        <div className="max-w-md text-white text-center sm:text-left">
+    <div className="min-h-screen w-full flex flex-col sm:flex-row bg-background">
+      <div className="bg-primary sm:w-1/2 flex items-center justify-center p-8">
+        <div className="max-w-md text-primary-foreground text-center sm:text-left">
           <div className="flex items-center justify-center sm:justify-start mb-6">
             <Package size={40} className="mr-2" />
             <h1 className="text-3xl font-bold">StockControl</h1>
@@ -53,7 +53,7 @@ const LoginPage: React.FC = () => {
         </div>
       </div>
       
-      <div className="flex-1 flex items-center justify-center p-8 bg-white">
+      <div className="flex-1 flex items-center justify-center p-8 bg-background">
         <LoginForm />
       </div>
     </div>
