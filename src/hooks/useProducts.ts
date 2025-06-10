@@ -273,20 +273,21 @@ export function useProducts() {
     });
   };
 
-  // Add stock movement with RIGOROUS validation
+  // Add stock movement with RIGOROUS validation working with database trigger
   const useAddStockMovement = () => {
     return useMutation({
       mutationFn: async (movement: Partial<StockMovement>) => {
-        SecureLogger.info('Iniciando registro de movimentação com validação rigorosa');
+        SecureLogger.info('Iniciando registro de movimentação com validação rigorosa (frontend + backend)');
         
         if (!movement.productId || !movement.quantity || !movement.type) {
           throw new Error('Dados de movimentação incompletos');
         }
 
-        // VALIDAÇÃO RIGOROSA para saídas
+        // VALIDAÇÃO RIGOROSA DUPLA para saídas (frontend + backend)
         if (movement.type === 'out') {
-          console.log('Aplicando validação rigorosa para saída de estoque...');
+          console.log('Aplicando validação rigorosa DUPLA para saída de estoque...');
           
+          // Primeira validação: frontend
           const validation = await ApiService.validateMovement(
             movement.productId, 
             movement.quantity, 
@@ -294,15 +295,16 @@ export function useProducts() {
           );
           
           if (!validation.valid) {
-            SecureLogger.error('Movimentação BLOQUEADA pela validação rigorosa', validation.message);
+            SecureLogger.error('Movimentação BLOQUEADA pela validação frontend', validation.message);
             throw new Error(validation.message || 'Movimentação bloqueada - estoque insuficiente');
           }
           
-          SecureLogger.info('Validação rigorosa APROVADA - prosseguindo com a movimentação');
+          SecureLogger.info('Validação frontend APROVADA - enviando para o banco de dados');
         }
         
         const dbMovement = mapStockMovementToDbStockMovement(movement, user?.id);
         
+        // O banco de dados fará a segunda validação via trigger
         const { data, error } = await supabase
           .from('stock_movements')
           .insert(dbMovement)
@@ -310,11 +312,17 @@ export function useProducts() {
           .single();
           
         if (error) {
-          SecureLogger.error('Erro ao registrar movimentação no banco', error);
+          SecureLogger.error('Erro/Bloqueio no banco de dados', error);
+          
+          // Tratar erros específicos do trigger de validação
+          if (error.message && error.message.includes('Estoque insuficiente')) {
+            throw new Error(`BLOQUEADO: ${error.message}`);
+          }
+          
           throw new Error(`Erro ao registrar movimentação: ${error.message}`);
         }
         
-        SecureLogger.success('Movimentação registrada com sucesso após validação rigorosa');
+        SecureLogger.success('Movimentação registrada com sucesso após validação DUPLA (frontend + backend)');
         return mapDbStockMovementToStockMovement(data);
       },
       onSuccess: (_, variables) => {
@@ -329,7 +337,7 @@ export function useProducts() {
         // Limpar cache da API
         ApiService.clearCache();
         
-        SecureLogger.success(`Movimentação ${variables.type} de ${variables.quantity} unidades finalizada com sucesso`);
+        SecureLogger.success(`Movimentação ${variables.type} de ${variables.quantity} unidades finalizada com SUCESSO TOTAL`);
         toast.success(`${variables.type === 'in' ? 'Entrada' : 'Saída'} de ${variables.quantity} unidades registrada com sucesso!`);
       },
       onError: (error: any) => {

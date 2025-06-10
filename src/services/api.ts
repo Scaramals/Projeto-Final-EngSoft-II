@@ -340,11 +340,11 @@ export const ApiService = {
   },
 
   /**
-   * Validar movimentação de estoque
+   * Validar movimentação de estoque - PRIMEIRA LINHA DE DEFESA
    */
   async validateMovement(productId: string, quantity: number, type: 'in' | 'out'): Promise<{valid: boolean, message?: string}> {
     try {
-      console.log(`Validando movimentação: ${type} de ${quantity} unidades para produto ${productId}`);
+      console.log(`Validação FRONTEND: ${type} de ${quantity} unidades para produto ${productId}`);
       
       if (type === 'out') {
         const { data: product, error } = await supabase
@@ -358,9 +358,9 @@ export const ApiService = {
           return { valid: false, message: 'Produto não encontrado' };
         }
         
-        // REGRA RIGOROSA: Não permitir saída maior que estoque
+        // REGRA ABSOLUTA: Não permitir saída maior que estoque
         if (product.quantity === 0) {
-          console.error(`BLOQUEADO: Tentativa de saída em produto sem estoque. Produto: ${product.name}`);
+          console.error(`FRONTEND BLOQUEOU: Produto sem estoque. Produto: ${product.name}`);
           return { 
             valid: false, 
             message: `ERRO: Produto "${product.name}" não possui estoque disponível` 
@@ -368,19 +368,19 @@ export const ApiService = {
         }
         
         if (product.quantity < quantity) {
-          console.error(`BLOQUEADO: Tentativa de saída de ${quantity} unidades quando há apenas ${product.quantity} em estoque. Produto: ${product.name}`);
+          console.error(`FRONTEND BLOQUEOU: Saída de ${quantity} unidades quando há apenas ${product.quantity}. Produto: ${product.name}`);
           return { 
             valid: false, 
             message: `ERRO: Estoque insuficiente para "${product.name}". Disponível: ${product.quantity}, Solicitado: ${quantity}` 
           };
         }
         
-        console.log(`Validação OK: Saída de ${quantity} unidades permitida. Estoque atual: ${product.quantity}`);
+        console.log(`Validação FRONTEND OK: Saída de ${quantity} unidades permitida. Estoque atual: ${product.quantity}`);
       }
       
       return { valid: true };
     } catch (error) {
-      console.error("Erro crítico na validação de movimentação:", error);
+      console.error("Erro crítico na validação frontend:", error);
       return { valid: false, message: 'Erro na validação - operação bloqueada por segurança' };
     }
   },
