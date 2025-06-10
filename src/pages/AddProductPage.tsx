@@ -18,7 +18,18 @@ const AddProductPage: React.FC = () => {
     try {
       setSubmitError("");
       
-      createProduct(productData, {
+      // Convert ProductFormData to the format expected by the mutation
+      const productToCreate = {
+        name: productData.name,
+        description: productData.description,
+        quantity: productData.quantity,
+        price: productData.price,
+        category: productData.category,
+        minimumStock: productData.minimumStock,
+        imageUrl: productData.imageUrl,
+      };
+      
+      createProduct(productToCreate, {
         onSuccess: () => {
           navigate("/products");
         },

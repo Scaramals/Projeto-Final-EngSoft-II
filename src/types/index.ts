@@ -125,7 +125,6 @@ export interface ProductFormData {
   category?: string;
   minimumStock?: number;
   imageUrl?: string;
-  suppliers?: string[];
 }
 
 export interface StockMovementFormData {
