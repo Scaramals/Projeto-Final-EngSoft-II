@@ -53,9 +53,13 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
   currentStock = 0,
 }) => {
   const { toast } = useToast();
-  const { useAddStockMovement } = useProducts();
+  const { useAddStockMovement, useProduct } = useProducts();
   const { useAllSuppliers } = useSuppliers();
   const { mutate: addStockMovement, isPending: isLoading } = useAddStockMovement();
+  
+  // Buscar dados atuais do produto para ter certeza do estoque real
+  const { data: currentProduct } = useProduct(productId);
+  const realTimeStock = currentProduct?.quantity ?? currentStock;
   
   const { data: suppliers = [] } = useAllSuppliers();
   const formRef = useRef<HTMLFormElement>(null);
@@ -73,9 +77,11 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
   const watchType = form.watch('type');
   const watchQuantity = form.watch('quantity');
 
-  // Validação rigorosa de estoque insuficiente
-  const hasInsufficientStock = watchType === 'out' && watchQuantity > currentStock;
-  const isStockEmpty = currentStock === 0;
+  // Usar o estoque em tempo real para validações
+  const hasInsufficientStock = watchType === 'out' && watchQuantity > realTimeStock;
+  const isStockEmpty = realTimeStock === 0;
+
+  console.log('📊 StockMovementForm - Estoque atual:', realTimeStock, 'Quantidade solicitada:', watchQuantity, 'Tipo:', watchType);
 
   // Reset supplier when changing to 'out'
   React.useEffect(() => {
@@ -86,22 +92,24 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
 
   // Validação em tempo real da quantidade para saídas
   React.useEffect(() => {
-    if (watchType === 'out' && watchQuantity > currentStock) {
+    if (watchType === 'out' && watchQuantity > realTimeStock) {
       form.setError('quantity', {
         type: 'manual',
-        message: `Quantidade não pode ser maior que o estoque disponível (${currentStock})`
+        message: `Quantidade não pode ser maior que o estoque disponível (${realTimeStock})`
       });
     } else {
       form.clearErrors('quantity');
     }
-  }, [watchType, watchQuantity, currentStock, form]);
+  }, [watchType, watchQuantity, realTimeStock, form]);
 
   const handleSubmit = (values: StockMovementFormValues) => {
-    console.log('Validando movimentação com regras rigorosas:', values);
+    console.log('🔍 Validando movimentação antes do envio:', values);
+    console.log('📊 Estoque atual para validação:', realTimeStock);
     
-    // VALIDAÇÃO RIGOROSA - Impedir qualquer saída maior que estoque
+    // VALIDAÇÃO FINAL antes do envio
     if (values.type === 'out') {
-      if (currentStock === 0) {
+      if (realTimeStock === 0) {
+        console.error('❌ BLOQUEIO: Produto sem estoque');
         toast({
           variant: "destructive",
           title: "Produto sem estoque",
@@ -114,15 +122,16 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
         return;
       }
       
-      if (values.quantity > currentStock) {
+      if (values.quantity > realTimeStock) {
+        console.error(`❌ BLOQUEIO: Tentativa de saída de ${values.quantity} quando há apenas ${realTimeStock}`);
         toast({
           variant: "destructive",
           title: "Estoque insuficiente",
-          description: `ERRO: Tentativa de saída de ${values.quantity} unidades quando há apenas ${currentStock} em estoque. Operação bloqueada.`,
+          description: `ERRO: Tentativa de saída de ${values.quantity} unidades quando há apenas ${realTimeStock} em estoque. Operação bloqueada.`,
         });
         form.setError('quantity', {
           type: 'manual',
-          message: `Máximo permitido: ${currentStock} unidades`
+          message: `Máximo permitido: ${realTimeStock} unidades`
         });
         return;
       }
@@ -143,11 +152,11 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
       supplierId: values.type === 'out' ? undefined : values.supplierId,
     };
     
-    console.log('Enviando movimentação validada:', movement);
+    console.log('✅ Enviando movimentação validada:', movement);
     
     addStockMovement(movement, {
       onSuccess: (data) => {
-        console.log('Movimentação registrada com sucesso:', data);
+        console.log('✅ Movimentação registrada com sucesso:', data);
         toast({
           title: "Movimentação registrada",
           description: `${values.type === 'in' ? 'Entrada' : 'Saída'} de ${values.quantity} unidades registrada com sucesso!`,
@@ -155,7 +164,7 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
         onSubmit();
       },
       onError: (error: any) => {
-        console.error('Erro ao registrar movimentação:', error);
+        console.error('❌ Erro ao registrar movimentação:', error);
         toast({
           variant: "destructive",
           title: "Erro ao registrar movimentação",
@@ -210,7 +219,7 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
                   <Input
                     type="number"
                     min="1"
-                    max={watchType === 'out' ? currentStock : undefined}
+                    max={watchType === 'out' ? realTimeStock : undefined}
                     step="1"
                     disabled={isLoading || (watchType === 'out' && isStockEmpty)}
                     {...field}
@@ -219,7 +228,7 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
                 </FormControl>
                 {watchType === "out" && (
                   <FormDescription className={isStockEmpty ? "text-red-600 font-medium" : ""}>
-                    Estoque disponível: {currentStock} unidades
+                    Estoque disponível: {realTimeStock} unidades
                     {isStockEmpty && " - BLOQUEADO: Produto sem estoque!"}
                     {!isStockEmpty && hasInsufficientStock && " - ERRO: Quantidade excede estoque!"}
                   </FormDescription>

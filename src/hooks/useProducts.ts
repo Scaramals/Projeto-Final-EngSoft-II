@@ -100,8 +100,8 @@ export function useProducts() {
         }
       },
       enabled: !!user,
-      staleTime: 2 * 60 * 1000, // 2 minutos
-      gcTime: 5 * 60 * 1000, // 5 minutos
+      staleTime: 30 * 1000, // Reduzindo para 30 segundos para dados mais frescos
+      gcTime: 2 * 60 * 1000, // 2 minutos
     });
   };
 
@@ -124,13 +124,14 @@ export function useProducts() {
     });
   };
 
-  // Fetch a single product by ID
+  // Fetch a single product by ID - SEMPRE buscar dados frescos do banco
   const useProduct = (productId: string | undefined) => {
     return useQuery({
       queryKey: ['products', productId],
       queryFn: async () => {
         if (!productId) throw new Error("Product ID is required");
         
+        console.log('Buscando produto atualizado do banco de dados:', productId);
         const { data, error } = await supabase
           .from('products')
           .select('*')
@@ -141,9 +142,13 @@ export function useProducts() {
           throw new Error(`Error fetching product: ${error.message}`);
         }
         
-        return mapDbProductToProduct(data);
+        const product = mapDbProductToProduct(data);
+        console.log('Produto carregado com estoque atual:', product.quantity);
+        return product;
       },
       enabled: !!user && !!productId,
+      staleTime: 0, // Sempre buscar dados frescos para produto individual
+      gcTime: 30 * 1000, // 30 segundos
     });
   };
 
@@ -273,7 +278,7 @@ export function useProducts() {
     });
   };
 
-  // Add stock movement with ENHANCED validation and real-time stock check
+  // Add stock movement with REAL-TIME validation
   const useAddStockMovement = () => {
     return useMutation({
       mutationFn: async (movement: Partial<StockMovement>) => {
@@ -283,8 +288,8 @@ export function useProducts() {
           throw new Error('Dados de movimentação incompletos');
         }
 
-        // VALIDAÇÃO CRÍTICA: Buscar estoque atual em tempo real antes de qualquer operação
-        console.log('Buscando estoque atual em tempo real...');
+        // BUSCAR ESTOQUE ATUAL SEMPRE DO BANCO - NUNCA DO CACHE
+        console.log('🔍 Buscando estoque atual DIRETAMENTE do banco de dados...');
         const { data: currentProduct, error: productError } = await supabase
           .from('products')
           .select('quantity, name')
@@ -292,33 +297,36 @@ export function useProducts() {
           .single();
 
         if (productError) {
+          console.error('❌ Erro ao buscar produto:', productError);
           SecureLogger.error('Erro ao buscar produto atual', productError);
           throw new Error('Erro ao verificar estoque atual do produto');
         }
 
         const currentStock = currentProduct.quantity;
-        console.log(`Estoque atual em tempo real: ${currentStock} unidades`);
+        console.log(`📊 Estoque atual no banco: ${currentStock} unidades`);
 
-        // VALIDAÇÃO RIGOROSA para saídas
+        // VALIDAÇÃO ABSOLUTA para saídas
         if (movement.type === 'out') {
-          console.log(`Validando saída: ${movement.quantity} unidades solicitadas de ${currentStock} disponíveis`);
+          console.log(`🔍 Validando saída: ${movement.quantity} unidades de ${currentStock} disponíveis`);
           
           if (currentStock === 0) {
+            console.error('❌ BLOQUEIO: Produto sem estoque');
             SecureLogger.error('BLOQUEIO: Produto sem estoque');
-            throw new Error(`BLOQUEADO: Produto "${currentProduct.name}" não possui estoque disponível`);
+            throw new Error(`ERRO: Produto "${currentProduct.name}" não possui estoque disponível`);
           }
           
           if (currentStock < movement.quantity) {
-            SecureLogger.error(`BLOQUEIO: Saída de ${movement.quantity} quando há apenas ${currentStock}`);
-            throw new Error(`BLOQUEADO: Estoque insuficiente. Disponível: ${currentStock}, Solicitado: ${movement.quantity}`);
+            console.error(`❌ BLOQUEIO: Estoque insuficiente - Tentativa: ${movement.quantity}, Disponível: ${currentStock}`);
+            SecureLogger.error(`BLOQUEIO: Estoque insuficiente - Tentativa: ${movement.quantity}, Disponível: ${currentStock}`);
+            throw new Error(`ERRO: Estoque insuficiente. Disponível: ${currentStock}, Solicitado: ${movement.quantity}`);
           }
           
-          console.log('Validação de saída APROVADA');
+          console.log('✅ Validação de saída APROVADA');
         }
         
         const dbMovement = mapStockMovementToDbStockMovement(movement, user?.id);
         
-        // Registrar a movimentação (o trigger do banco fará a segunda validação e atualizará o estoque)
+        console.log('💾 Registrando movimentação no banco...');
         const { data, error } = await supabase
           .from('stock_movements')
           .insert(dbMovement)
@@ -326,9 +334,9 @@ export function useProducts() {
           .single();
           
         if (error) {
+          console.error('❌ Erro no banco:', error);
           SecureLogger.error('Erro no banco de dados', error);
           
-          // Tratar erros específicos do trigger de validação
           if (error.message && error.message.includes('Estoque insuficiente')) {
             throw new Error(`SISTEMA BLOQUEOU: ${error.message}`);
           }
@@ -336,11 +344,14 @@ export function useProducts() {
           throw new Error(`Erro ao registrar movimentação: ${error.message}`);
         }
         
+        console.log('✅ Movimentação registrada com sucesso');
         SecureLogger.success('Movimentação registrada com sucesso');
         return mapDbStockMovementToStockMovement(data);
       },
       onSuccess: (_, variables) => {
-        // Invalidar TODAS as queries relacionadas para forçar atualização
+        console.log('🔄 Invalidando todas as queries para atualizar dados...');
+        
+        // Invalidar TODAS as queries relacionadas
         queryClient.invalidateQueries({ queryKey: ['products'] });
         queryClient.invalidateQueries({ queryKey: ['products', variables.productId] });
         queryClient.invalidateQueries({ queryKey: ['productMovements', variables.productId] });
@@ -348,10 +359,10 @@ export function useProducts() {
         queryClient.invalidateQueries({ queryKey: ['recent-movements'] });
         queryClient.invalidateQueries({ queryKey: ['low-stock-products'] });
         
-        // Limpar cache da API para forçar busca de dados frescos
+        // Limpar cache da API
         ApiService.clearCache();
         
-        // Aguardar um pouco e forçar refetch do produto específico
+        // Forçar refetch imediato do produto
         setTimeout(() => {
           queryClient.refetchQueries({ queryKey: ['products', variables.productId] });
         }, 100);
@@ -360,6 +371,7 @@ export function useProducts() {
         toast.success(`${variables.type === 'in' ? 'Entrada' : 'Saída'} de ${variables.quantity} unidades registrada com sucesso!`);
       },
       onError: (error: any) => {
+        console.error('❌ ERRO CRÍTICO:', error.message);
         SecureLogger.error('ERRO CRÍTICO no registro da movimentação', error);
         toast.error(`Operação bloqueada: ${error.message}`);
       }
