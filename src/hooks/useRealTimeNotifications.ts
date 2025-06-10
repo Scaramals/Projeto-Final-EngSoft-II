@@ -22,12 +22,13 @@ export function useRealTimeNotifications() {
         {
           event: 'UPDATE',
           schema: 'public',
-          table: 'products',
-          filter: 'quantity=lte.minimum_stock'
+          table: 'products'
         },
-        (payload) => {
+        async (payload) => {
           const product = payload.new;
-          if (product.quantity <= (product.minimum_stock || 5)) {
+          
+          // Verificar se o produto tem estoque baixo usando a função RPC
+          if (product.minimum_stock && product.quantity <= product.minimum_stock) {
             const newAlert: Alert = {
               id: `low-stock-${product.id}`,
               type: 'low_stock',

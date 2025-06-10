@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { SecureLogger } from "./secureLogger";
 
@@ -37,12 +36,9 @@ export class AlertsService {
     try {
       SecureLogger.info('Gerando alertas de estoque baixo');
       
-      // Corrigir a consulta para evitar erro de sintaxe SQL
+      // Usar função RPC para buscar produtos com estoque baixo
       const { data: lowStockProducts, error } = await supabase
-        .from('products')
-        .select('id, name, quantity, minimum_stock')
-        .not('minimum_stock', 'is', null)
-        .filter('quantity', 'lt', 'minimum_stock');
+        .rpc('get_low_stock_products');
 
       if (error) {
         SecureLogger.error('Erro ao buscar produtos com estoque baixo', error);
