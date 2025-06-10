@@ -1,6 +1,6 @@
 
-import { CategoriesService } from "./categoriesService";
-import { ProductsService } from "./productsService";
+import { CategoriesService } from "./categories.service";
+import { ProductsService } from "./products.service";
 import { SuppliersService } from "./suppliersService";
 import { StockMovementsService } from "./stockMovementsService";
 import { cacheService } from "./cacheService";
@@ -11,14 +11,25 @@ import { cacheService } from "./cacheService";
  */
 export const ApiService = {
   // Categorias
-  getDistinctCategories: CategoriesService.getDistinctCategories,
-  getCategoryNameById: CategoriesService.getCategoryNameById,
+  getDistinctCategories: async () => {
+    const categories = await CategoriesService.getAllCategories();
+    return categories.map(cat => ({ id: cat.id, name: cat.name }));
+  },
+  getCategoryNameById: CategoriesService.getCategoryById,
 
   // Produtos
   getAllProducts: ProductsService.getAllProducts,
-  getProducts: ProductsService.getProducts,
-  getLowStockProducts: ProductsService.getLowStockProducts,
-  getCurrentStock: ProductsService.getCurrentStock,
+  getProducts: ProductsService.getAllProducts,
+  getLowStockProducts: async (filters?: any) => {
+    const products = await ProductsService.getAllProducts(filters);
+    return products.filter(product => 
+      product.quantity <= (product.minimumStock || 0)
+    );
+  },
+  getCurrentStock: async () => {
+    const products = await ProductsService.getAllProducts();
+    return products.reduce((total, product) => total + product.quantity, 0);
+  },
 
   // Fornecedores
   getAllSuppliers: SuppliersService.getAllSuppliers,

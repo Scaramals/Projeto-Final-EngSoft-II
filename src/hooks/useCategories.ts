@@ -15,6 +15,17 @@ export function useCategories() {
     });
   };
 
+  const useDistinctCategories = () => {
+    return useQuery({
+      queryKey: ['categories', 'distinct'],
+      queryFn: async () => {
+        const categories = await CategoriesService.getAllCategories();
+        return categories.map(cat => ({ id: cat.id, name: cat.name }));
+      },
+      staleTime: 5 * 60 * 1000, // 5 minutes
+    });
+  };
+
   const useCategoryById = (id: string) => {
     return useQuery({
       queryKey: ['category', id],
@@ -87,6 +98,7 @@ export function useCategories() {
 
   return {
     useAllCategories,
+    useDistinctCategories,
     useCategoryById,
     useCreateCategory,
     useUpdateCategory,
