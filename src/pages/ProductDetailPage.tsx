@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -162,11 +163,11 @@ const ProductDetailPage: React.FC = () => {
   return (
     <AppLayout>
       {isEditing ? (
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6 w-full">
           <div className="flex items-center justify-between">
-            <h1 className="text-3xl font-bold">Editar Produto</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold">Editar Produto</h1>
           </div>
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="card-responsive">
             <ProductForm
               defaultValues={getProductFormDefaultValues()}
               onSubmit={handleEditProduct}
@@ -176,11 +177,11 @@ const ProductDetailPage: React.FC = () => {
           </div>
         </div>
       ) : isAddingMovement ? (
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6 w-full">
           <div className="flex items-center justify-between">
-            <h1 className="text-3xl font-bold">Registrar Movimentação</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold">Registrar Movimentação</h1>
           </div>
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="card-responsive">
             <StockMovementForm
               productId={product?.id || ''}
               onSubmit={handleAddMovement}
@@ -190,16 +191,17 @@ const ProductDetailPage: React.FC = () => {
           </div>
         </div>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6 w-full">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div>
-              <h1 className="text-3xl font-bold">{product?.name || 'Carregando...'}</h1>
+            <div className="min-w-0 flex-1">
+              <h1 className="text-2xl sm:text-3xl font-bold truncate">{product?.name || 'Carregando...'}</h1>
               <p className="text-muted-foreground">Detalhes do produto</p>
             </div>
-            <div className="flex space-x-3">
+            <div className="flex flex-wrap gap-2 sm:gap-3 w-full sm:w-auto">
               <Button 
                 variant="outline" 
                 onClick={() => setIsAddingMovement(true)}
+                className="flex-1 sm:flex-none btn-responsive"
               >
                 <ArrowUpDown className="mr-2 h-4 w-4" />
                 Registrar Movimentação
@@ -207,13 +209,14 @@ const ProductDetailPage: React.FC = () => {
               <Button 
                 variant="outline" 
                 onClick={() => setIsEditing(true)}
+                className="flex-1 sm:flex-none btn-responsive"
               >
                 <Edit className="mr-2 h-4 w-4" />
                 Editar
               </Button>
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <Button variant="destructive">
+                  <Button variant="destructive" className="flex-1 sm:flex-none btn-responsive">
                     <Trash2 className="mr-2 h-4 w-4" />
                     Excluir
                   </Button>
@@ -240,21 +243,21 @@ const ProductDetailPage: React.FC = () => {
             </div>
           </div>
           
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList>
-              <TabsTrigger value="details">Detalhes</TabsTrigger>
-              <TabsTrigger value="movements">Movimentações</TabsTrigger>
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="w-full sm:w-auto">
+              <TabsTrigger value="details" className="flex-1 sm:flex-none">Detalhes</TabsTrigger>
+              <TabsTrigger value="movements" className="flex-1 sm:flex-none">Movimentações</TabsTrigger>
             </TabsList>
-            <TabsContent value="details" className="space-y-6 pt-4">
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="md:col-span-2">
-                  <div className="bg-white rounded-lg shadow p-6">
-                    <h2 className="text-xl font-semibold mb-4">Informações do Produto</h2>
+            
+            <TabsContent value="details" className="space-y-4 sm:space-y-6 pt-4 w-full">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+                <div className="lg:col-span-2">
+                  <div className="card-responsive">
+                    <h2 className="text-lg sm:text-xl font-semibold mb-4">Informações do Produto</h2>
                     <div className="space-y-4">
                       <div>
                         <p className="text-sm text-muted-foreground">Descrição</p>
-                        <p>{product.description || "Sem descrição"}</p>
+                        <p className="break-words">{product.description || "Sem descrição"}</p>
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
@@ -269,11 +272,11 @@ const ProductDetailPage: React.FC = () => {
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <p className="text-sm text-muted-foreground">Data de Criação</p>
-                          <p>{formatDate(product.createdAt)}</p>
+                          <p className="text-sm">{formatDate(product.createdAt)}</p>
                         </div>
                         <div>
                           <p className="text-sm text-muted-foreground">Última Atualização</p>
-                          <p>{formatDate(product.updatedAt)}</p>
+                          <p className="text-sm">{formatDate(product.updatedAt)}</p>
                         </div>
                       </div>
                       {product.suppliers && product.suppliers.length > 0 && (
@@ -281,10 +284,10 @@ const ProductDetailPage: React.FC = () => {
                           <p className="text-sm text-muted-foreground">Fornecedores</p>
                           <div className="space-y-2">
                             {product.suppliers.map((supplier) => (
-                              <div key={supplier.id} className="bg-gray-50 p-2 rounded">
-                                <p className="font-medium">{supplier.name}</p>
+                              <div key={supplier.id} className="bg-muted/50 p-3 rounded-md">
+                                <p className="font-medium text-sm">{supplier.name}</p>
                                 {supplier.cnpj && (
-                                  <p className="text-sm text-muted-foreground">CNPJ: {supplier.cnpj}</p>
+                                  <p className="text-xs text-muted-foreground">CNPJ: {supplier.cnpj}</p>
                                 )}
                               </div>
                             ))}
@@ -296,8 +299,8 @@ const ProductDetailPage: React.FC = () => {
                 </div>
                 
                 <div>
-                  <div className="bg-white rounded-lg shadow p-6">
-                    <h2 className="text-xl font-semibold mb-4">Estoque</h2>
+                  <div className="card-responsive">
+                    <h2 className="text-lg sm:text-xl font-semibold mb-4">Estoque</h2>
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">
                         <p className="text-sm text-muted-foreground">Quantidade atual</p>
@@ -330,22 +333,22 @@ const ProductDetailPage: React.FC = () => {
               </div>
             </TabsContent>
             
-            <TabsContent value="movements" className="space-y-6 pt-4">
-              <div className="bg-white rounded-lg shadow overflow-hidden">
-                <div className="p-6">
-                  <h2 className="text-xl font-semibold mb-4">Histórico de Movimentações</h2>
-                  <Button onClick={() => setIsAddingMovement(true)}>
+            <TabsContent value="movements" className="space-y-4 sm:space-y-6 pt-4 w-full">
+              <div className="card-responsive overflow-hidden">
+                <div className="p-4 sm:p-6">
+                  <h2 className="text-lg sm:text-xl font-semibold mb-4">Histórico de Movimentações</h2>
+                  <Button onClick={() => setIsAddingMovement(true)} className="w-full sm:w-auto">
                     <Plus className="mr-2 h-4 w-4" />
                     Nova Movimentação
                   </Button>
                 </div>
                 
                 {loadingMovements ? (
-                  <div className="p-6">
+                  <div className="p-4 sm:p-6">
                     <Skeleton className="h-32 w-full" />
                   </div>
                 ) : movementsError ? (
-                  <div className="text-center p-6">
+                  <div className="text-center p-4 sm:p-6">
                     <p className="text-destructive">
                       Erro ao carregar movimentações
                     </p>
@@ -356,54 +359,56 @@ const ProductDetailPage: React.FC = () => {
                     </Button>
                   </div>
                 ) : (
-                  <div className="overflow-x-auto">
+                  <div className="table-responsive">
                     <table className="w-full">
                       <thead className="bg-muted text-muted-foreground">
                         <tr>
-                          <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
+                          <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
                             Tipo
                           </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
+                          <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
                             Quantidade
                           </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
+                          <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium uppercase tracking-wider hidden sm:table-cell">
                             Data
                           </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
+                          <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium uppercase tracking-wider hidden md:table-cell">
                             Fornecedor
                           </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
+                          <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium uppercase tracking-wider hidden lg:table-cell">
                             Observações
                           </th>
                         </tr>
                       </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
+                      <tbody className="bg-card divide-y divide-border">
                         {stockMovements.map((movement) => (
                           <tr key={movement.id}>
-                            <td className="px-6 py-4 whitespace-nowrap">
+                            <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
                               <span
                                 className={`status-badge ${
                                   movement.type === 'in'
-                                    ? 'bg-green-100 text-green-800'
-                                    : 'bg-red-100 text-red-800'
+                                    ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300'
+                                    : 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300'
                                 }`}
                               >
                                 {movement.type === 'in' ? 'Entrada' : 'Saída'}
                               </span>
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <span className="font-medium">
-                                {movement.quantity} unidades
+                            <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
+                              <span className="font-medium text-sm">
+                                {movement.quantity}
                               </span>
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
+                            <td className="px-3 sm:px-6 py-4 whitespace-nowrap hidden sm:table-cell text-sm">
                               {formatDate(movement.date)}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
+                            <td className="px-3 sm:px-6 py-4 whitespace-nowrap hidden md:table-cell text-sm">
                               {movement.supplierName || '-'}
                             </td>
-                            <td className="px-6 py-4">
-                              {movement.notes || '-'}
+                            <td className="px-3 sm:px-6 py-4 hidden lg:table-cell text-sm">
+                              <div className="max-w-xs truncate">
+                                {movement.notes || '-'}
+                              </div>
                             </td>
                           </tr>
                         ))}
@@ -413,7 +418,7 @@ const ProductDetailPage: React.FC = () => {
                 )}
                 
                 {stockMovements.length === 0 && !loadingMovements && !movementsError && (
-                  <div className="text-center p-6">
+                  <div className="text-center p-4 sm:p-6">
                     <p className="text-muted-foreground">
                       Nenhuma movimentação registrada para este produto
                     </p>
