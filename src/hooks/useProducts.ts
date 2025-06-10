@@ -100,8 +100,8 @@ export function useProducts() {
         }
       },
       enabled: !!user,
-      staleTime: 30 * 1000, // Reduzindo para 30 segundos para dados mais frescos
-      gcTime: 2 * 60 * 1000, // 2 minutos
+      staleTime: 0, // SEMPRE buscar dados frescos
+      gcTime: 30 * 1000, // 30 segundos
     });
   };
 
@@ -131,7 +131,7 @@ export function useProducts() {
       queryFn: async () => {
         if (!productId) throw new Error("Product ID is required");
         
-        console.log('Buscando produto atualizado do banco de dados:', productId);
+        console.log('🔄 Buscando produto ATUALIZADO do banco de dados:', productId);
         const { data, error } = await supabase
           .from('products')
           .select('*')
@@ -139,16 +139,19 @@ export function useProducts() {
           .single();
           
         if (error) {
+          console.error('❌ Erro ao buscar produto:', error);
           throw new Error(`Error fetching product: ${error.message}`);
         }
         
         const product = mapDbProductToProduct(data);
-        console.log('Produto carregado com estoque atual:', product.quantity);
+        console.log('📊 Produto carregado com estoque REAL:', product.quantity);
         return product;
       },
       enabled: !!user && !!productId,
-      staleTime: 0, // Sempre buscar dados frescos para produto individual
-      gcTime: 30 * 1000, // 30 segundos
+      staleTime: 0, // SEMPRE buscar dados frescos
+      gcTime: 10 * 1000, // 10 segundos apenas
+      refetchOnMount: true, // SEMPRE refetch ao montar
+      refetchOnWindowFocus: true, // Refetch quando a janela ganha foco
     });
   };
 
@@ -282,7 +285,7 @@ export function useProducts() {
   const useAddStockMovement = () => {
     return useMutation({
       mutationFn: async (movement: Partial<StockMovement>) => {
-        SecureLogger.info('Iniciando registro de movimentação com validação em tempo real');
+        SecureLogger.info('Iniciando registro de movimentação com validação EXTREMA');
         
         if (!movement.productId || !movement.quantity || !movement.type) {
           throw new Error('Dados de movimentação incompletos');
@@ -303,7 +306,7 @@ export function useProducts() {
         }
 
         const currentStock = currentProduct.quantity;
-        console.log(`📊 Estoque atual no banco: ${currentStock} unidades`);
+        console.log(`📊 Estoque REAL atual no banco: ${currentStock} unidades`);
 
         // VALIDAÇÃO ABSOLUTA para saídas
         if (movement.type === 'out') {
@@ -349,9 +352,9 @@ export function useProducts() {
         return mapDbStockMovementToStockMovement(data);
       },
       onSuccess: (_, variables) => {
-        console.log('🔄 Invalidando todas as queries para atualizar dados...');
+        console.log('🔄 Invalidando e forçando refetch de TODAS as queries...');
         
-        // Invalidar TODAS as queries relacionadas
+        // Invalidar e forçar refetch IMEDIATO de TODAS as queries relacionadas
         queryClient.invalidateQueries({ queryKey: ['products'] });
         queryClient.invalidateQueries({ queryKey: ['products', variables.productId] });
         queryClient.invalidateQueries({ queryKey: ['productMovements', variables.productId] });
@@ -362,10 +365,16 @@ export function useProducts() {
         // Limpar cache da API
         ApiService.clearCache();
         
-        // Forçar refetch imediato do produto
+        // Forçar refetch MÚLTIPLO e IMEDIATO
         setTimeout(() => {
           queryClient.refetchQueries({ queryKey: ['products', variables.productId] });
-        }, 100);
+          queryClient.refetchQueries({ queryKey: ['products'] });
+        }, 50);
+        
+        // Refetch adicional após um tempo
+        setTimeout(() => {
+          queryClient.refetchQueries({ queryKey: ['products', variables.productId] });
+        }, 200);
         
         SecureLogger.success(`Movimentação ${variables.type} de ${variables.quantity} unidades registrada com SUCESSO`);
         toast.success(`${variables.type === 'in' ? 'Entrada' : 'Saída'} de ${variables.quantity} unidades registrada com sucesso!`);
@@ -374,6 +383,10 @@ export function useProducts() {
         console.error('❌ ERRO CRÍTICO:', error.message);
         SecureLogger.error('ERRO CRÍTICO no registro da movimentação', error);
         toast.error(`Operação bloqueada: ${error.message}`);
+        
+        // Forçar refetch para sincronizar após erro
+        queryClient.refetchQueries({ queryKey: ['products'] });
+        ApiService.clearCache();
       }
     });
   };

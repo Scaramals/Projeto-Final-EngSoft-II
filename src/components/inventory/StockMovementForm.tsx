@@ -57,9 +57,9 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
   const { useAllSuppliers } = useSuppliers();
   const { mutate: addStockMovement, isPending: isLoading } = useAddStockMovement();
   
-  // Buscar dados atuais do produto para ter certeza do estoque real
-  const { data: currentProduct } = useProduct(productId);
-  const realTimeStock = currentProduct?.quantity ?? currentStock;
+  // SEMPRE buscar dados atuais do produto para ter certeza do estoque real
+  const { data: currentProduct, refetch: refetchProduct } = useProduct(productId);
+  const realTimeStock = currentProduct?.quantity ?? 0; // Usar 0 como fallback
   
   const { data: suppliers = [] } = useAllSuppliers();
   const formRef = useRef<HTMLFormElement>(null);
@@ -81,7 +81,7 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
   const hasInsufficientStock = watchType === 'out' && watchQuantity > realTimeStock;
   const isStockEmpty = realTimeStock === 0;
 
-  console.log('📊 StockMovementForm - Estoque atual:', realTimeStock, 'Quantidade solicitada:', watchQuantity, 'Tipo:', watchType);
+  console.log('📊 StockMovementForm - Estoque REAL do banco:', realTimeStock, 'Quantidade solicitada:', watchQuantity, 'Tipo:', watchType);
 
   // Reset supplier when changing to 'out'
   React.useEffect(() => {
@@ -89,6 +89,12 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
       form.setValue('supplierId', '');
     }
   }, [watchType, form]);
+
+  // Forçar refetch do produto quando o formulário é montado
+  React.useEffect(() => {
+    console.log('🔄 Forçando refetch do produto para obter estoque atual...');
+    refetchProduct();
+  }, [refetchProduct]);
 
   // Validação em tempo real da quantidade para saídas
   React.useEffect(() => {
@@ -104,7 +110,7 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
 
   const handleSubmit = (values: StockMovementFormValues) => {
     console.log('🔍 Validando movimentação antes do envio:', values);
-    console.log('📊 Estoque atual para validação:', realTimeStock);
+    console.log('📊 Estoque REAL atual para validação:', realTimeStock);
     
     // VALIDAÇÃO FINAL antes do envio
     if (values.type === 'out') {
@@ -170,6 +176,8 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
           title: "Erro ao registrar movimentação",
           description: error.message || "Ocorreu um erro inesperado. Verifique os dados e tente novamente.",
         });
+        // Forçar refetch para sincronizar estoque após erro
+        refetchProduct();
       }
     });
   };
