@@ -1,10 +1,6 @@
 
-import React from "react";
-import { Package, BarChart, AlertTriangle, ArrowUpDown, RefreshCw } from "lucide-react";
+import React, { useState, useEffect } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
-import { formatCurrency } from "@/lib/utils";
 import { useOptimizedDashboard } from "@/hooks/useOptimizedDashboard";
 import { useDashboard } from "@/hooks/useDashboard";
 import { OptimizedApiService } from "@/services/optimizedApi";
@@ -12,30 +8,28 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { DashboardStats } from "@/types";
 import { SecureLogger } from "@/services/secureLogger";
-import { MetricsCard } from "@/components/dashboard/MetricsCard";
-import { EnhancedDashboard } from "@/components/dashboard/EnhancedDashboard";
 import { WelcomeMessage } from "@/components/dashboard/WelcomeMessage";
 import { RealTimePerformanceSummary } from "@/components/dashboard/RealTimePerformanceSummary";
+import { EnhancedDashboard } from "@/components/dashboard/EnhancedDashboard";
+import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
+import { DashboardMetrics } from "@/components/dashboard/DashboardMetrics";
 import { useRealTimeNotifications } from "@/hooks/useRealTimeNotifications";
 import { useData } from "@/contexts/DataContext";
-import { useState, useEffect } from "react";
 
 const DashboardPage: React.FC = () => {
   const { toast } = useToast();
   const { refreshAll: refreshOptimized } = useOptimizedDashboard();
   const { products, fetchProducts, loadingProducts } = useData();
+  const { recentMovements, refreshAll: refreshDashboard } = useDashboard();
   
-  // Hook de notificações em tempo real
   useRealTimeNotifications();
 
-  // Estados locais para estatísticas
   const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
   const [isStatsLoading, setIsStatsLoading] = useState(false);
   const [monthlyComparison, setMonthlyComparison] = useState<any>(null);
   const [isComparisonLoading, setIsComparisonLoading] = useState(false);
   const [lowStockCount, setLowStockCount] = useState(0);
 
-  // Buscar estatísticas reais da API com comparação mensal
   const fetchDashboardStats = async () => {
     setIsStatsLoading(true);
     try {
@@ -57,7 +51,6 @@ const DashboardPage: React.FC = () => {
     }
   };
 
-  // Buscar dados de comparação mensal
   const fetchMonthlyComparison = async () => {
     setIsComparisonLoading(true);
     try {
@@ -67,13 +60,11 @@ const DashboardPage: React.FC = () => {
       const currentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
       const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
       
-      // Buscar movimentações do mês atual
       const { data: currentData, error: currentError } = await supabase
         .from('stock_movements')
         .select('quantity, type')
         .gte('date', currentMonth.toISOString());
 
-      // Buscar movimentações do mês passado
       const { data: lastData, error: lastError } = await supabase
         .from('stock_movements')
         .select('quantity, type')
@@ -102,7 +93,6 @@ const DashboardPage: React.FC = () => {
     }
   };
 
-  // Buscar contagem de produtos com estoque baixo
   const fetchLowStockCount = async () => {
     try {
       SecureLogger.info('Buscando contagem de produtos com estoque baixo');
@@ -126,8 +116,6 @@ const DashboardPage: React.FC = () => {
       SecureLogger.error('Erro ao buscar contagem de estoque baixo', error);
     }
   };
-
-  const { recentMovements, refreshAll: refreshDashboard } = useDashboard();
 
   const isLoading = isStatsLoading || isComparisonLoading || loadingProducts;
 
@@ -158,7 +146,6 @@ const DashboardPage: React.FC = () => {
     }
   };
 
-  // Carregar dados iniciais
   useEffect(() => {
     fetchDashboardStats();
     fetchMonthlyComparison();
@@ -169,92 +156,20 @@ const DashboardPage: React.FC = () => {
   return (
     <AppLayout>
       <div className="space-y-4 md:space-y-6 p-2 md:p-0 max-w-full overflow-hidden">
-        {/* Mensagem de boas-vindas */}
         <WelcomeMessage />
+        
+        <DashboardHeader onRefresh={handleRefresh} isLoading={isLoading} />
 
-        {/* Header responsivo */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold">Dashboard</h1>
-            <p className="text-sm md:text-base text-muted-foreground">
-              Visão geral do seu estoque e operações em tempo real
-            </p>
-          </div>
-          <Button 
-            onClick={handleRefresh} 
-            disabled={isLoading}
-            size="sm"
-            className="w-full sm:w-auto"
-          >
-            <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-            Atualizar
-          </Button>
-        </div>
+        <DashboardMetrics
+          isLoading={isLoading}
+          dashboardStats={dashboardStats}
+          monthlyComparison={monthlyComparison}
+          lowStockCount={lowStockCount}
+          productsLength={products.length}
+        />
 
-        {/* Cards de métricas modernos */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
-          {isLoading ? (
-            <>
-              {[...Array(4)].map((_, i) => (
-                <Skeleton key={i} className="h-32" />
-              ))}
-            </>
-          ) : (
-            <>
-              <MetricsCard
-                title="Total de Produtos"
-                value={Number(dashboardStats?.totalProducts) || products.length}
-                description="Produtos cadastrados"
-                icon={Package}
-                trend={{
-                  value: monthlyComparison?.movementsGrowth || 0,
-                  isPositive: (monthlyComparison?.movementsGrowth || 0) >= 0,
-                  label: "vs mês anterior"
-                }}
-              />
-              
-              <MetricsCard
-                title="Estoque Baixo"
-                value={lowStockCount || 0}
-                description="Necessitam reposição"
-                icon={AlertTriangle}
-                badge={{
-                  text: "Atenção",
-                  variant: "destructive"
-                }}
-              />
-              
-              <MetricsCard
-                title="Valor Total"
-                value={formatCurrency(Number(dashboardStats?.totalValue) || 0)}
-                description="Valor em estoque"
-                icon={BarChart}
-                trend={{
-                  value: Math.abs(monthlyComparison?.entriesGrowth || 0),
-                  isPositive: (monthlyComparison?.entriesGrowth || 0) >= 0,
-                  label: "vs mês anterior"
-                }}
-              />
-              
-              <MetricsCard
-                title="Movimentações"
-                value={Number(dashboardStats?.recentMovementsCount) || 0}
-                description="Últimos 30 dias"
-                icon={ArrowUpDown}
-                trend={{
-                  value: Math.abs(monthlyComparison?.movementsGrowth || 0),
-                  isPositive: (monthlyComparison?.movementsGrowth || 0) >= 0,
-                  label: "vs mês anterior"
-                }}
-              />
-            </>
-          )}
-        </div>
-
-        {/* Resumo de Performance em Tempo Real */}
         <RealTimePerformanceSummary />
-
-        {/* Dashboard aprimorado */}
+        
         <EnhancedDashboard />
       </div>
     </AppLayout>

@@ -14,10 +14,11 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { AutoCurrencyInput } from "@/components/ui/auto-currency-input";
 import { ProductFormData } from "@/types";
 import { CategorySelect } from "@/components/products/CategorySelect";
 import { ImageUpload } from "@/components/products/ImageUpload";
+import { PriceField } from "@/components/products/PriceField";
+import { QuantityField } from "@/components/inventory/forms/QuantityField";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { 
   productNameSchema, 
@@ -31,7 +32,7 @@ const productFormSchema = z.object({
   description: z.string().optional(),
   quantity: quantitySchema,
   price: currencySchema,
-  categoryId: z.string().optional(), // Corrigido
+  categoryId: z.string().optional(),
   minimumStock: quantitySchema.optional(),
   imageUrl: z.string().optional(),
 });
@@ -58,7 +59,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
       description: "",
       quantity: 0,
       price: 0,
-      categoryId: "", // Corrigido
+      categoryId: "",
       minimumStock: 5,
       imageUrl: "",
       ...defaultValues,
@@ -69,7 +70,6 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     try {
       setSubmitError("");
       
-      // Validação adicional antes de enviar
       if (!data.name?.trim()) {
         setSubmitError("Nome do produto é obrigatório");
         return;
@@ -85,7 +85,6 @@ export const ProductForm: React.FC<ProductFormProps> = ({
         return;
       }
 
-      // Limpar dados antes de enviar
       const cleanData = {
         ...data,
         name: data.name.trim(),
@@ -98,6 +97,8 @@ export const ProductForm: React.FC<ProductFormProps> = ({
       setSubmitError("Erro ao salvar produto. Tente novamente.");
     }
   };
+
+  const clearError = () => setSubmitError("");
 
   return (
     <Form {...form}>
@@ -123,7 +124,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                       {...field}
                       onChange={(e) => {
                         field.onChange(e);
-                        if (submitError) setSubmitError("");
+                        clearError();
                       }}
                     />
                   </FormControl>
@@ -134,7 +135,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
 
             <FormField
               control={form.control}
-              name="categoryId" // Corrigido
+              name="categoryId"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Categoria</FormLabel>
@@ -143,7 +144,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                       value={field.value || ''} 
                       onChange={(value) => {
                         field.onChange(value);
-                        if (submitError) setSubmitError("");
+                        clearError();
                       }} 
                     />
                   </FormControl>
@@ -153,73 +154,26 @@ export const ProductForm: React.FC<ProductFormProps> = ({
             />
 
             <div className="grid grid-cols-2 gap-4">
-              <FormField
+              <QuantityField
                 control={form.control}
                 name="quantity"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Quantidade*</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="text"
-                        placeholder="Ex: 10"
-                        {...field}
-                        value={field.value === 0 ? '' : field.value.toString()}
-                        onChange={(e) => {
-                          const value = e.target.value.replace(/\D/g, '');
-                          field.onChange(value === '' ? 0 : parseInt(value, 10));
-                          if (submitError) setSubmitError("");
-                        }}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                label="Quantidade"
+                required
               />
 
-              <FormField
+              <QuantityField
                 control={form.control}
                 name="minimumStock"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Estoque mínimo</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="text"
-                        placeholder="Ex: 5 (recomendado)"
-                        {...field}
-                        value={field.value === 0 ? '' : field.value?.toString() || ''}
-                        onChange={(e) => {
-                          const value = e.target.value.replace(/\D/g, '');
-                          field.onChange(value === '' ? 0 : parseInt(value, 10));
-                          if (submitError) setSubmitError("");
-                        }}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                label="Estoque mínimo"
+                placeholder="Ex: 5 (recomendado)"
               />
             </div>
 
-            <FormField
+            <PriceField
               control={form.control}
               name="price"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Preço*</FormLabel>
-                  <FormControl>
-                    <AutoCurrencyInput
-                      value={field.value}
-                      onChange={(value) => {
-                        field.onChange(value);
-                        if (submitError) setSubmitError("");
-                      }}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+              required
+              onErrorClear={clearError}
             />
           </div>
 
@@ -238,7 +192,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                       {...field}
                       onChange={(e) => {
                         field.onChange(e);
-                        if (submitError) setSubmitError("");
+                        clearError();
                       }}
                     />
                   </FormControl>
@@ -258,11 +212,11 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                       value={field.value}
                       onChange={(url) => {
                         field.onChange(url);
-                        if (submitError) setSubmitError("");
+                        clearError();
                       }}
                       onRemove={() => {
                         field.onChange('');
-                        if (submitError) setSubmitError("");
+                        clearError();
                       }}
                     />
                   </FormControl>

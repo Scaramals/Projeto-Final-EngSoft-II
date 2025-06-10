@@ -28,14 +28,10 @@ export const useStockForm = (initialData?: Partial<StockFormData>) => {
 
   const updateField = useCallback((field: keyof StockFormData, value: any) => {
     setFormData(prev => {
-      // FIXO: evitar atualizações desnecessárias que causam valores dobrados
-      if (prev[field] === value) {
-        return prev;
-      }
+      if (prev[field] === value) return prev;
       return { ...prev, [field]: value };
     });
     
-    // Limpar erro do campo quando modificado
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: undefined }));
     }
@@ -44,12 +40,10 @@ export const useStockForm = (initialData?: Partial<StockFormData>) => {
   const validateForm = useCallback((currentStock: number): boolean => {
     const newErrors: StockFormValidation = {};
 
-    // Validar tipo
     if (!formData.type) {
       newErrors.type = 'Selecione o tipo de movimentação';
     }
 
-    // Validar quantidade
     if (!formData.quantity || formData.quantity <= 0) {
       newErrors.quantity = 'Quantidade deve ser maior que zero';
     } else if (!Number.isInteger(formData.quantity)) {
