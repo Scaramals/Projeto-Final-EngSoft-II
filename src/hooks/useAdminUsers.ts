@@ -1,5 +1,5 @@
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 
@@ -18,13 +18,15 @@ interface UpdateUserRoleData {
 }
 
 export function useAdminUsers() {
-  const queryClient = useQueryClient();
+  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
 
-  // Buscar todos os usuários
-  const users = useQuery({
-    queryKey: ['admin-users'],
-    queryFn: async () => {
+  const fetchUsers = useCallback(async () => {
+    setIsLoading(true);
+    try {
       console.log('Fetching users from profiles table...');
       const { data, error } = await supabase
         .from('profiles')
@@ -37,13 +39,26 @@ export function useAdminUsers() {
       }
 
       console.log('Users fetched:', data);
-      return data as AdminUser[];
-    },
-  });
+      setUsers(data as AdminUser[]);
+    } catch (error: any) {
+      console.error('Error fetching users:', error);
+      toast({
+        variant: "destructive",
+        title: "Erro ao buscar usuários",
+        description: error.message,
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [toast]);
 
-  // Atualizar role do usuário
-  const updateUserRole = useMutation({
-    mutationFn: async ({ userId, role, isMaster }: UpdateUserRoleData) => {
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
+
+  const updateUserRole = useCallback(async ({ userId, role, isMaster }: UpdateUserRoleData) => {
+    setIsUpdating(true);
+    try {
       console.log('Updating user role:', { userId, role, isMaster });
       const { data, error } = await supabase
         .from('profiles')
@@ -61,28 +76,38 @@ export function useAdminUsers() {
       }
 
       console.log('User role updated successfully:', data);
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+      
+      // Update local state
+      setUsers(prevUsers => 
+        prevUsers.map(user => 
+          user.id === userId 
+            ? { ...user, role, is_master: isMaster }
+            : user
+        )
+      );
+
       toast({
         title: "Usuário atualizado",
         description: "As permissões do usuário foram atualizadas com sucesso!",
       });
-    },
-    onError: (error) => {
+
+      return data;
+    } catch (error: any) {
       console.error('Update user role error:', error);
       toast({
         variant: "destructive",
         title: "Erro ao atualizar usuário",
         description: error.message,
       });
+      throw error;
+    } finally {
+      setIsUpdating(false);
     }
-  });
+  }, [toast]);
 
-  // Deletar perfil
-  const deleteProfile = useMutation({
-    mutationFn: async (userId: string) => {
+  const deleteProfile = useCallback(async (userId: string) => {
+    setIsDeleting(true);
+    try {
       console.log('Deleting profile:', userId);
       const { error } = await supabase
         .from('profiles')
@@ -95,29 +120,39 @@ export function useAdminUsers() {
       }
 
       console.log('Profile deleted successfully');
-      return userId;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+      
+      // Update local state
+      setUsers(prevUsers => prevUsers.filter(user => user.id !== userId));
+
       toast({
         title: "Usuário excluído",
         description: "O usuário foi removido com sucesso!",
       });
-    },
-    onError: (error) => {
+
+      return userId;
+    } catch (error: any) {
       console.error('Delete profile error:', error);
       toast({
         variant: "destructive",
         title: "Erro ao excluir usuário",
         description: error.message,
       });
+      throw error;
+    } finally {
+      setIsDeleting(false);
     }
-  });
+  }, [toast]);
 
   return {
-    users: users.data,
-    isLoading: users.isLoading,
-    updateUserRole,
-    deleteProfile
+    users,
+    isLoading,
+    updateUserRole: {
+      mutateAsync: updateUserRole,
+      isPending: isUpdating
+    },
+    deleteProfile: {
+      mutateAsync: deleteProfile,
+      isPending: isDeleting
+    }
   };
 }
