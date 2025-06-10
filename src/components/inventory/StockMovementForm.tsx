@@ -1,304 +1,281 @@
 
-import React, { useRef } from "react";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { StockMovement } from "@/types";
-import { useToast } from "@/components/ui/use-toast";
-import { useProducts } from "@/hooks/useProducts";
-import { useSuppliers } from "@/hooks/useSuppliers";
-import { useStockMovements } from "@/hooks/useStockMovements";
+import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { z } from "zod";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Form, FormField } from "@/components/ui/form";
+import { Textarea } from "@/components/ui/textarea";
+import { useStockMovements } from "@/hooks/useStockMovements";
+import { useToast } from "@/components/ui/use-toast";
+import { StockValidationService } from "@/services/stockValidationService";
 import { MovementTypeField } from "./MovementTypeField";
 import { QuantityField } from "./QuantityField";
-import { StockValidationService } from "@/services/stockValidationService";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertTriangle, CheckCircle } from "lucide-react";
+
+const formSchema = z.object({
+  type: z.enum(["in", "out"], {
+    required_error: "Selecione o tipo de movimentação",
+  }),
+  quantity: z.number().min(1, "Quantidade deve ser maior que 0"),
+  notes: z.string().optional(),
+  supplierId: z.string().optional(),
+});
+
+type FormData = z.infer<typeof formSchema>;
 
 interface StockMovementFormProps {
   productId: string;
   onSubmit: () => void;
   onCancel: () => void;
-  currentStock?: number;
+  currentStock: number;
 }
-
-const stockMovementSchema = z.object({
-  type: z.enum(['in', 'out'], {
-    required_error: "Selecione o tipo de movimentação",
-  }),
-  quantity: z.coerce.number().int().positive("A quantidade deve ser maior que zero"),
-  notes: z.string().optional(),
-  supplierId: z.string().optional(),
-}).refine((data) => {
-  if (data.type === 'in' && (!data.supplierId || data.supplierId === "")) {
-    return false;
-  }
-  return true;
-}, {
-  message: "Fornecedor é obrigatório para entradas de estoque",
-  path: ["supplierId"],
-});
-
-type StockMovementFormValues = z.infer<typeof stockMovementSchema>;
 
 export const StockMovementForm: React.FC<StockMovementFormProps> = ({
   productId,
   onSubmit,
   onCancel,
-  currentStock = 0,
+  currentStock,
 }) => {
   const { toast } = useToast();
-  const { useProduct } = useProducts();
-  const { useAllSuppliers } = useSuppliers();
-  const { useAddStockMovement } = useStockMovements();
-  const { mutate: addStockMovement, isPending: isLoading } = useAddStockMovement();
-  
-  // SEMPRE buscar produto DIRETO do banco com configuração agressiva
-  const { data: currentProduct, refetch: refetchProduct } = useProduct(productId);
-  const bankStock = currentProduct?.quantity ?? 0;
-  
-  const { data: suppliers = [] } = useAllSuppliers();
-  const formRef = useRef<HTMLFormElement>(null);
-  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [isValidating, setIsValidating] = useState(false);
+  const [validationError, setValidationError] = useState<string | null>(null);
+  const [currentValidatedStock, setCurrentValidatedStock] = useState(currentStock);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [hasSubmitted, setHasSubmitted] = useState(false);
 
-  console.log('🔍 [FORM] === ESTADO ATUAL DO FORMULÁRIO ===');
-  console.log('🔍 [FORM] Product ID:', productId);
-  console.log('🔍 [FORM] Current Stock (prop):', currentStock);
-  console.log('🔍 [FORM] Bank Stock (query):', bankStock);
-  console.log('🔍 [FORM] Produto completo:', currentProduct);
-  console.log('🔍 [FORM] Timestamp:', new Date().toISOString());
-
-  const form = useForm<StockMovementFormValues>({
-    resolver: zodResolver(stockMovementSchema),
+  const form = useForm<FormData>({
+    resolver: zodResolver(formSchema),
     defaultValues: {
-      type: 'in',
+      type: "in",
       quantity: 1,
-      notes: '',
-      supplierId: '',
+      notes: "",
+      supplierId: "",
     },
   });
 
-  const watchType = form.watch('type');
-  const watchQuantity = form.watch('quantity');
+  const { useCreateStockMovement } = useStockMovements();
+  const createMovementMutation = useCreateStockMovement();
 
-  // Usar SEMPRE o estoque do banco como fonte da verdade
-  const realStock = bankStock;
-  const hasInsufficientStock = watchType === 'out' && watchQuantity > realStock;
+  const watchedType = form.watch("type");
+  const watchedQuantity = form.watch("quantity");
 
-  console.log('📊 [FORM] === ANÁLISE DE ESTOQUE ===');
-  console.log('📊 [FORM] Estoque REAL:', realStock);
-  console.log('📊 [FORM] Tipo movimento:', watchType);
-  console.log('📊 [FORM] Quantidade solicitada:', watchQuantity);
-  console.log('📊 [FORM] Tem estoque insuficiente?', hasInsufficientStock);
-
-  // Reset supplier when changing to 'out'
-  React.useEffect(() => {
-    if (watchType === 'out') {
-      form.setValue('supplierId', '');
-    }
-  }, [watchType, form]);
-
-  // Refresh product data when form opens
-  React.useEffect(() => {
-    console.log('🔄 [FORM] Forçando refresh dos dados do produto...');
-    refetchProduct();
-  }, [refetchProduct]);
-
-  // Validação visual para feedback imediato
-  React.useEffect(() => {
-    if (watchType === 'out' && watchQuantity > realStock) {
-      console.log(`⚠️ [FORM] VALIDAÇÃO VISUAL FALHOU: ${watchQuantity} > ${realStock}`);
-      form.setError('quantity', {
-        type: 'manual',
-        message: `Quantidade solicitada (${watchQuantity}) é maior que o estoque disponível (${realStock})`
-      });
-    } else {
-      form.clearErrors('quantity');
-    }
-  }, [watchType, watchQuantity, realStock, form]);
-
-  const handleSubmit = async (values: StockMovementFormValues) => {
-    console.log('🚀 [FORM] === INICIANDO SUBMISSÃO DO FORMULÁRIO ===');
-    console.log('🚀 [FORM] Valores do formulário:', values);
-    console.log('🚀 [FORM] Estoque real antes da submissão:', realStock);
-    console.log('🚀 [FORM] Product ID:', productId);
-    console.log('🚀 [FORM] Timestamp:', new Date().toISOString());
-    
-    // Prevenir submissões duplas
-    if (isSubmitting || isLoading) {
-      console.log('⚠️ [FORM] Submissão já em andamento, ignorando');
-      return;
-    }
-    
-    setIsSubmitting(true);
-    
-    try {
-      // VALIDAÇÃO FINAL com dados frescos do banco
-      console.log('🔍 [FORM] === EXECUTANDO VALIDAÇÃO FINAL ===');
-      const validation = await StockValidationService.validateMovement(
-        productId, 
-        values.quantity, 
-        values.type
-      );
-      
-      console.log('📋 [FORM] Resultado da validação:', validation);
-      
-      if (!validation.valid) {
-        console.error('❌ [FORM] VALIDAÇÃO FALHOU:', validation.message);
-        toast({
-          variant: "destructive",
-          title: "Movimentação bloqueada",
-          description: validation.message,
-        });
-        setIsSubmitting(false);
+  // Validação em tempo real quando mudar tipo ou quantidade
+  useEffect(() => {
+    const validateMovement = async () => {
+      if (!watchedType || !watchedQuantity || watchedQuantity <= 0) {
+        setValidationError(null);
         return;
       }
-      
-      const movement: Partial<StockMovement> = {
-        ...values,
-        productId,
-        supplierId: values.type === 'out' ? undefined : values.supplierId,
-      };
-      
-      console.log('✅ [FORM] === ENVIANDO MOVIMENTAÇÃO VALIDADA ===');
-      console.log('✅ [FORM] Dados do movimento:', movement);
-      
-      addStockMovement(movement, {
-        onSuccess: async (data) => {
-          console.log('✅ [FORM] === SUCESSO NO FORMULÁRIO ===');
-          console.log('✅ [FORM] Dados retornados:', data);
-          setIsSubmitting(false);
+
+      console.log('🔍 [FORM] === VALIDAÇÃO EM TEMPO REAL ===');
+      console.log('🔍 [FORM] Tipo:', watchedType);
+      console.log('🔍 [FORM] Quantidade:', watchedQuantity);
+      console.log('🔍 [FORM] Produto ID:', productId);
+
+      if (watchedType === 'out') {
+        setIsValidating(true);
+        try {
+          const validation = await StockValidationService.validateMovement(
+            productId, 
+            watchedQuantity, 
+            watchedType
+          );
           
-          // Aguardar um tempo para garantir que o trigger terminou
-          await new Promise(resolve => setTimeout(resolve, 100));
+          console.log('✅ [FORM] Resultado da validação:', validation);
+          setCurrentValidatedStock(validation.currentStock);
           
-          // Forçar refresh dos dados antes de chamar onSubmit
-          await refetchProduct();
-          
-          onSubmit();
-        },
-        onError: (error: any) => {
-          console.error('❌ [FORM] === ERRO NO FORMULÁRIO ===');
-          console.error('❌ [FORM] Erro completo:', error);
-          setIsSubmitting(false);
+          if (!validation.valid) {
+            setValidationError(validation.message || 'Erro na validação');
+          } else {
+            setValidationError(null);
+          }
+        } catch (error) {
+          console.error('❌ [FORM] Erro na validação:', error);
+          setValidationError('Erro ao validar movimentação');
+        } finally {
+          setIsValidating(false);
         }
+      } else {
+        setValidationError(null);
+        setCurrentValidatedStock(currentStock);
+      }
+    };
+
+    validateMovement();
+  }, [watchedType, watchedQuantity, productId, currentStock]);
+
+  const handleSubmit = async (data: FormData) => {
+    // Evitar duplo envio
+    if (isSubmitting || hasSubmitted) {
+      console.log('🚫 [FORM] Bloqueando duplo envio');
+      return;
+    }
+
+    console.log('🎯 [FORM] === INICIANDO ENVIO ===');
+    console.log('🎯 [FORM] Dados do formulário:', data);
+    console.log('🎯 [FORM] Produto ID:', productId);
+
+    setIsSubmitting(true);
+    setHasSubmitted(true);
+
+    try {
+      // Validação final antes do envio
+      if (data.type === 'out') {
+        console.log('🔍 [FORM] Validação final antes do envio...');
+        const finalValidation = await StockValidationService.validateMovement(
+          productId,
+          data.quantity,
+          data.type
+        );
+
+        if (!finalValidation.valid) {
+          console.error('❌ [FORM] Validação final falhou:', finalValidation.message);
+          toast({
+            title: "Erro de validação",
+            description: finalValidation.message,
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+
+      console.log('📤 [FORM] Enviando para a API...');
+      await createMovementMutation.mutateAsync({
+        productId,
+        quantity: data.quantity,
+        type: data.type,
+        notes: data.notes || "",
+        supplierId: data.supplierId || null,
       });
-    } catch (error) {
-      console.error('❌ [FORM] Erro na validação:', error);
-      setIsSubmitting(false);
+
+      console.log('✅ [FORM] Movimentação registrada com sucesso!');
+      
       toast({
-        variant: "destructive",
-        title: "Erro na validação",
-        description: "Ocorreu um erro ao validar a movimentação",
+        title: "Sucesso!",
+        description: `${data.type === 'in' ? 'Entrada' : 'Saída'} de ${data.quantity} unidades registrada.`,
       });
+
+      // Aguardar um pouco antes de chamar onSubmit para garantir que a mutação foi processada
+      setTimeout(() => {
+        onSubmit();
+      }, 500);
+
+    } catch (error: any) {
+      console.error('❌ [FORM] Erro ao registrar movimentação:', error);
+      
+      let errorMessage = "Erro ao registrar movimentação";
+      if (error?.message?.includes('Estoque insuficiente')) {
+        errorMessage = error.message;
+      }
+      
+      toast({
+        title: "Erro",
+        description: errorMessage,
+        variant: "destructive",
+      });
+      
+      // Permitir nova tentativa em caso de erro
+      setHasSubmitted(false);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  return (
-    <Form {...form}>
-      <form ref={formRef} onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-        <div className="space-y-4">
-          <FormField
-            control={form.control}
-            name="type"
-            render={({ field }) => (
-              <MovementTypeField field={field} isLoading={isLoading || isSubmitting} />
-            )}
-          />
-          
-          <FormField
-            control={form.control}
-            name="quantity"
-            render={({ field }) => (
-              <QuantityField 
-                field={field}
-                movementType={watchType}
-                currentStock={realStock}
-                isLoading={isLoading || isSubmitting}
-                hasInsufficientStock={hasInsufficientStock}
-              />
-            )}
-          />
+  const hasInsufficientStock = validationError !== null && watchedType === 'out';
 
-          {watchType === 'in' && (
+  return (
+    <Card className="w-full max-w-2xl mx-auto">
+      <CardHeader>
+        <CardTitle>Registrar Movimentação de Estoque</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+            {/* Alerta de estoque atual */}
+            <Alert>
+              <CheckCircle className="h-4 w-4" />
+              <AlertDescription>
+                Estoque atual: <strong>{currentValidatedStock} unidades</strong>
+              </AlertDescription>
+            </Alert>
+
             <FormField
               control={form.control}
-              name="supplierId"
+              name="type"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Fornecedor *</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    value={field.value || ""}
-                    disabled={isLoading || isSubmitting}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione o fornecedor (obrigatório)" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {suppliers.map((supplier) => (
-                        <SelectItem key={supplier.id} value={supplier.id}>
-                          {supplier.name} {supplier.cnpj && `- ${supplier.cnpj}`}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormDescription>
-                    O fornecedor é obrigatório para entradas de estoque
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
+                <MovementTypeField 
+                  field={field} 
+                  isLoading={isSubmitting || isValidating}
+                />
               )}
             />
-          )}
-          
-          <FormField
-            control={form.control}
-            name="notes"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Observações</FormLabel>
-                <FormControl>
-                  <Textarea
-                    {...field}
-                    placeholder="Informe detalhes sobre esta movimentação"
-                    rows={3}
-                    disabled={isLoading || isSubmitting}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
+
+            <FormField
+              control={form.control}
+              name="quantity"
+              render={({ field }) => (
+                <QuantityField
+                  field={field}
+                  movementType={watchedType}
+                  currentStock={currentValidatedStock}
+                  isLoading={isSubmitting || isValidating}
+                  hasInsufficientStock={hasInsufficientStock}
+                />
+              )}
+            />
+
+            {/* Alerta de erro de validação */}
+            {validationError && (
+              <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>
+                  {validationError}
+                </AlertDescription>
+              </Alert>
             )}
-          />
-        </div>
-        
-        <div className="flex justify-end space-x-3">
-          <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading || isSubmitting}>
-            Cancelar
-          </Button>
-          <Button
-            type="submit"
-            disabled={isLoading || isSubmitting}
-            variant={watchType === "in" ? "default" : "destructive"}
-          >
-            {isLoading || isSubmitting
-              ? "Processando..."
-              : watchType === "in"
-              ? "Registrar entrada"
-              : "Registrar saída"}
-          </Button>
-        </div>
-      </form>
-    </Form>
+
+            <FormField
+              control={form.control}
+              name="notes"
+              render={({ field }) => (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Observações (opcional)</label>
+                  <Textarea
+                    placeholder="Adicione observações sobre esta movimentação..."
+                    disabled={isSubmitting || isValidating}
+                    {...field}
+                  />
+                </div>
+              )}
+            />
+
+            <div className="flex gap-4 pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onCancel}
+                disabled={isSubmitting}
+                className="flex-1"
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                disabled={isSubmitting || isValidating || hasInsufficientStock || hasSubmitted}
+                className="flex-1"
+              >
+                {isSubmitting ? "Registrando..." : 
+                 isValidating ? "Validando..." :
+                 hasSubmitted ? "Registrado" :
+                 "Registrar Movimentação"}
+              </Button>
+            </div>
+          </form>
+        </Form>
+      </CardContent>
+    </Card>
   );
 };

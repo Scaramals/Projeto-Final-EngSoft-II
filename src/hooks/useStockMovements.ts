@@ -1,161 +1,168 @@
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { StockMovement } from "@/types";
-import { useAuth } from "@/contexts/AuthContext";
-import { SecureLogger } from "@/services/secureLogger";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/use-toast";
 
-/**
- * Helper function to convert StockMovement type to database format
- */
-const mapStockMovementToDbStockMovement = (movement: Partial<StockMovement>, userId?: string) => {
-  const dbMovement: any = {};
-  
-  if (movement.productId !== undefined) dbMovement.product_id = movement.productId;
-  if (movement.quantity !== undefined) dbMovement.quantity = movement.quantity;
-  if (movement.type !== undefined) dbMovement.type = movement.type;
-  if (movement.notes !== undefined) dbMovement.notes = movement.notes;
-  if (movement.supplierId !== undefined) dbMovement.supplier_id = movement.supplierId;
-  
-  if (userId) {
-    dbMovement.created_by = userId;
-    dbMovement.user_id = userId;
-  }
-  
-  return dbMovement;
-};
-
-/**
- * Helper function to convert database response to StockMovement type
- */
-const mapDbStockMovementToStockMovement = (dbMovement: any): StockMovement => ({
-  id: dbMovement.id,
-  productId: dbMovement.product_id,
-  quantity: dbMovement.quantity,
-  type: dbMovement.type as 'in' | 'out',
-  date: dbMovement.date,
-  notes: dbMovement.notes,
-  supplierId: dbMovement.supplier_id,
-  createdBy: dbMovement.created_by,
-  updatedAt: dbMovement.updated_at || dbMovement.date,
-  productName: dbMovement.product_name,
-  supplierName: dbMovement.supplier_name,
-});
-
-export function useStockMovements() {
+export const useStockMovements = () => {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
 
-  // Add stock movement
-  const useAddStockMovement = () => {
-    return useMutation({
-      mutationFn: async (movement: Partial<StockMovement>) => {
-        console.log('🔄 [HOOK] === INICIANDO REGISTRO DE MOVIMENTAÇÃO ===');
-        console.log('🔄 [HOOK] Dados recebidos:', movement);
-        console.log('🔄 [HOOK] User ID:', user?.id);
-        console.log('🔄 [HOOK] Timestamp:', new Date().toISOString());
+  const useAllStockMovements = () => {
+    return useQuery({
+      queryKey: ["stock-movements"],
+      queryFn: async (): Promise<StockMovement[]> => {
+        console.log("[INFO] Buscando todas as movimentações de estoque");
         
-        if (!movement.productId || !movement.quantity || !movement.type) {
-          console.error('❌ [HOOK] Dados incompletos');
-          throw new Error('Dados de movimentação incompletos');
-        }
-
-        if (!user?.id) {
-          console.error('❌ [HOOK] Usuário não autenticado');
-          throw new Error('Usuário não autenticado');
-        }
-
-        // Verificar estoque atual ANTES da inserção
-        console.log('🔍 [HOOK] Verificando estoque atual antes da inserção...');
-        const { data: preCheck, error: preCheckError } = await supabase
-          .from('products')
-          .select('quantity, name')
-          .eq('id', movement.productId)
-          .single();
-        
-        if (preCheckError) {
-          console.error('❌ [HOOK] Erro na verificação prévia:', preCheckError);
-        } else {
-          console.log(`📊 [HOOK] Estoque PRÉ-inserção: ${preCheck.quantity} para ${preCheck.name}`);
-        }
-
-        // Converter para formato do banco
-        const dbMovement = mapStockMovementToDbStockMovement(movement, user.id);
-        console.log('💾 [HOOK] Dados formatados para inserção:', dbMovement);
-        
-        // Inserir no banco
-        console.log('🔄 [HOOK] Executando inserção no banco...');
         const { data, error } = await supabase
-          .from('stock_movements')
-          .insert(dbMovement)
+          .from("stock_movements")
+          .select("*")
+          .order("date", { ascending: false });
+
+        if (error) {
+          console.error("Erro ao buscar movimentações:", error);
+          throw error;
+        }
+
+        return (data || []).map((movement) => ({
+          id: movement.id,
+          productId: movement.product_id,
+          quantity: movement.quantity,
+          type: movement.type as 'in' | 'out',
+          date: movement.date,
+          supplierId: movement.supplier_id,
+          notes: movement.notes,
+          userId: movement.user_id,
+          createdBy: movement.created_by,
+          updatedAt: movement.updated_at,
+        })) as StockMovement[];
+      },
+    });
+  };
+
+  const useProductMovements = (productId?: string) => {
+    return useQuery({
+      queryKey: ["product-movements", productId],
+      queryFn: async (): Promise<StockMovement[]> => {
+        if (!productId) return [];
+        
+        console.log("[INFO] Buscando histórico de movimentações do produto");
+        
+        const { data, error } = await supabase
+          .rpc('get_product_movement_history', { 
+            product_id_param: productId 
+          });
+
+        if (error) {
+          console.error("Erro ao buscar movimentações do produto:", error);
+          throw error;
+        }
+
+        return (data || []).map((movement: any) => ({
+          id: movement.id,
+          productId: movement.product_id,
+          quantity: movement.quantity,
+          type: movement.type as 'in' | 'out',
+          date: movement.date,
+          supplierId: movement.supplier_id,
+          notes: movement.notes,
+          userId: movement.user_id,
+          createdBy: movement.created_by,
+          updatedAt: movement.updated_at,
+        })) as StockMovement[];
+      },
+      enabled: !!productId,
+    });
+  };
+
+  const useCreateStockMovement = () => {
+    return useMutation({
+      mutationFn: async (movementData: {
+        productId: string;
+        quantity: number;
+        type: 'in' | 'out';
+        notes?: string;
+        supplierId?: string | null;
+      }) => {
+        console.log('🚀 [MUTATION] === INICIANDO CRIAÇÃO DE MOVIMENTAÇÃO ===');
+        console.log('🚀 [MUTATION] Dados recebidos:', movementData);
+
+        // Validação de dados
+        if (!movementData.productId || !movementData.quantity || !movementData.type) {
+          throw new Error('Dados obrigatórios não fornecidos');
+        }
+
+        if (movementData.quantity <= 0) {
+          throw new Error('Quantidade deve ser maior que zero');
+        }
+
+        console.log('📤 [MUTATION] Enviando para Supabase...');
+        
+        const { data, error } = await supabase
+          .from("stock_movements")
+          .insert({
+            product_id: movementData.productId,
+            quantity: movementData.quantity,
+            type: movementData.type,
+            notes: movementData.notes || "",
+            supplier_id: movementData.supplierId || null,
+            date: new Date().toISOString(),
+          })
           .select()
           .single();
-          
+
         if (error) {
-          console.error('❌ [HOOK] Erro na inserção:', error);
-          console.error('❌ [HOOK] Código do erro:', error.code);
-          console.error('❌ [HOOK] Detalhes:', error.details);
-          console.error('❌ [HOOK] Hint:', error.hint);
-          throw new Error(`Erro ao registrar movimentação: ${error.message}`);
+          console.error('❌ [MUTATION] Erro do Supabase:', error);
+          throw error;
         }
-        
-        console.log('✅ [HOOK] Movimentação inserida:', data);
-        
-        // Verificar estoque atual APÓS a inserção
-        console.log('🔍 [HOOK] Verificando estoque atual APÓS a inserção...');
-        const { data: postCheck, error: postCheckError } = await supabase
-          .from('products')
-          .select('quantity, name, updated_at')
-          .eq('id', movement.productId)
-          .single();
-        
-        if (postCheckError) {
-          console.error('❌ [HOOK] Erro na verificação pós-inserção:', postCheckError);
-        } else {
-          console.log(`📊 [HOOK] Estoque PÓS-inserção: ${postCheck.quantity} para ${postCheck.name}`);
-          console.log(`📊 [HOOK] Última atualização: ${postCheck.updated_at}`);
-        }
-        
-        console.log('🔄 [HOOK] === FIM DO REGISTRO ===');
-        return mapDbStockMovementToStockMovement(data);
+
+        console.log('✅ [MUTATION] Movimentação criada com sucesso:', data);
+        return data;
       },
-      onSuccess: async (data, variables) => {
-        console.log('🎉 [HOOK] === SUCESSO NA MOVIMENTAÇÃO ===');
-        console.log('🎉 [HOOK] Dados retornados:', data);
-        console.log('🎉 [HOOK] Variáveis:', variables);
+      onSuccess: (data, variables) => {
+        console.log('🎉 [MUTATION] === SUCESSO NA CRIAÇÃO ===');
+        console.log('🎉 [MUTATION] Invalidando cache...');
         
-        // FORÇAR invalidação e refetch imediato
-        console.log('🔄 [HOOK] FORÇANDO invalidação completa...');
+        // Invalidar todas as queries relacionadas
+        queryClient.invalidateQueries({ queryKey: ["stock-movements"] });
+        queryClient.invalidateQueries({ queryKey: ["product-movements"] });
+        queryClient.invalidateQueries({ queryKey: ["products"] });
+        queryClient.invalidateQueries({ queryKey: ["product", variables.productId] });
+        queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+        queryClient.invalidateQueries({ queryKey: ["low-stock-products"] });
         
-        // Invalidar TODAS as queries relacionadas
-        await queryClient.invalidateQueries({ queryKey: ['products'] });
-        await queryClient.invalidateQueries({ queryKey: ['productMovements'] });
-        await queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+        console.log('✅ [MUTATION] Cache invalidado com sucesso');
         
-        // Remover dados específicos do cache para forçar refetch
-        queryClient.removeQueries({ queryKey: ['products', variables.productId] });
-        
-        // Refetch específico do produto
-        await queryClient.refetchQueries({ queryKey: ['products', variables.productId] });
-        
-        SecureLogger.success(`Movimentação ${variables.type} de ${variables.quantity} unidades registrada`);
-        toast.success(`${variables.type === 'in' ? 'Entrada' : 'Saída'} de ${variables.quantity} unidades registrada!`);
-        console.log('🎉 [HOOK] === FIM DO SUCESSO ===');
+        toast({
+          title: "Movimentação registrada",
+          description: `${variables.type === 'in' ? 'Entrada' : 'Saída'} de ${variables.quantity} unidades registrada com sucesso.`,
+        });
       },
       onError: (error: any) => {
-        console.error('❌ [HOOK] === ERRO NA MOVIMENTAÇÃO ===');
-        console.error('❌ [HOOK] Erro completo:', error);
-        console.error('❌ [HOOK] Mensagem:', error.message);
-        console.error('❌ [HOOK] Stack:', error.stack);
-        SecureLogger.error('Erro no registro da movimentação', error);
-        toast.error(`Erro: ${error.message}`);
-        console.error('❌ [HOOK] === FIM DO ERRO ===');
-      }
+        console.error('❌ [MUTATION] === ERRO NA CRIAÇÃO ===');
+        console.error('❌ [MUTATION] Erro:', error);
+        
+        let errorMessage = "Erro ao registrar movimentação";
+        
+        if (error?.message?.includes('Estoque insuficiente')) {
+          errorMessage = error.message;
+        } else if (error?.message?.includes('violates check constraint')) {
+          errorMessage = "Dados inválidos fornecidos";
+        } else if (error?.message) {
+          errorMessage = error.message;
+        }
+        
+        toast({
+          title: "Erro",
+          description: errorMessage,
+          variant: "destructive",
+        });
+      },
     });
   };
 
   return {
-    useAddStockMovement
+    useAllStockMovements,
+    useProductMovements,
+    useCreateStockMovement,
   };
-}
+};
