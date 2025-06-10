@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 
 interface FormActionsProps {
   onCancel: () => void;
-  onSubmit: () => void;
+  onSubmit: (e: React.FormEvent) => void;
   isSubmitting: boolean;
   isValidating: boolean;
   hasInsufficientStock: boolean;
