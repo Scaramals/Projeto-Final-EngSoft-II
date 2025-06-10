@@ -61,12 +61,19 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
   const { useAddStockMovement } = useStockMovements();
   const { mutate: addStockMovement, isPending: isLoading } = useAddStockMovement();
   
-  const { data: currentProduct } = useProduct(productId);
-  const realTimeStock = currentProduct?.quantity ?? 0;
+  // SEMPRE buscar produto DIRETO do banco
+  const { data: currentProduct, refetch: refetchProduct } = useProduct(productId);
+  const bankStock = currentProduct?.quantity ?? 0;
   
   const { data: suppliers = [] } = useAllSuppliers();
   const formRef = useRef<HTMLFormElement>(null);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+
+  console.log('🔍 [FORM] === DADOS DO FORMULÁRIO ===');
+  console.log('🔍 [FORM] Product ID:', productId);
+  console.log('🔍 [FORM] Current Stock (prop):', currentStock);
+  console.log('🔍 [FORM] Bank Stock (query):', bankStock);
+  console.log('🔍 [FORM] Produto do banco:', currentProduct?.name);
 
   const form = useForm<StockMovementFormValues>({
     resolver: zodResolver(stockMovementSchema),
@@ -81,9 +88,15 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
   const watchType = form.watch('type');
   const watchQuantity = form.watch('quantity');
 
-  const hasInsufficientStock = watchType === 'out' && watchQuantity > realTimeStock;
+  // Usar SEMPRE o estoque do banco como fonte da verdade
+  const realStock = bankStock;
+  const hasInsufficientStock = watchType === 'out' && watchQuantity > realStock;
 
-  console.log('📊 [FORM] Estoque atual:', realTimeStock, 'Quantidade solicitada:', watchQuantity);
+  console.log('📊 [FORM] === STATUS ATUAL ===');
+  console.log('📊 [FORM] Estoque REAL do banco:', realStock);
+  console.log('📊 [FORM] Tipo:', watchType);
+  console.log('📊 [FORM] Quantidade:', watchQuantity);
+  console.log('📊 [FORM] Tem estoque insuficiente?', hasInsufficientStock);
 
   // Reset supplier when changing to 'out'
   React.useEffect(() => {
@@ -92,20 +105,29 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
     }
   }, [watchType, form]);
 
+  // Refresh product data when form opens
+  React.useEffect(() => {
+    console.log('🔄 [FORM] Forçando atualização dos dados do produto');
+    refetchProduct();
+  }, [refetchProduct]);
+
   // Validação visual para feedback imediato
   React.useEffect(() => {
-    if (watchType === 'out' && watchQuantity > realTimeStock) {
+    if (watchType === 'out' && watchQuantity > realStock) {
+      console.log(`⚠️ [FORM] VALIDAÇÃO VISUAL: ${watchQuantity} > ${realStock}`);
       form.setError('quantity', {
         type: 'manual',
-        message: `Quantidade solicitada (${watchQuantity}) é maior que o estoque disponível (${realTimeStock})`
+        message: `Quantidade solicitada (${watchQuantity}) é maior que o estoque disponível (${realStock})`
       });
     } else {
       form.clearErrors('quantity');
     }
-  }, [watchType, watchQuantity, realTimeStock, form]);
+  }, [watchType, watchQuantity, realStock, form]);
 
   const handleSubmit = async (values: StockMovementFormValues) => {
-    console.log('🚀 [FORM] Iniciando submissão:', values);
+    console.log('🚀 [FORM] === INICIANDO SUBMISSÃO ===');
+    console.log('🚀 [FORM] Valores do formulário:', values);
+    console.log('🚀 [FORM] Estoque real antes da submissão:', realStock);
     
     // Prevenir submissões duplas
     if (isSubmitting || isLoading) {
@@ -116,14 +138,18 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
     setIsSubmitting(true);
     
     try {
-      // Validação final do estoque
+      // VALIDAÇÃO FINAL com dados frescos do banco
+      console.log('🔍 [FORM] Executando validação final...');
       const validation = await StockValidationService.validateMovement(
         productId, 
         values.quantity, 
         values.type
       );
       
+      console.log('📋 [FORM] Resultado da validação:', validation);
+      
       if (!validation.valid) {
+        console.error('❌ [FORM] Validação falhou:', validation.message);
         toast({
           variant: "destructive",
           title: "Movimentação bloqueada",
@@ -148,7 +174,7 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
           onSubmit();
         },
         onError: (error: any) => {
-          console.error('❌ [FORM] Erro:', error);
+          console.error('❌ [FORM] Erro na submissão:', error);
           setIsSubmitting(false);
         }
       });
@@ -182,7 +208,7 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
               <QuantityField 
                 field={field}
                 movementType={watchType}
-                currentStock={realTimeStock}
+                currentStock={realStock}
                 isLoading={isLoading || isSubmitting}
                 hasInsufficientStock={hasInsufficientStock}
               />

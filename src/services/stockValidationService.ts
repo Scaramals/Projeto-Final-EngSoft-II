@@ -7,11 +7,11 @@ export const StockValidationService = {
    */
   async getCurrentStock(productId: string): Promise<number> {
     try {
-      console.log('📊 [VALIDATION] Buscando estoque atual para produto:', productId);
+      console.log('🔍 [VALIDATION] Buscando estoque DIRETO do banco para produto:', productId);
       
       const { data, error } = await supabase
         .from('products')
-        .select('quantity')
+        .select('quantity, name')
         .eq('id', productId)
         .single();
       
@@ -21,7 +21,7 @@ export const StockValidationService = {
       }
       
       const currentStock = data.quantity || 0;
-      console.log('📊 [VALIDATION] Estoque atual no banco:', currentStock);
+      console.log(`📊 [VALIDATION] BANCO REAL - Produto: ${data.name}, Estoque: ${currentStock}`);
       return currentStock;
     } catch (error) {
       console.error('❌ [VALIDATION] Erro crítico:', error);
@@ -34,12 +34,17 @@ export const StockValidationService = {
    */
   async validateMovement(productId: string, quantity: number, type: 'in' | 'out'): Promise<{valid: boolean, message?: string, currentStock: number}> {
     try {
-      console.log(`🔍 [VALIDATION] Validando ${type} de ${quantity} unidades`);
+      console.log(`🔍 [VALIDATION] === INICIANDO VALIDAÇÃO ===`);
+      console.log(`🔍 [VALIDATION] Produto: ${productId}`);
+      console.log(`🔍 [VALIDATION] Tipo: ${type}`);
+      console.log(`🔍 [VALIDATION] Quantidade: ${quantity}`);
       
       const currentStock = await this.getCurrentStock(productId);
+      console.log(`📊 [VALIDATION] Estoque obtido do banco: ${currentStock}`);
       
       if (type === 'out') {
         if (currentStock === 0) {
+          console.error('❌ [VALIDATION] BLOQUEIO - Produto sem estoque');
           return { 
             valid: false, 
             message: 'Produto sem estoque disponível',
@@ -48,15 +53,20 @@ export const StockValidationService = {
         }
         
         if (currentStock < quantity) {
+          console.error(`❌ [VALIDATION] BLOQUEIO - Estoque insuficiente: ${currentStock} < ${quantity}`);
           return { 
             valid: false, 
             message: `Estoque insuficiente. Disponível: ${currentStock}, Solicitado: ${quantity}`,
             currentStock 
           };
         }
+        
+        console.log(`✅ [VALIDATION] APROVADO - Saída de ${quantity} quando há ${currentStock}`);
+      } else {
+        console.log(`✅ [VALIDATION] APROVADO - Entrada de ${quantity} unidades`);
       }
       
-      console.log('✅ [VALIDATION] Movimentação válida');
+      console.log(`🔍 [VALIDATION] === FIM DA VALIDAÇÃO ===`);
       return { valid: true, currentStock };
     } catch (error) {
       console.error('❌ [VALIDATION] Erro na validação:', error);

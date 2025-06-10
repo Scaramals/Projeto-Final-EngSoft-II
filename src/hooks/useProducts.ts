@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Product, FilterParams } from "@/types";
@@ -88,14 +87,16 @@ export function useProducts() {
     });
   };
 
-  // Fetch a single product by ID - SEMPRE buscar dados frescos do banco
+  // Fetch a single product by ID - SEMPRE buscar dados DIRETAMENTE do banco
   const useProduct = (productId: string | undefined) => {
     return useQuery({
       queryKey: ['products', productId],
       queryFn: async () => {
         if (!productId) throw new Error("Product ID is required");
         
-        console.log('🔄 [PRODUCTS] Buscando produto ATUALIZADO do banco:', productId);
+        console.log('🔄 [PRODUCTS] === BUSCANDO PRODUTO DIRETO DO BANCO ===');
+        console.log('🔄 [PRODUCTS] ID do produto:', productId);
+        
         const { data, error } = await supabase
           .from('products')
           .select('*')
@@ -108,14 +109,19 @@ export function useProducts() {
         }
         
         const product = mapDbProductToProduct(data);
-        console.log('📊 [PRODUCTS] Produto carregado com estoque REAL:', product.quantity);
+        console.log('📊 [PRODUCTS] === PRODUTO CARREGADO DO BANCO ===');
+        console.log('📊 [PRODUCTS] Nome:', product.name);
+        console.log('📊 [PRODUCTS] Estoque REAL no banco:', product.quantity);
+        console.log('📊 [PRODUCTS] === FIM DO CARREGAMENTO ===');
+        
         return product;
       },
       enabled: !!user && !!productId,
-      staleTime: 0, // SEMPRE buscar dados frescos
-      gcTime: 10 * 1000, // 10 segundos apenas
+      staleTime: 0, // SEMPRE buscar dados frescos - NUNCA cache
+      gcTime: 0, // NÃO manter em cache
       refetchOnMount: true, // SEMPRE refetch ao montar
       refetchOnWindowFocus: true, // Refetch quando a janela ganha foco
+      refetchOnReconnect: true, // Refetch quando reconecta
     });
   };
 
