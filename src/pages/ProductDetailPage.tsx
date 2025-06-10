@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,9 @@ const ProductDetailPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState("details");
   const [isEditing, setIsEditing] = useState(false);
   const [isAddingMovement, setIsAddingMovement] = useState(false);
+  const [stockMovements, setStockMovements] = useState<any[]>([]);
+  const [loadingMovements, setLoadingMovements] = useState(false);
+  const [movementsError, setMovementsError] = useState<Error | null>(null);
   
   // Get product data
   const { useProduct, useUpdateProduct, useDeleteProduct, useProductMovements } = useProducts();
@@ -29,14 +32,6 @@ const ProductDetailPage: React.FC = () => {
     error: productError,
     refetch: refetchProduct
   } = useProduct(productId);
-  
-  // Get stock movements
-  const {
-    data: stockMovements = [],
-    isLoading: loadingMovements,
-    error: movementsError,
-    refetch: refetchMovements
-  } = useProductMovements(productId);
   
   // Mutations
   const { mutate: updateProduct, isPending: isUpdating } = useUpdateProduct();
@@ -50,6 +45,27 @@ const ProductDetailPage: React.FC = () => {
   console.log('🔍 [DETAIL] Estoque atual:', product?.quantity);
   console.log('🔍 [DETAIL] Loading?', loadingProduct);
   console.log('🔍 [DETAIL] Error?', productError);
+
+  // Load product movements
+  const loadProductMovements = async () => {
+    if (!productId) return;
+    
+    setLoadingMovements(true);
+    setMovementsError(null);
+    
+    try {
+      const result = await useProductMovements(productId);
+      setStockMovements(result.data);
+    } catch (error) {
+      setMovementsError(error as Error);
+    } finally {
+      setLoadingMovements(false);
+    }
+  };
+
+  useEffect(() => {
+    loadProductMovements();
+  }, [productId]);
   
   // Transform product data for ProductForm
   const getProductFormDefaultValues = () => {
@@ -90,7 +106,7 @@ const ProductDetailPage: React.FC = () => {
     // Forçar atualização completa dos dados
     await Promise.all([
       refetchProduct(),
-      refetchMovements()
+      loadProductMovements()
     ]);
   };
   
@@ -226,6 +242,7 @@ const ProductDetailPage: React.FC = () => {
               <TabsTrigger value="movements">Movimentações</TabsTrigger>
             </TabsList>
             <TabsContent value="details" className="space-y-6 pt-4">
+              
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="md:col-span-2">
                   <div className="bg-white rounded-lg shadow p-6">

@@ -75,7 +75,7 @@ export function useProducts() {
       error: null,
       refetch: fetchProducts
     };
-  }, [products, loadingProducts, fetchProducts, productId]);
+  }, [products, loadingProducts, fetchProducts]);
 
   // Get product movements history
   const getProductMovements = useCallback(async (productId: string | undefined) => {
@@ -117,7 +117,24 @@ export function useProducts() {
   // Create a new product
   const createProduct = useCallback(async (product: Partial<Product>) => {
     try {
-      await createProductData(product);
+      // Ensure required fields are present
+      if (!product.name || product.price === undefined || product.quantity === undefined) {
+        throw new Error('Nome, preço e quantidade são obrigatórios');
+      }
+
+      const productToCreate = {
+        name: product.name,
+        description: product.description || '',
+        quantity: product.quantity,
+        price: product.price,
+        categoryId: product.categoryId,
+        minimumStock: product.minimumStock,
+        imageUrl: product.imageUrl,
+        createdBy: product.createdBy,
+        lastModifiedBy: product.lastModifiedBy,
+      };
+
+      await createProductData(productToCreate);
       toast({
         title: "Sucesso",
         description: "Produto criado com sucesso!",
@@ -202,18 +219,24 @@ export function useProducts() {
     useLowStockProducts: getLowStockProducts,
     useTotalStockValue: getTotalStockValue,
     
-    // Mutation functions
+    // Mutation functions with consistent API
     useCreateProduct: () => ({
+      mutate: createProduct,
       mutateAsync: createProduct,
-      isLoading: loadingProducts
+      isLoading: loadingProducts,
+      isPending: loadingProducts
     }),
     useUpdateProduct: () => ({
+      mutate: updateProduct,
       mutateAsync: updateProduct,
-      isLoading: loadingProducts
+      isLoading: loadingProducts,
+      isPending: loadingProducts
     }),
     useDeleteProduct: () => ({
+      mutate: deleteProduct,
       mutateAsync: deleteProduct,
-      isLoading: loadingProducts
+      isLoading: loadingProducts,
+      isPending: loadingProducts
     }),
 
     // Direct access to products data
