@@ -27,7 +27,7 @@ export function useOptimizedDashboard() {
     enabled: !!user,
   });
 
-  // Buscar análise de categorias
+  // Buscar análise de categorias - usando a função do banco que retorna os nomes
   const { data: categoryAnalysis, isLoading: isCategoryLoading, refetch: refetchCategory } = useQuery<CategoryAnalysis[]>({
     queryKey: ["category-analysis"],
     queryFn: () => OptimizedApiService.getCategoryAnalysis(true), // Force refresh
@@ -36,43 +36,43 @@ export function useOptimizedDashboard() {
     enabled: !!user,
   });
 
-  // Buscar dados de tendência mensal
+  // Buscar dados de tendência mensal - corrigir para usar dados reais
   const { data: monthlyTrends, isLoading: isTrendsLoading, refetch: refetchTrends } = useQuery({
     queryKey: ["monthly-trends"],
     queryFn: async () => {
-      const now = new Date();
-      const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 6, 1);
-      
-      const { data, error } = await supabase
-        .from('stock_movements')
-        .select('quantity, type, date')
-        .gte('date', sixMonthsAgo.toISOString())
-        .order('date', { ascending: true });
+      console.log('Fetching monthly trends data...');
+      const { data, error } = await supabase.rpc('get_movements_summary', { days_back: 180 });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching monthly trends:', error);
+        throw error;
+      }
 
       // Agrupar por mês
       const monthlyData: { [key: string]: { in: number, out: number } } = {};
       
-      data?.forEach(movement => {
-        const monthKey = new Date(movement.date).toISOString().slice(0, 7); // YYYY-MM
+      data?.forEach((movement: any) => {
+        const monthKey = new Date(movement.movement_date).toISOString().slice(0, 7); // YYYY-MM
         if (!monthlyData[monthKey]) {
           monthlyData[monthKey] = { in: 0, out: 0 };
         }
         
-        if (movement.type === 'in') {
-          monthlyData[monthKey].in += movement.quantity;
-        } else {
-          monthlyData[monthKey].out += movement.quantity;
-        }
+        monthlyData[monthKey].in += movement.total_in || 0;
+        monthlyData[monthKey].out += movement.total_out || 0;
       });
 
-      return Object.entries(monthlyData).map(([month, data]) => ({
-        month,
-        totalIn: data.in,
-        totalOut: data.out,
-        net: data.in - data.out
-      }));
+      const trends = Object.entries(monthlyData)
+        .map(([month, data]) => ({
+          month,
+          totalIn: data.in,
+          totalOut: data.out,
+          net: data.in - data.out
+        }))
+        .sort((a, b) => a.month.localeCompare(b.month))
+        .slice(-6); // Últimos 6 meses
+
+      console.log('Monthly trends processed:', trends);
+      return trends;
     },
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
@@ -131,6 +131,7 @@ export function useOptimizedDashboard() {
     queryClient.invalidateQueries({ queryKey: ["category-analysis"] });
     queryClient.invalidateQueries({ queryKey: ["monthly-trends"] });
     queryClient.invalidateQueries({ queryKey: ["monthly-comparison"] });
+    queryClient.invalidateQueries({ queryKey: ["recent-movements"] });
     
     // Também limpar cache do service
     OptimizedApiService.clearCache();

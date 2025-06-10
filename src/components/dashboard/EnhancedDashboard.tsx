@@ -7,6 +7,7 @@ import { CategoryPieChart } from "./charts/CategoryPieChart";
 import { MonthlyTrendsChart } from "./charts/MonthlyTrendsChart";
 import { PerformanceSummary } from "./sections/PerformanceSummary";
 import { CategoryAnalysisSection } from "./sections/CategoryAnalysisSection";
+import { RecentMovementsSection } from "./sections/RecentMovementsSection";
 
 export const EnhancedDashboard: React.FC = () => {
   const { 
@@ -35,6 +36,7 @@ export const EnhancedDashboard: React.FC = () => {
       <MonthlyTrendsChart monthlyTrends={monthlyTrends} />
       <PerformanceSummary monthlyComparison={monthlyComparison} />
       <CategoryAnalysisSection categoryAnalysis={categoryAnalysis} />
+      <RecentMovementsSection />
     </div>
   );
 };
