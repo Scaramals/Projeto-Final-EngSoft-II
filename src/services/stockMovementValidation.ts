@@ -15,8 +15,9 @@ export const validateStockMovementForm = (
     errors.type = 'Selecione o tipo de movimentação';
   }
 
-  if (!quantity || quantity <= 0) {
-    errors.quantity = 'Quantidade deve ser maior que 0';
+  // Validação mais rigorosa da quantidade
+  if (!quantity || isNaN(quantity) || quantity <= 0 || !Number.isInteger(quantity)) {
+    errors.quantity = 'Quantidade deve ser um número inteiro maior que 0';
   }
 
   return errors;

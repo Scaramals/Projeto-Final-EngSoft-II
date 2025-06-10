@@ -31,7 +31,7 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasSubmitted, setHasSubmitted] = useState(false);
 
-  // Form state
+  // Form state com valores iniciais seguros
   const [type, setType] = useState<'in' | 'out'>('in');
   const [quantity, setQuantity] = useState<number>(1);
   const [notes, setNotes] = useState<string>('');
@@ -46,6 +46,7 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
   // Validação em tempo real quando mudar tipo ou quantidade
   useEffect(() => {
     const validateMovement = async () => {
+      // Limpar erro se não há tipo ou quantidade válida
       if (!type || !quantity || quantity <= 0) {
         setValidationError(null);
         return;
@@ -97,27 +98,50 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
       return;
     }
 
-    const formErrors = validateStockMovementForm(type, quantity);
+    // Validação de dados antes do envio
+    console.log('🔍 [FORM] === VALIDAÇÃO ANTES DO ENVIO ===');
+    console.log('🔍 [FORM] Tipo:', type, typeof type);
+    console.log('🔍 [FORM] Quantidade:', quantity, typeof quantity);
+    console.log('🔍 [FORM] Product ID:', productId, typeof productId);
+
+    // Garantir que quantity é um número inteiro válido
+    const validQuantity = parseInt(String(quantity), 10);
+    if (isNaN(validQuantity) || validQuantity <= 0) {
+      toast({
+        title: "Erro de validação",
+        description: "Quantidade deve ser um número inteiro maior que 0",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const formErrors = validateStockMovementForm(type, validQuantity);
     setErrors(formErrors);
 
     if (hasValidationErrors(formErrors)) {
+      console.log('❌ [FORM] Erros de validação:', formErrors);
       return;
     }
 
     console.log('🎯 [FORM] === INICIANDO ENVIO ===');
-    console.log('🎯 [FORM] Dados do formulário:', { type, quantity, notes, supplierId });
-    console.log('🎯 [FORM] Produto ID:', productId);
+    console.log('🎯 [FORM] Dados validados:', { 
+      type, 
+      quantity: validQuantity, 
+      notes, 
+      supplierId: supplierId || null,
+      productId 
+    });
 
     setIsSubmitting(true);
     setHasSubmitted(true);
 
     try {
-      // Validação final antes do envio
+      // Validação final antes do envio para movimentações de saída
       if (type === 'out') {
         console.log('🔍 [FORM] Validação final antes do envio...');
         const finalValidation = await StockValidationService.validateMovement(
           productId,
-          quantity,
+          validQuantity,
           type
         );
 
@@ -135,9 +159,9 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
       console.log('📤 [FORM] Enviando para a API...');
       await createMovementMutation.mutateAsync({
         productId,
-        quantity,
+        quantity: validQuantity,
         type,
-        notes: notes || "",
+        notes: notes.trim() || "",
         supplierId: supplierId || null,
       });
 
@@ -145,10 +169,10 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
       
       toast({
         title: "Sucesso!",
-        description: `${type === 'in' ? 'Entrada' : 'Saída'} de ${quantity} unidades registrada.`,
+        description: `${type === 'in' ? 'Entrada' : 'Saída'} de ${validQuantity} unidades registrada.`,
       });
 
-      // Aguardar um pouco antes de chamar onSubmit para garantir que a mutação foi processada
+      // Aguardar um pouco antes de chamar onSubmit
       setTimeout(() => {
         onSubmit();
       }, 500);
