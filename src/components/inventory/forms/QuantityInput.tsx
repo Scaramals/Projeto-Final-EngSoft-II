@@ -30,17 +30,14 @@ export const QuantityInput: React.FC<QuantityInputProps> = ({
       return;
     }
     
-    // Converter para número e garantir que seja inteiro
+    // Converter para número inteiro - FIXO: não mais dobrar valores
     const numericValue = parseInt(inputValue, 10);
     
-    // Verificar se é um número válido
+    // Verificar se é um número válido e não NaN
     if (!isNaN(numericValue) && numericValue >= 0) {
-      console.log('📝 [QUANTITY] Valor válido digitado:', numericValue);
       onChange(numericValue);
-    } else {
-      console.log('📝 [QUANTITY] Valor inválido ignorado:', inputValue);
-      // Não atualizar se o valor for inválido
     }
+    // Se inválido, não fazer nada (manter valor atual)
   };
 
   return (
@@ -48,9 +45,9 @@ export const QuantityInput: React.FC<QuantityInputProps> = ({
       <label className="text-sm font-medium">Quantidade</label>
       <Input
         type="number"
-        min="1"
+        min="0"
         step="1"
-        value={value || ''}
+        value={value === 0 ? '' : value.toString()}
         disabled={disabled}
         className={hasInsufficientStock ? "border-yellow-500" : ""}
         onChange={handleInputChange}

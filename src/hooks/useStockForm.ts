@@ -17,7 +17,7 @@ export interface StockFormValidation {
 export const useStockForm = (initialData?: Partial<StockFormData>) => {
   const [formData, setFormData] = useState<StockFormData>({
     type: 'in',
-    quantity: 1,
+    quantity: 0,
     notes: '',
     supplierId: '',
     ...initialData
@@ -27,7 +27,13 @@ export const useStockForm = (initialData?: Partial<StockFormData>) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const updateField = useCallback((field: keyof StockFormData, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData(prev => {
+      // FIXO: evitar atualizações desnecessárias que causam valores dobrados
+      if (prev[field] === value) {
+        return prev;
+      }
+      return { ...prev, [field]: value };
+    });
     
     // Limpar erro do campo quando modificado
     if (errors[field]) {
@@ -59,7 +65,7 @@ export const useStockForm = (initialData?: Partial<StockFormData>) => {
   const resetForm = useCallback(() => {
     setFormData({
       type: 'in',
-      quantity: 1,
+      quantity: 0,
       notes: '',
       supplierId: ''
     });

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -25,10 +26,10 @@ export const SimplifiedStockForm: React.FC<SimplifiedStockFormProps> = ({
   const suppliersHook = useSuppliers();
   const { data: suppliers = [] } = suppliersHook.useAllSuppliers();
   
-  // Estados do formulário
+  // Estados do formulário - FIXO: inicialização correta
   const [formData, setFormData] = useState({
     type: 'in' as 'in' | 'out',
-    quantity: 1,
+    quantity: 0,
     notes: '',
     supplierId: ''
   });
@@ -65,12 +66,33 @@ export const SimplifiedStockForm: React.FC<SimplifiedStockFormProps> = ({
     }
   }, [formData.type, formData.quantity, currentStock]);
 
-  // Atualizar campo do formulário
+  // FIXO: Atualizar campo do formulário sem duplicação
   const updateField = (field: string, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData(prev => {
+      if (prev[field as keyof typeof prev] === value) {
+        return prev; // Não atualizar se o valor for o mesmo
+      }
+      return { ...prev, [field]: value };
+    });
+    
     // Limpar erro do campo
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
+    }
+  };
+
+  // FIXO: Manipulador de quantidade específico
+  const handleQuantityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const inputValue = e.target.value;
+    
+    if (inputValue === '') {
+      updateField('quantity', 0);
+      return;
+    }
+    
+    const numericValue = parseInt(inputValue, 10);
+    if (!isNaN(numericValue) && numericValue >= 0) {
+      updateField('quantity', numericValue);
     }
   };
 
@@ -132,7 +154,7 @@ export const SimplifiedStockForm: React.FC<SimplifiedStockFormProps> = ({
         // Reset form
         setFormData({
           type: 'in',
-          quantity: 1,
+          quantity: 0,
           notes: '',
           supplierId: ''
         });
@@ -206,16 +228,18 @@ export const SimplifiedStockForm: React.FC<SimplifiedStockFormProps> = ({
             </Select>
           </div>
 
-          {/* Quantidade */}
+          {/* Quantidade - FIXO */}
           <div className="space-y-2">
             <label className="text-sm font-medium">Quantidade</label>
             <Input
               type="number"
-              min="1"
-              value={formData.quantity || ''}
-              onChange={(e) => updateField('quantity', parseInt(e.target.value) || 0)}
+              min="0"
+              step="1"
+              value={formData.quantity === 0 ? '' : formData.quantity.toString()}
+              onChange={handleQuantityChange}
               disabled={isLoading}
               className={errors.quantity ? "border-destructive" : ""}
+              placeholder="Digite a quantidade"
             />
             {errors.quantity && (
               <p className="text-sm text-destructive">{errors.quantity}</p>
