@@ -27,6 +27,32 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 
+// Helper function to check if a string looks like a UUID
+const isUUID = (str: string): boolean => {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(str);
+};
+
+// Helper function to generate a display name if the name is a UUID
+const getDisplayName = (productName: string, description?: string, category?: string): string => {
+  if (!productName) return "Produto sem nome";
+  
+  // If name looks like a UUID, try to create a meaningful name
+  if (isUUID(productName)) {
+    if (description && description.trim()) {
+      return description.substring(0, 50);
+    }
+    
+    if (category) {
+      return `${category} - Produto ${productName.substring(0, 8)}`;
+    }
+    
+    return `Produto ${productName.substring(0, 8)}`;
+  }
+  
+  return productName;
+};
+
 const InventoryPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<string>("name");
@@ -221,6 +247,7 @@ const InventoryPage: React.FC = () => {
                   filteredProducts.map((product) => {
                     const stockStatus = getStockStatus(product.quantity, product.minimumStock);
                     const totalValue = product.quantity * product.price;
+                    const displayName = getDisplayName(product.name, product.description, product.category);
                     
                     return (
                       <TableRow key={product.id}>
@@ -228,10 +255,11 @@ const InventoryPage: React.FC = () => {
                           <Link 
                             to={`/products/${product.id}`}
                             className="font-medium hover:underline"
+                            title={displayName}
                           >
-                            {product.name}
+                            {displayName}
                           </Link>
-                          {product.description && (
+                          {product.description && !isUUID(product.name) && (
                             <p className="text-sm text-muted-foreground mt-1">
                               {product.description}
                             </p>

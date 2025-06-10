@@ -47,6 +47,14 @@ const ProductsPage: React.FC = () => {
   const { useDistinctCategories } = useCategories();
   const { data: categories = [], isLoading: categoriesLoading } = useDistinctCategories();
 
+  // Debug logging to understand the data
+  React.useEffect(() => {
+    if (products.length > 0) {
+      console.log('Products data:', products.slice(0, 3));
+      console.log('Categories data:', categories);
+    }
+  }, [products, categories]);
+
   const handleClearFilters = () => {
     setSearchQuery("");
     setSelectedCategory("all");
@@ -202,9 +210,18 @@ const ProductsPage: React.FC = () => {
             <p className="text-muted-foreground text-lg">
               Nenhum produto encontrado
             </p>
-            <Button className="mt-4" variant="outline" onClick={handleClearFilters}>
-              Limpar filtros
-            </Button>
+            {activeFiltersCount > 0 ? (
+              <Button className="mt-4" variant="outline" onClick={handleClearFilters}>
+                Limpar filtros
+              </Button>
+            ) : (
+              <Button className="mt-4" asChild>
+                <Link to="/products/new">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Adicionar primeiro produto
+                </Link>
+              </Button>
+            )}
           </div>
         ) : (
           <div className={`grid gap-6 ${
