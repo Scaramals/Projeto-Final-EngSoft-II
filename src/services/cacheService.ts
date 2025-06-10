@@ -57,6 +57,14 @@ class CacheService {
   }
   
   /**
+   * Obtém todas as chaves do cache
+   * @returns Array com todas as chaves
+   */
+  getKeys(): string[] {
+    return Array.from(this.cache.keys());
+  }
+  
+  /**
    * Remove todos os itens expirados do cache
    */
   cleanup(): void {
