@@ -281,55 +281,22 @@ export function useProducts() {
     });
   };
 
-  // Add stock movement with REAL-TIME validation
+  // Add stock movement - REMOVENDO validações duplicadas que estavam causando conflito
   const useAddStockMovement = () => {
     return useMutation({
       mutationFn: async (movement: Partial<StockMovement>) => {
-        SecureLogger.info('Iniciando registro de movimentação com validação EXTREMA');
+        SecureLogger.info('Registrando movimentação de estoque');
         
         if (!movement.productId || !movement.quantity || !movement.type) {
           throw new Error('Dados de movimentação incompletos');
         }
 
-        // BUSCAR ESTOQUE ATUAL SEMPRE DO BANCO - NUNCA DO CACHE
-        console.log('🔍 Buscando estoque atual DIRETAMENTE do banco de dados...');
-        const { data: currentProduct, error: productError } = await supabase
-          .from('products')
-          .select('quantity, name')
-          .eq('id', movement.productId)
-          .single();
-
-        if (productError) {
-          console.error('❌ Erro ao buscar produto:', productError);
-          SecureLogger.error('Erro ao buscar produto atual', productError);
-          throw new Error('Erro ao verificar estoque atual do produto');
-        }
-
-        const currentStock = currentProduct.quantity;
-        console.log(`📊 Estoque REAL atual no banco: ${currentStock} unidades`);
-
-        // VALIDAÇÃO ABSOLUTA para saídas
-        if (movement.type === 'out') {
-          console.log(`🔍 Validando saída: ${movement.quantity} unidades de ${currentStock} disponíveis`);
-          
-          if (currentStock === 0) {
-            console.error('❌ BLOQUEIO: Produto sem estoque');
-            SecureLogger.error('BLOQUEIO: Produto sem estoque');
-            throw new Error(`ERRO: Produto "${currentProduct.name}" não possui estoque disponível`);
-          }
-          
-          if (currentStock < movement.quantity) {
-            console.error(`❌ BLOQUEIO: Estoque insuficiente - Tentativa: ${movement.quantity}, Disponível: ${currentStock}`);
-            SecureLogger.error(`BLOQUEIO: Estoque insuficiente - Tentativa: ${movement.quantity}, Disponível: ${currentStock}`);
-            throw new Error(`ERRO: Estoque insuficiente. Disponível: ${currentStock}, Solicitado: ${movement.quantity}`);
-          }
-          
-          console.log('✅ Validação de saída APROVADA');
-        }
+        // CONFIANDO apenas no trigger do banco para validação de estoque
+        // Removendo validações duplicadas que estavam causando conflitos
+        console.log('💾 Registrando movimentação no banco (confiando no trigger para validação)...');
         
         const dbMovement = mapStockMovementToDbStockMovement(movement, user?.id);
         
-        console.log('💾 Registrando movimentação no banco...');
         const { data, error } = await supabase
           .from('stock_movements')
           .insert(dbMovement)
@@ -340,8 +307,9 @@ export function useProducts() {
           console.error('❌ Erro no banco:', error);
           SecureLogger.error('Erro no banco de dados', error);
           
+          // O trigger do banco já faz a validação correta
           if (error.message && error.message.includes('Estoque insuficiente')) {
-            throw new Error(`SISTEMA BLOQUEOU: ${error.message}`);
+            throw new Error(`Estoque insuficiente: ${error.message}`);
           }
           
           throw new Error(`Erro ao registrar movimentação: ${error.message}`);
@@ -371,17 +339,12 @@ export function useProducts() {
           queryClient.refetchQueries({ queryKey: ['products'] });
         }, 50);
         
-        // Refetch adicional após um tempo
-        setTimeout(() => {
-          queryClient.refetchQueries({ queryKey: ['products', variables.productId] });
-        }, 200);
-        
         SecureLogger.success(`Movimentação ${variables.type} de ${variables.quantity} unidades registrada com SUCESSO`);
         toast.success(`${variables.type === 'in' ? 'Entrada' : 'Saída'} de ${variables.quantity} unidades registrada com sucesso!`);
       },
       onError: (error: any) => {
-        console.error('❌ ERRO CRÍTICO:', error.message);
-        SecureLogger.error('ERRO CRÍTICO no registro da movimentação', error);
+        console.error('❌ ERRO:', error.message);
+        SecureLogger.error('ERRO no registro da movimentação', error);
         toast.error(`Operação bloqueada: ${error.message}`);
         
         // Forçar refetch para sincronizar após erro

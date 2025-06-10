@@ -57,9 +57,9 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
   const { useAllSuppliers } = useSuppliers();
   const { mutate: addStockMovement, isPending: isLoading } = useAddStockMovement();
   
-  // SEMPRE buscar dados atuais do produto para ter certeza do estoque real
+  // Buscar dados atuais do produto para mostrar estoque real
   const { data: currentProduct, refetch: refetchProduct } = useProduct(productId);
-  const realTimeStock = currentProduct?.quantity ?? 0; // Usar 0 como fallback
+  const realTimeStock = currentProduct?.quantity ?? 0;
   
   const { data: suppliers = [] } = useAllSuppliers();
   const formRef = useRef<HTMLFormElement>(null);
@@ -77,11 +77,11 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
   const watchType = form.watch('type');
   const watchQuantity = form.watch('quantity');
 
-  // Usar o estoque em tempo real para validações
+  // Usar o estoque em tempo real para validações na INTERFACE apenas
   const hasInsufficientStock = watchType === 'out' && watchQuantity > realTimeStock;
   const isStockEmpty = realTimeStock === 0;
 
-  console.log('📊 StockMovementForm - Estoque REAL do banco:', realTimeStock, 'Quantidade solicitada:', watchQuantity, 'Tipo:', watchType);
+  console.log('📊 StockMovementForm - Estoque REAL mostrado:', realTimeStock, 'Quantidade solicitada:', watchQuantity, 'Tipo:', watchType);
 
   // Reset supplier when changing to 'out'
   React.useEffect(() => {
@@ -96,12 +96,12 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
     refetchProduct();
   }, [refetchProduct]);
 
-  // Validação em tempo real da quantidade para saídas
+  // Validação visual para feedback imediato - NÃO BLOQUEIA O ENVIO
   React.useEffect(() => {
     if (watchType === 'out' && watchQuantity > realTimeStock) {
       form.setError('quantity', {
         type: 'manual',
-        message: `Quantidade não pode ser maior que o estoque disponível (${realTimeStock})`
+        message: `Quantidade solicitada (${watchQuantity}) é maior que o estoque disponível (${realTimeStock})`
       });
     } else {
       form.clearErrors('quantity');
@@ -109,47 +109,17 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
   }, [watchType, watchQuantity, realTimeStock, form]);
 
   const handleSubmit = (values: StockMovementFormValues) => {
-    console.log('🔍 Validando movimentação antes do envio:', values);
-    console.log('📊 Estoque REAL atual para validação:', realTimeStock);
+    console.log('🔍 Enviando movimentação (validação final será feita pelo banco):', values);
+    console.log('📊 Estoque mostrado na interface:', realTimeStock);
     
-    // VALIDAÇÃO FINAL antes do envio
-    if (values.type === 'out') {
-      if (realTimeStock === 0) {
-        console.error('❌ BLOQUEIO: Produto sem estoque');
-        toast({
-          variant: "destructive",
-          title: "Produto sem estoque",
-          description: "Não é possível registrar saída para produto sem estoque disponível",
-        });
-        form.setError('quantity', {
-          type: 'manual',
-          message: 'Produto sem estoque disponível'
-        });
-        return;
-      }
-      
-      if (values.quantity > realTimeStock) {
-        console.error(`❌ BLOQUEIO: Tentativa de saída de ${values.quantity} quando há apenas ${realTimeStock}`);
-        toast({
-          variant: "destructive",
-          title: "Estoque insuficiente",
-          description: `ERRO: Tentativa de saída de ${values.quantity} unidades quando há apenas ${realTimeStock} em estoque. Operação bloqueada.`,
-        });
-        form.setError('quantity', {
-          type: 'manual',
-          message: `Máximo permitido: ${realTimeStock} unidades`
-        });
-        return;
-      }
-
-      if (values.quantity <= 0) {
-        toast({
-          variant: "destructive",
-          title: "Quantidade inválida",
-          description: "A quantidade deve ser maior que zero",
-        });
-        return;
-      }
+    // Apenas validações básicas - deixar o banco fazer a validação final de estoque
+    if (values.quantity <= 0) {
+      toast({
+        variant: "destructive",
+        title: "Quantidade inválida",
+        description: "A quantidade deve ser maior que zero",
+      });
+      return;
     }
     
     const movement: Partial<StockMovement> = {
@@ -158,7 +128,7 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
       supplierId: values.type === 'out' ? undefined : values.supplierId,
     };
     
-    console.log('✅ Enviando movimentação validada:', movement);
+    console.log('✅ Enviando movimentação (banco fará validação final):', movement);
     
     addStockMovement(movement, {
       onSuccess: (data) => {
@@ -182,9 +152,6 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
     });
   };
 
-  // Determinar se o formulário deve estar desabilitado
-  const isFormDisabled = isLoading || (watchType === 'out' && (isStockEmpty || hasInsufficientStock));
-
   return (
     <Form {...form}>
       <form ref={formRef} onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
@@ -207,9 +174,7 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
                   </FormControl>
                   <SelectContent>
                     <SelectItem value="in">Entrada</SelectItem>
-                    <SelectItem value="out" disabled={isStockEmpty}>
-                      Saída {isStockEmpty && "(Sem estoque)"}
-                    </SelectItem>
+                    <SelectItem value="out">Saída</SelectItem>
                   </SelectContent>
                 </Select>
                 <FormMessage />
@@ -227,18 +192,16 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
                   <Input
                     type="number"
                     min="1"
-                    max={watchType === 'out' ? realTimeStock : undefined}
                     step="1"
-                    disabled={isLoading || (watchType === 'out' && isStockEmpty)}
+                    disabled={isLoading}
                     {...field}
-                    className={hasInsufficientStock || (watchType === 'out' && isStockEmpty) ? "border-red-500" : ""}
+                    className={hasInsufficientStock ? "border-yellow-500" : ""}
                   />
                 </FormControl>
                 {watchType === "out" && (
-                  <FormDescription className={isStockEmpty ? "text-red-600 font-medium" : ""}>
+                  <FormDescription className={hasInsufficientStock ? "text-yellow-600" : ""}>
                     Estoque disponível: {realTimeStock} unidades
-                    {isStockEmpty && " - BLOQUEADO: Produto sem estoque!"}
-                    {!isStockEmpty && hasInsufficientStock && " - ERRO: Quantidade excede estoque!"}
+                    {hasInsufficientStock && " - ATENÇÃO: Quantidade solicitada é maior que o estoque mostrado!"}
                   </FormDescription>
                 )}
                 <FormMessage />
@@ -306,16 +269,11 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
           </Button>
           <Button
             type="submit"
-            disabled={isFormDisabled}
+            disabled={isLoading}
             variant={watchType === "in" ? "default" : "destructive"}
-            className={isFormDisabled && watchType === "out" ? "opacity-50 cursor-not-allowed" : ""}
           >
             {isLoading
               ? "Processando..."
-              : isStockEmpty && watchType === "out"
-              ? "Bloqueado - Sem estoque"
-              : hasInsufficientStock && watchType === "out"
-              ? "Bloqueado - Estoque insuficiente"
               : watchType === "in"
               ? "Registrar entrada"
               : "Registrar saída"}
