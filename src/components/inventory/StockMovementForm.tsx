@@ -1,9 +1,8 @@
 
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useStockMovements } from "@/hooks/useStockMovements";
 import { useToast } from "@/hooks/use-toast";
-import { StockValidationService } from "@/services/stockValidationService";
+import { StockService } from "@/services/stockService";
 import { validateStockMovementForm, hasValidationErrors } from "@/services/stockMovementValidation";
 import { StockStatusAlert } from "./forms/StockStatusAlert";
 import { MovementTypeSelect } from "./forms/MovementTypeSelect";
@@ -40,9 +39,6 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
   // Form errors
   const [errors, setErrors] = useState(validateStockMovementForm('', 0));
 
-  const { useCreateStockMovement } = useStockMovements();
-  const createMovementMutation = useCreateStockMovement();
-
   // Validação em tempo real quando mudar tipo ou quantidade
   useEffect(() => {
     const validateMovement = async () => {
@@ -60,7 +56,7 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
       if (type === 'out') {
         setIsValidating(true);
         try {
-          const validation = await StockValidationService.validateMovement(
+          const validation = await StockService.validateMovement(
             productId, 
             quantity, 
             type
@@ -69,7 +65,7 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
           console.log('✅ [FORM] Resultado da validação:', validation);
           setCurrentValidatedStock(validation.currentStock);
           
-          if (!validation.valid) {
+          if (!validation.isValid) {
             setValidationError(validation.message || 'Erro na validação');
           } else {
             setValidationError(null);
@@ -93,11 +89,10 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
     e.preventDefault();
 
     // PROTEÇÃO CRÍTICA: Evitar execução múltipla
-    if (isSubmitting || hasSubmitted || createMovementMutation.isPending) {
+    if (isSubmitting || hasSubmitted) {
       console.log('🚫 [FORM] Bloqueando execução múltipla');
       console.log('🚫 [FORM] isSubmitting:', isSubmitting);
       console.log('🚫 [FORM] hasSubmitted:', hasSubmitted);
-      console.log('🚫 [FORM] isPending:', createMovementMutation.isPending);
       return;
     }
 
@@ -143,13 +138,13 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
       // Validação final antes do envio para movimentações de saída
       if (type === 'out') {
         console.log('🔍 [FORM] Validação final antes do envio...');
-        const finalValidation = await StockValidationService.validateMovement(
+        const finalValidation = await StockService.validateMovement(
           productId,
           validQuantity,
           type
         );
 
-        if (!finalValidation.valid) {
+        if (!finalValidation.isValid) {
           console.error('❌ [FORM] Validação final falhou:', finalValidation.message);
           toast({
             title: "Erro de validação",
@@ -163,20 +158,29 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
       }
 
       console.log('📤 [FORM] Enviando para a API...');
-      await createMovementMutation.mutateAsync({
+      const result = await StockService.createMovement({
         productId,
         quantity: validQuantity,
         type,
         notes: notes.trim() || "",
-        supplierId: supplierId || null,
+        supplierId: supplierId || undefined,
       });
 
-      console.log('✅ [FORM] Movimentação registrada com sucesso!');
-      
-      // Aguardar um pouco antes de chamar onSubmit para garantir que o cache seja atualizado
-      setTimeout(() => {
-        onSubmit();
-      }, 1000);
+      if (result.success) {
+        console.log('✅ [FORM] Movimentação registrada com sucesso!');
+        
+        toast({
+          title: "Movimentação registrada",
+          description: `${type === 'in' ? 'Entrada' : 'Saída'} de ${validQuantity} unidades registrada com sucesso.`,
+        });
+        
+        // Aguardar um pouco antes de chamar onSubmit para garantir que o cache seja atualizado
+        setTimeout(() => {
+          onSubmit();
+        }, 1000);
+      } else {
+        throw new Error(result.message || 'Erro ao registrar movimentação');
+      }
 
     } catch (error: any) {
       console.error('❌ [FORM] Erro ao registrar movimentação:', error);
@@ -241,7 +245,7 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
           <FormActions
             onCancel={onCancel}
             onSubmit={handleSubmit}
-            isSubmitting={isSubmitting || createMovementMutation.isPending}
+            isSubmitting={isSubmitting}
             isValidating={isValidating}
             hasInsufficientStock={hasInsufficientStock}
             hasSubmitted={hasSubmitted}

@@ -1,10 +1,9 @@
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { SecureLogger } from "@/services/secureLogger";
 
@@ -17,11 +16,12 @@ interface LowStockProduct {
 
 export const LowStockAlert: React.FC = () => {
   const { toast } = useToast();
+  const [lowStockProducts, setLowStockProducts] = useState<LowStockProduct[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Buscar produtos com estoque baixo usando função RPC
-  const { data: lowStockProducts = [], isLoading } = useQuery({
-    queryKey: ['low-stock-products'],
-    queryFn: async () => {
+  const fetchLowStockProducts = async () => {
+    try {
       SecureLogger.info('Buscando produtos com estoque baixo para alertas');
       
       // Usar função RPC que já existe no banco
@@ -43,9 +43,31 @@ export const LowStockAlert: React.FC = () => {
         .sort((a, b) => a.quantity - b.quantity);
 
       SecureLogger.success(`Produtos com estoque baixo encontrados: ${lowStockItems.length}`);
-      return lowStockItems as LowStockProduct[];
-    },
-  });
+      setLowStockProducts(lowStockItems as LowStockProduct[]);
+    } catch (error) {
+      SecureLogger.error('Erro ao buscar produtos com estoque baixo', error);
+      setLowStockProducts([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchLowStockProducts();
+    
+    // Escutar atualizações de produtos
+    const handleUpdate = () => {
+      fetchLowStockProducts();
+    };
+
+    window.addEventListener('stock-updated', handleUpdate);
+    window.addEventListener('movements-updated', handleUpdate);
+    
+    return () => {
+      window.removeEventListener('stock-updated', handleUpdate);
+      window.removeEventListener('movements-updated', handleUpdate);
+    };
+  }, []);
 
   const handleViewProduct = (productId: string) => {
     SecureLogger.info('Ação: Visualizar produto selecionado');

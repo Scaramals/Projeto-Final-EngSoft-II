@@ -1,7 +1,6 @@
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { SystemIndicator, AlertsService } from "@/services/alertsService";
-import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { TrendingUp, TrendingDown, Minus, Activity } from "lucide-react";
@@ -9,11 +8,29 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { formatCurrency } from "@/lib/utils";
 
 export const SystemIndicators: React.FC = () => {
-  const { data: indicators = [], isLoading } = useQuery({
-    queryKey: ['system-indicators'],
-    queryFn: () => AlertsService.getSystemIndicators(),
-    refetchInterval: 2 * 60 * 1000, // Atualizar a cada 2 minutos
-  });
+  const [indicators, setIndicators] = useState<SystemIndicator[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const fetchIndicators = async () => {
+    try {
+      const data = await AlertsService.getSystemIndicators();
+      setIndicators(data);
+    } catch (error) {
+      console.error('Error fetching system indicators:', error);
+      setIndicators([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchIndicators();
+    
+    // Atualizar a cada 2 minutos
+    const interval = setInterval(fetchIndicators, 2 * 60 * 1000);
+    
+    return () => clearInterval(interval);
+  }, []);
 
   const getStatusColor = (status: SystemIndicator['status']) => {
     switch (status) {

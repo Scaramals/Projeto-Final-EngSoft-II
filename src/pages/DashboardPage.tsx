@@ -3,8 +3,6 @@ import React from "react";
 import { Package, BarChart, AlertTriangle, ArrowUpDown, RefreshCw } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatCurrency } from "@/lib/utils";
 import { useOptimizedDashboard } from "@/hooks/useOptimizedDashboard";
