@@ -1,12 +1,12 @@
 
-import React, { useState, useRef, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Plus } from "lucide-react";
 import { formatCurrency, getStockStatus } from "@/lib/utils";
 import { Link } from "react-router-dom";
-import { useProducts } from "@/hooks/useProducts";
+import { ApiService } from "@/services/api";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
@@ -15,8 +15,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useToast } from "@/components/ui/use-toast";
-import { useCategories } from "@/hooks/useCategories";
 import {
   Table,
   TableBody,
@@ -26,6 +24,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { useQuery } from "@tanstack/react-query";
 
 const InventoryPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -33,20 +32,24 @@ const InventoryPage: React.FC = () => {
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [filter, setFilter] = useState<"all" | "low" | "medium" | "good">("all");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
-  const { toast } = useToast();
-  const pageRef = useRef<HTMLDivElement>(null);
   
-  // Usar hook de categorias para obter lista de nomes de categorias
-  const { useDistinctCategories } = useCategories();
-  const { data: categories = [], isLoading: loadingCategories } = useDistinctCategories();
-  
-  // Get products with filters
-  const { useAllProducts } = useProducts();
-  const { data: products = [], isLoading, error } = useAllProducts({
-    search: searchQuery,
-    category: selectedCategory === "all" ? "" : selectedCategory,
-    sortBy: sortBy as any,
-    sortDirection: sortDirection
+  // Get products with filters using ApiService
+  const { data: products = [], isLoading, error, refetch } = useQuery({
+    queryKey: ['products', searchQuery, selectedCategory, sortBy, sortDirection],
+    queryFn: () => ApiService.getProducts({
+      search: searchQuery || undefined,
+      category: selectedCategory === "all" ? undefined : selectedCategory,
+      sortBy: sortBy as any,
+      sortDirection: sortDirection
+    }),
+    staleTime: 1000 * 60 * 2, // 2 minutes
+  });
+
+  // Get distinct categories using ApiService
+  const { data: categories = [] } = useQuery({
+    queryKey: ['distinct-categories'],
+    queryFn: () => ApiService.getDistinctCategories(),
+    staleTime: 1000 * 60 * 5, // 5 minutes
   });
   
   // Filter products based on stock status - memoized for performance
@@ -79,9 +82,15 @@ const InventoryPage: React.FC = () => {
     setSelectedCategory("all");
   };
 
+  const handleRefresh = () => {
+    refetch();
+    // Clear cache to force fresh data
+    ApiService.clearCache();
+  };
+
   return (
     <AppLayout>
-      <div ref={pageRef} className="space-y-6">
+      <div className="space-y-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <h1 className="text-3xl font-bold">Estoque</h1>
@@ -89,12 +98,17 @@ const InventoryPage: React.FC = () => {
               Visualize e gerencie seus produtos em estoque
             </p>
           </div>
-          <Button asChild>
-            <Link to="/products/new">
-              <Plus className="mr-2 h-4 w-4" />
-              Novo Produto
-            </Link>
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={handleRefresh}>
+              Atualizar
+            </Button>
+            <Button asChild>
+              <Link to="/products/new">
+                <Plus className="mr-2 h-4 w-4" />
+                Novo Produto
+              </Link>
+            </Button>
+          </div>
         </div>
         
         <div className="flex flex-col sm:flex-row gap-4">
@@ -110,136 +124,145 @@ const InventoryPage: React.FC = () => {
           <div className="flex space-x-2">
             <Select
               value={filter}
-              onValueChange={(value) => setFilter(value as any)}
+              onValueChange={(value) => setFilter(value as "all" | "low" | "medium" | "good")}
             >
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Filtrar por estoque" />
+              <SelectTrigger className="w-[140px]">
+                <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todos os produtos</SelectItem>
-                <SelectItem value="low">Estoque crítico</SelectItem>
-                <SelectItem value="medium">Estoque baixo</SelectItem>
-                <SelectItem value="good">Estoque adequado</SelectItem>
+                <SelectItem value="all">Todos</SelectItem>
+                <SelectItem value="low">Baixo</SelectItem>
+                <SelectItem value="medium">Médio</SelectItem>
+                <SelectItem value="good">Bom</SelectItem>
               </SelectContent>
             </Select>
             
-            {loadingCategories ? (
-              <Skeleton className="h-10 w-40" />
-            ) : (
-              <Select
-                value={selectedCategory}
-                onValueChange={setSelectedCategory}
-              >
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Todas categorias" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas categorias</SelectItem>
-                  {categories.map((category) => (
-                    <SelectItem key={category} value={category}>
-                      {category}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
+            <Select
+              value={selectedCategory}
+              onValueChange={setSelectedCategory}
+            >
+              <SelectTrigger className="w-[160px]">
+                <SelectValue placeholder="Categoria" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas</SelectItem>
+                {categories.map((category) => (
+                  <SelectItem key={category} value={category}>
+                    {category}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            
+            <Button variant="outline" onClick={handleClearFilters}>
+              Limpar
+            </Button>
           </div>
         </div>
         
         {isLoading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {Array(8).fill(0).map((_, index) => (
-              <Skeleton key={index} className="h-64 w-full rounded-lg" />
+          <div className="space-y-3">
+            {Array(5).fill(0).map((_, index) => (
+              <Skeleton key={index} className="h-16 w-full" />
             ))}
           </div>
         ) : error ? (
           <div className="text-center py-12">
             <p className="text-destructive text-lg">Erro ao carregar produtos</p>
-            <Button className="mt-4" variant="outline" onClick={() => {
-              window.location.reload();
-            }}>
+            <Button className="mt-4" variant="outline" onClick={handleRefresh}>
               Tentar novamente
             </Button>
           </div>
-        ) : filteredProducts.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground text-lg">
-              Nenhum produto encontrado
-            </p>
-            <Button className="mt-4" variant="outline" onClick={handleClearFilters}>
-              Limpar filtros
-            </Button>
-          </div>
         ) : (
-          <div className="rounded-md border">
+          <div className="border rounded-lg">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead 
-                    className="cursor-pointer hover:bg-muted/50" 
+                    className="cursor-pointer select-none"
                     onClick={() => toggleSort("name")}
                   >
-                    Nome {getSortIcon("name")}
+                    Produto {getSortIcon("name")}
                   </TableHead>
                   <TableHead>Categoria</TableHead>
                   <TableHead 
-                    className="cursor-pointer hover:bg-muted/50" 
+                    className="cursor-pointer select-none text-right"
                     onClick={() => toggleSort("quantity")}
                   >
-                    Quantidade {getSortIcon("quantity")}
+                    Estoque {getSortIcon("quantity")}
                   </TableHead>
                   <TableHead 
-                    className="cursor-pointer hover:bg-muted/50" 
+                    className="cursor-pointer select-none text-right"
                     onClick={() => toggleSort("price")}
                   >
                     Preço {getSortIcon("price")}
                   </TableHead>
+                  <TableHead className="text-right">Valor Total</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredProducts.map((product) => {
-                  const stockStatus = getStockStatus(product.quantity, product.minimumStock);
-                  
-                  return (
-                    <TableRow key={product.id} className="hover:bg-muted/50">
-                      <TableCell className="font-medium">
-                        {product.name}
-                      </TableCell>
-                      <TableCell>
-                        {product.category || "Sem categoria"}
-                      </TableCell>
-                      <TableCell className="font-medium">
-                        {product.quantity}
-                      </TableCell>
-                      <TableCell>
-                        {formatCurrency(product.price)}
-                      </TableCell>
-                      <TableCell>
-                        <Badge 
-                          variant={
-                            stockStatus.class.includes("red") ? "destructive" :
-                            stockStatus.class.includes("yellow") ? "secondary" : "default"
-                          }
-                        >
-                          {stockStatus.label}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          asChild
-                        >
-                          <Link to={`/products/${product.id}`}>
-                            Detalhes
+                {filteredProducts.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-8">
+                      <p className="text-muted-foreground">
+                        Nenhum produto encontrado
+                      </p>
+                      <Button 
+                        className="mt-2" 
+                        variant="outline" 
+                        onClick={handleClearFilters}
+                      >
+                        Limpar filtros
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredProducts.map((product) => {
+                    const stockStatus = getStockStatus(product.quantity, product.minimumStock);
+                    const totalValue = product.quantity * product.price;
+                    
+                    return (
+                      <TableRow key={product.id}>
+                        <TableCell>
+                          <Link 
+                            to={`/products/${product.id}`}
+                            className="font-medium hover:underline"
+                          >
+                            {product.name}
                           </Link>
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
+                          {product.description && (
+                            <p className="text-sm text-muted-foreground mt-1">
+                              {product.description}
+                            </p>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {product.category || "Sem categoria"}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {product.quantity}
+                          {product.minimumStock && (
+                            <span className="text-xs text-muted-foreground ml-1">
+                              (min: {product.minimumStock})
+                            </span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {formatCurrency(product.price)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {formatCurrency(totalValue)}
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={stockStatus.class}>
+                            {stockStatus.text}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
               </TableBody>
             </Table>
           </div>

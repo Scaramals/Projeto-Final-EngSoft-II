@@ -3,13 +3,12 @@ import React, { useState, useRef } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { ProductCard } from "@/components/products/ProductCard";
 import { Button } from "@/components/ui/button";
-import { Plus, Filter, Search as SearchIcon, SlidersHorizontal, Grid3X3, List } from "lucide-react";
+import { Plus, Search as SearchIcon, SlidersHorizontal, Grid3X3, List } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Link } from "react-router-dom";
 import { useProducts } from "@/hooks/useProducts";
+import { ApiService } from "@/services/api";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import {
   Select,
   SelectContent,
@@ -24,6 +23,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
+import { useQuery } from "@tanstack/react-query";
 
 type SortOption = "name" | "price" | "quantity" | "created_at";
 
@@ -34,31 +34,23 @@ const ProductsPage: React.FC = () => {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const searchRef = useRef<HTMLInputElement>(null);
   
-  // Get all categories for filter dropdown
-  const { data: categories = [], isLoading: loadingCategories } = useQuery({
-    queryKey: ['categories'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('products')
-        .select('category')
-        .not('category', 'is', null)
-        .order('category');
-      
-      if (error) throw error;
-      
-      // Extract unique categories
-      const uniqueCategories = [...new Set(data.map(item => item.category).filter(Boolean))];
-      return uniqueCategories;
-    }
+  // Get products with filters using ApiService
+  const { data: products = [], isLoading, error, refetch } = useQuery({
+    queryKey: ['products', searchQuery, selectedCategory, sortBy],
+    queryFn: () => ApiService.getProducts({
+      search: searchQuery || undefined,
+      category: selectedCategory || undefined,
+      sortBy: sortBy === "created_at" ? "name" : sortBy,
+      sortDirection: "asc"
+    }),
+    staleTime: 1000 * 60 * 2, // 2 minutes
   });
-  
-  // Get products with filters
-  const { useAllProducts } = useProducts();
-  const { data: products = [], isLoading, error, refetch } = useAllProducts({
-    search: searchQuery,
-    category: selectedCategory || undefined,
-    sortBy: sortBy === "created_at" ? "name" : sortBy,
-    sortDirection: "asc"
+
+  // Get distinct categories using ApiService
+  const { data: categories = [] } = useQuery({
+    queryKey: ['distinct-categories'],
+    queryFn: () => ApiService.getDistinctCategories(),
+    staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
   const handleClearFilters = () => {
@@ -72,6 +64,8 @@ const ProductsPage: React.FC = () => {
 
   const handleRefresh = () => {
     refetch();
+    // Clear cache to force fresh data
+    ApiService.clearCache();
   };
 
   const activeFiltersCount = [searchQuery, selectedCategory].filter(Boolean).length;
@@ -114,26 +108,22 @@ const ProductsPage: React.FC = () => {
           
           <div className="flex flex-wrap gap-2">
             {/* Filtro de Categoria */}
-            {loadingCategories ? (
-              <Skeleton className="h-10 w-40" />
-            ) : (
-              <Select
-                value={selectedCategory}
-                onValueChange={setSelectedCategory}
-              >
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Categoria" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas Categorias</SelectItem>
-                  {categories.map((category) => (
-                    <SelectItem key={category} value={category}>
-                      {category}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
+            <Select
+              value={selectedCategory}
+              onValueChange={setSelectedCategory}
+            >
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Categoria" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Todas Categorias</SelectItem>
+                {categories.map((category) => (
+                  <SelectItem key={category} value={category}>
+                    {category}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
             {/* Ordenação */}
             <DropdownMenu>
