@@ -23,7 +23,8 @@ export const SimplifiedStockForm: React.FC<SimplifiedStockFormProps> = ({
   onCancel
 }) => {
   const { toast } = useToast();
-  const { suppliers } = useSuppliers();
+  const { useAllSuppliers } = useSuppliers();
+  const { data: suppliers = [] } = useAllSuppliers();
   
   // Estados do formulário
   const [formData, setFormData] = useState({

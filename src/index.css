@@ -264,6 +264,6 @@
 
 @media (min-width: 1920px) {
   .container-responsive {
-    @apply max-w-8xl;
+    @apply max-w-7xl;
   }
 }
