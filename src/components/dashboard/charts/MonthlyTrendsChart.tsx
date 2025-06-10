@@ -2,33 +2,39 @@
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
-  LineChart,
-  Line,
+  BarChart,
+  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
-  ResponsiveContainer,
-  Legend
+  ResponsiveContainer
 } from "recharts";
+import { useSupplierMovements } from "@/hooks/useSupplierMovements";
 
-interface MonthlyTrend {
-  month: string;
-  totalIn: number;
-  totalOut: number;
-  net: number;
-}
+export const MonthlyTrendsChart: React.FC = () => {
+  const { supplierMovements, isLoading } = useSupplierMovements();
 
-interface MonthlyTrendsChartProps {
-  monthlyTrends: MonthlyTrend[] | undefined;
-}
-
-export const MonthlyTrendsChart: React.FC<MonthlyTrendsChartProps> = ({ monthlyTrends }) => {
-  if (!monthlyTrends || monthlyTrends.length === 0) {
+  if (isLoading) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Tendência Mensal</CardTitle>
+          <CardTitle>Fornecedores com Mais Saídas</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="h-64 flex items-center justify-center">
+            <p className="text-muted-foreground">Carregando...</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!supplierMovements || supplierMovements.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Fornecedores com Mais Saídas</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="h-64 flex items-center justify-center">
@@ -40,26 +46,23 @@ export const MonthlyTrendsChart: React.FC<MonthlyTrendsChartProps> = ({ monthlyT
   }
 
   // Formattar dados para o gráfico
-  const chartData = monthlyTrends.map(trend => ({
-    month: new Date(trend.month + '-01').toLocaleDateString('pt-BR', { 
-      month: 'short', 
-      year: '2-digit' 
-    }),
-    entradas: trend.totalIn,
-    saidas: trend.totalOut,
-    liquido: trend.net
+  const chartData = supplierMovements.map(supplier => ({
+    name: supplier.supplierName.length > 15 
+      ? supplier.supplierName.substring(0, 15) + '...' 
+      : supplier.supplierName,
+    fullName: supplier.supplierName,
+    saidas: supplier.totalOut
   }));
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
+      const data = payload[0].payload;
       return (
         <div className="bg-white p-3 border rounded shadow">
-          <p className="font-medium">{label}</p>
-          {payload.map((entry: any, index: number) => (
-            <p key={index} style={{ color: entry.color }}>
-              {entry.name}: {entry.value} unidades
-            </p>
-          ))}
+          <p className="font-medium">{data.fullName}</p>
+          <p className="text-red-600">
+            Saídas: {data.saidas} unidades
+          </p>
         </div>
       );
     }
@@ -69,39 +72,29 @@ export const MonthlyTrendsChart: React.FC<MonthlyTrendsChartProps> = ({ monthlyT
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Tendência Mensal</CardTitle>
+        <CardTitle>Fornecedores com Mais Saídas</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="h-64">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={chartData}>
+            <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="month" />
+              <XAxis 
+                dataKey="name" 
+                angle={-45}
+                textAnchor="end"
+                height={80}
+                fontSize={12}
+              />
               <YAxis />
               <Tooltip content={<CustomTooltip />} />
-              <Legend />
-              <Line 
-                type="monotone" 
-                dataKey="entradas" 
-                stroke="#00C49F" 
-                strokeWidth={2}
-                name="Entradas"
-              />
-              <Line 
-                type="monotone" 
+              <Bar 
                 dataKey="saidas" 
-                stroke="#FF8042" 
-                strokeWidth={2}
+                fill="#FF8042" 
                 name="Saídas"
+                radius={[4, 4, 0, 0]}
               />
-              <Line 
-                type="monotone" 
-                dataKey="liquido" 
-                stroke="#0088FE" 
-                strokeWidth={2}
-                name="Líquido"
-              />
-            </LineChart>
+            </BarChart>
           </ResponsiveContainer>
         </div>
       </CardContent>
