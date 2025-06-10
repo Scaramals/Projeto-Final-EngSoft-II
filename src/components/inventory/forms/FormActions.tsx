@@ -7,15 +7,23 @@ interface FormActionsProps {
   onCancel: () => void;
   onSubmit?: (e: React.FormEvent) => void | Promise<void>;
   isSubmitting: boolean;
-  hasValidationError: boolean;
+  hasValidationError?: boolean;
+  isValidating?: boolean;
+  hasInsufficientStock?: boolean;
+  hasSubmitted?: boolean;
 }
 
 export const FormActions: React.FC<FormActionsProps> = ({
   onCancel,
   onSubmit,
   isSubmitting,
-  hasValidationError
+  hasValidationError = false,
+  isValidating = false,
+  hasInsufficientStock = false,
+  hasSubmitted = false
 }) => {
+  const isDisabled = isSubmitting || hasValidationError || hasInsufficientStock || isValidating;
+
   return (
     <div className="flex gap-2 pt-2">
       <Button
@@ -29,7 +37,7 @@ export const FormActions: React.FC<FormActionsProps> = ({
       </Button>
       <Button
         type="submit"
-        disabled={isSubmitting || hasValidationError}
+        disabled={isDisabled}
         className="flex-1"
         onClick={onSubmit}
       >
