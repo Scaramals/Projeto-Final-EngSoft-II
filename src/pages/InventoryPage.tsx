@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useRef } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -10,6 +9,7 @@ import { useProducts } from "@/hooks/useProducts";
 import { useCategories } from "@/hooks/useCategories";
 import { ApiService } from "@/services/api";
 import { Skeleton } from "@/components/ui/skeleton";
+import { CategoryCell } from "@/components/inventory/CategoryCell";
 import {
   Select,
   SelectContent,
@@ -53,29 +53,6 @@ const getDisplayName = (productName: string, description?: string, category?: st
   return productName;
 };
 
-// Helper function to get category display name
-const getCategoryDisplayName = (category: any): string => {
-  if (!category) return "Sem categoria";
-  
-  // If category is a string, return it directly
-  if (typeof category === 'string') {
-    // Check if it's a UUID string and should not be displayed
-    if (isUUID(category)) {
-      console.log('Category UUID detected instead of name:', category);
-      return "Categoria";
-    }
-    return category;
-  }
-  
-  // If category is an object, try to get the name property
-  if (typeof category === 'object' && category.name) {
-    return category.name;
-  }
-  
-  console.log('Unexpected category format:', category);
-  return "Categoria";
-};
-
 const InventoryPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<string>("name");
@@ -96,19 +73,6 @@ const InventoryPage: React.FC = () => {
   // Get categories using React Query
   const { useDistinctCategories } = useCategories();
   const { data: categories = [], isLoading: categoriesLoading } = useDistinctCategories();
-
-  // Debug logging
-  React.useEffect(() => {
-    if (products.length > 0) {
-      console.log('Inventory products data sample:', products.slice(0, 3).map(p => ({
-        id: p.id,
-        name: p.name,
-        category: p.category,
-        categoryType: typeof p.category
-      })));
-      console.log('Categories data:', categories);
-    }
-  }, [products, categories]);
   
   // Filter products based on stock status - memoized for performance
   const filteredProducts = useMemo(() => {
@@ -283,8 +247,7 @@ const InventoryPage: React.FC = () => {
                   filteredProducts.map((product) => {
                     const stockStatus = getStockStatus(product.quantity, product.minimumStock);
                     const totalValue = product.quantity * product.price;
-                    const displayName = getDisplayName(product.name, product.description, getCategoryDisplayName(product.category));
-                    const categoryName = getCategoryDisplayName(product.category);
+                    const displayName = getDisplayName(product.name, product.description);
                     
                     return (
                       <TableRow key={product.id}>
@@ -303,7 +266,7 @@ const InventoryPage: React.FC = () => {
                           )}
                         </TableCell>
                         <TableCell>
-                          {categoryName}
+                          <CategoryCell categoryId={product.category} />
                         </TableCell>
                         <TableCell className="text-right">
                           {product.quantity}

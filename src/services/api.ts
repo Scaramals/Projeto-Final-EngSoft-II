@@ -131,7 +131,7 @@ export const ApiService = {
   },
 
   /**
-   * Obter categorias distintas diretamente da tabela products
+   * Obter categorias da tabela categories
    */
   async getDistinctCategories(): Promise<string[]> {
     try {
@@ -143,26 +143,24 @@ export const ApiService = {
         return cached;
       }
 
-      SecureLogger.info('[INFO] Buscando categorias distintas');
+      SecureLogger.info('[INFO] Buscando categorias da tabela categories');
       
-      // Buscar categorias distintas diretamente da tabela products
+      // Buscar categorias da tabela categories
       const { data, error } = await supabase
-        .from('products')
-        .select('category')
-        .not('category', 'is', null)
-        .order('category');
+        .from('categories')
+        .select('name')
+        .order('name');
 
       if (error) {
         SecureLogger.error('[ERROR] Erro ao buscar categorias', error);
         throw error;
       }
 
-      // Extrair categorias únicas
-      const categories = Array.from(new Set(
-        (data || [])
-          .map(item => item.category)
-          .filter(category => category && category.trim() !== '')
-      )).sort();
+      // Extrair nomes das categorias
+      const categories = (data || [])
+        .map(item => item.name)
+        .filter(name => name && name.trim() !== '')
+        .sort();
 
       // Cache por 5 minutos
       cacheService.set(cacheKey, categories, 300);
@@ -172,6 +170,41 @@ export const ApiService = {
     } catch (error) {
       SecureLogger.error('[ERROR] Erro ao buscar categorias', error);
       return [];
+    }
+  },
+
+  /**
+   * Obter nome da categoria pelo ID
+   */
+  async getCategoryNameById(categoryId: string): Promise<string> {
+    try {
+      const cacheKey = `category_name_${categoryId}`;
+      const cached = cacheService.get<string>(cacheKey);
+      
+      if (cached) {
+        return cached;
+      }
+
+      const { data, error } = await supabase
+        .from('categories')
+        .select('name')
+        .eq('id', categoryId)
+        .single();
+
+      if (error || !data) {
+        SecureLogger.error('[ERROR] Categoria não encontrada', { categoryId, error });
+        return 'Categoria não encontrada';
+      }
+
+      const categoryName = data.name;
+      
+      // Cache por 10 minutos
+      cacheService.set(cacheKey, categoryName, 600);
+      
+      return categoryName;
+    } catch (error) {
+      SecureLogger.error('[ERROR] Erro ao buscar nome da categoria', error);
+      return 'Categoria não encontrada';
     }
   },
 
