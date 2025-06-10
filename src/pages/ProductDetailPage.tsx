@@ -59,7 +59,7 @@ const ProductDetailPage: React.FC = () => {
   if (isLoading) {
     return (
       <AppLayout>
-        <div className="space-y-6">
+        <div className="space-y-6 p-4 sm:p-6">
           <div className="flex items-center justify-between">
             <Skeleton className="h-10 w-1/3" />
           </div>
@@ -96,7 +96,7 @@ const ProductDetailPage: React.FC = () => {
   if (isEditing) {
     return (
       <AppLayout>
-        <div className="space-y-6">
+        <div className="space-y-6 p-4 sm:p-6">
           <div className="flex items-center justify-between">
             <h1 className="text-3xl font-bold">Editar Produto</h1>
           </div>
@@ -123,7 +123,7 @@ const ProductDetailPage: React.FC = () => {
 
   return (
     <AppLayout>
-      <div className="space-y-6">
+      <div className="space-y-6 p-4 sm:p-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <div className="flex items-center gap-2 mb-2">
