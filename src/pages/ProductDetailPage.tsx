@@ -5,9 +5,12 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { ProductForm } from "@/components/products/ProductForm";
 import { CategoryBadge } from "@/components/products/CategoryBadge";
+import { StockMovementModal } from "@/components/inventory/StockMovementModal";
+import { StockMovementsList } from "@/components/inventory/StockMovementsList";
 import { formatCurrency, formatDate, getStockStatus } from "@/lib/utils";
-import { Edit, Trash2, ArrowLeft } from "lucide-react";
+import { Edit, Trash2, ArrowLeft, Plus, TrendingUp } from "lucide-react";
 import { useProducts } from "@/hooks/useProducts";
+import { useRealtimeStock } from "@/hooks/useRealtimeStock";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   AlertDialog,
@@ -25,9 +28,11 @@ const ProductDetailPage: React.FC = () => {
   const { productId } = useParams<{ productId: string }>();
   const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
+  const [showMovementModal, setShowMovementModal] = useState(false);
   
   const { useProduct, useUpdateProduct, useDeleteProduct } = useProducts();
-  const { data: product, isLoading, error } = useProduct(productId);
+  const { data: product, isLoading, error, refetch } = useProduct(productId);
+  const { currentStock, refreshStock } = useRealtimeStock(productId);
   const updateProduct = useUpdateProduct();
   const deleteProduct = useDeleteProduct();
 
@@ -54,6 +59,11 @@ const ProductDetailPage: React.FC = () => {
     } catch (error) {
       console.error('Error deleting product:', error);
     }
+  };
+
+  const handleMovementSuccess = () => {
+    refetch();
+    refreshStock();
   };
 
   if (isLoading) {
@@ -91,7 +101,9 @@ const ProductDetailPage: React.FC = () => {
     );
   }
 
-  const stockStatus = getStockStatus(product.quantity, product.minimumStock);
+  // Usar estoque em tempo real se disponível, senão usar do produto
+  const displayStock = currentStock !== undefined ? currentStock : product.quantity;
+  const stockStatus = getStockStatus(displayStock, product.minimumStock);
 
   if (isEditing) {
     return (
@@ -135,6 +147,14 @@ const ProductDetailPage: React.FC = () => {
             <p className="text-muted-foreground">Detalhes do produto</p>
           </div>
           <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => setShowMovementModal(true)}
+              className="bg-blue-50 hover:bg-blue-100 border-blue-200"
+            >
+              <TrendingUp className="mr-2 h-4 w-4" />
+              Movimentar Estoque
+            </Button>
             <Button variant="outline" onClick={() => setIsEditing(true)}>
               <Edit className="mr-2 h-4 w-4" />
               Editar
@@ -169,7 +189,7 @@ const ProductDetailPage: React.FC = () => {
         </div>
         
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-2 space-y-6">
             <div className="bg-white rounded-lg shadow p-6">
               <h2 className="text-xl font-semibold mb-4">Informações do Produto</h2>
               <div className="space-y-4">
@@ -199,6 +219,9 @@ const ProductDetailPage: React.FC = () => {
                 </div>
               </div>
             </div>
+
+            {/* Lista de movimentações do produto */}
+            <StockMovementsList productId={productId} limit={20} />
           </div>
           
           <div>
@@ -207,7 +230,7 @@ const ProductDetailPage: React.FC = () => {
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <p className="text-sm text-muted-foreground">Quantidade atual</p>
-                  <p className="font-bold text-2xl">{product.quantity}</p>
+                  <p className="font-bold text-2xl">{displayStock}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Status</p>
@@ -221,12 +244,22 @@ const ProductDetailPage: React.FC = () => {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Valor total</p>
-                  <p className="font-semibold">{formatCurrency(product.price * product.quantity)}</p>
+                  <p className="font-semibold">{formatCurrency(product.price * displayStock)}</p>
                 </div>
               </div>
             </div>
           </div>
         </div>
+
+        {/* Modal de movimentação */}
+        <StockMovementModal
+          isOpen={showMovementModal}
+          onClose={() => setShowMovementModal(false)}
+          productId={productId!}
+          productName={product.name}
+          currentStock={displayStock}
+          onSuccess={handleMovementSuccess}
+        />
       </div>
     </AppLayout>
   );
