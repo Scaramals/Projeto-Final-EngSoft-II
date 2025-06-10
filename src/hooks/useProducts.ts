@@ -273,38 +273,52 @@ export function useProducts() {
     });
   };
 
-  // Add stock movement with RIGOROUS validation working with database trigger
+  // Add stock movement with ENHANCED validation and real-time stock check
   const useAddStockMovement = () => {
     return useMutation({
       mutationFn: async (movement: Partial<StockMovement>) => {
-        SecureLogger.info('Iniciando registro de movimentação com validação rigorosa (frontend + backend)');
+        SecureLogger.info('Iniciando registro de movimentação com validação em tempo real');
         
         if (!movement.productId || !movement.quantity || !movement.type) {
           throw new Error('Dados de movimentação incompletos');
         }
 
-        // VALIDAÇÃO RIGOROSA DUPLA para saídas (frontend + backend)
+        // VALIDAÇÃO CRÍTICA: Buscar estoque atual em tempo real antes de qualquer operação
+        console.log('Buscando estoque atual em tempo real...');
+        const { data: currentProduct, error: productError } = await supabase
+          .from('products')
+          .select('quantity, name')
+          .eq('id', movement.productId)
+          .single();
+
+        if (productError) {
+          SecureLogger.error('Erro ao buscar produto atual', productError);
+          throw new Error('Erro ao verificar estoque atual do produto');
+        }
+
+        const currentStock = currentProduct.quantity;
+        console.log(`Estoque atual em tempo real: ${currentStock} unidades`);
+
+        // VALIDAÇÃO RIGOROSA para saídas
         if (movement.type === 'out') {
-          console.log('Aplicando validação rigorosa DUPLA para saída de estoque...');
+          console.log(`Validando saída: ${movement.quantity} unidades solicitadas de ${currentStock} disponíveis`);
           
-          // Primeira validação: frontend
-          const validation = await ApiService.validateMovement(
-            movement.productId, 
-            movement.quantity, 
-            movement.type
-          );
-          
-          if (!validation.valid) {
-            SecureLogger.error('Movimentação BLOQUEADA pela validação frontend', validation.message);
-            throw new Error(validation.message || 'Movimentação bloqueada - estoque insuficiente');
+          if (currentStock === 0) {
+            SecureLogger.error('BLOQUEIO: Produto sem estoque');
+            throw new Error(`BLOQUEADO: Produto "${currentProduct.name}" não possui estoque disponível`);
           }
           
-          SecureLogger.info('Validação frontend APROVADA - enviando para o banco de dados');
+          if (currentStock < movement.quantity) {
+            SecureLogger.error(`BLOQUEIO: Saída de ${movement.quantity} quando há apenas ${currentStock}`);
+            throw new Error(`BLOQUEADO: Estoque insuficiente. Disponível: ${currentStock}, Solicitado: ${movement.quantity}`);
+          }
+          
+          console.log('Validação de saída APROVADA');
         }
         
         const dbMovement = mapStockMovementToDbStockMovement(movement, user?.id);
         
-        // O banco de dados fará a segunda validação via trigger
+        // Registrar a movimentação (o trigger do banco fará a segunda validação e atualizará o estoque)
         const { data, error } = await supabase
           .from('stock_movements')
           .insert(dbMovement)
@@ -312,21 +326,21 @@ export function useProducts() {
           .single();
           
         if (error) {
-          SecureLogger.error('Erro/Bloqueio no banco de dados', error);
+          SecureLogger.error('Erro no banco de dados', error);
           
           // Tratar erros específicos do trigger de validação
           if (error.message && error.message.includes('Estoque insuficiente')) {
-            throw new Error(`BLOQUEADO: ${error.message}`);
+            throw new Error(`SISTEMA BLOQUEOU: ${error.message}`);
           }
           
           throw new Error(`Erro ao registrar movimentação: ${error.message}`);
         }
         
-        SecureLogger.success('Movimentação registrada com sucesso após validação DUPLA (frontend + backend)');
+        SecureLogger.success('Movimentação registrada com sucesso');
         return mapDbStockMovementToStockMovement(data);
       },
       onSuccess: (_, variables) => {
-        // Invalidar múltiplas queries relacionadas
+        // Invalidar TODAS as queries relacionadas para forçar atualização
         queryClient.invalidateQueries({ queryKey: ['products'] });
         queryClient.invalidateQueries({ queryKey: ['products', variables.productId] });
         queryClient.invalidateQueries({ queryKey: ['productMovements', variables.productId] });
@@ -334,10 +348,15 @@ export function useProducts() {
         queryClient.invalidateQueries({ queryKey: ['recent-movements'] });
         queryClient.invalidateQueries({ queryKey: ['low-stock-products'] });
         
-        // Limpar cache da API
+        // Limpar cache da API para forçar busca de dados frescos
         ApiService.clearCache();
         
-        SecureLogger.success(`Movimentação ${variables.type} de ${variables.quantity} unidades finalizada com SUCESSO TOTAL`);
+        // Aguardar um pouco e forçar refetch do produto específico
+        setTimeout(() => {
+          queryClient.refetchQueries({ queryKey: ['products', variables.productId] });
+        }, 100);
+        
+        SecureLogger.success(`Movimentação ${variables.type} de ${variables.quantity} unidades registrada com SUCESSO`);
         toast.success(`${variables.type === 'in' ? 'Entrada' : 'Saída'} de ${variables.quantity} unidades registrada com sucesso!`);
       },
       onError: (error: any) => {

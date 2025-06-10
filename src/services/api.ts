@@ -344,9 +344,10 @@ export const ApiService = {
    */
   async validateMovement(productId: string, quantity: number, type: 'in' | 'out'): Promise<{valid: boolean, message?: string}> {
     try {
-      console.log(`Validação FRONTEND: ${type} de ${quantity} unidades para produto ${productId}`);
+      console.log(`Validação em tempo real: ${type} de ${quantity} unidades para produto ${productId}`);
       
       if (type === 'out') {
+        // Buscar estoque atual diretamente do banco (não do cache)
         const { data: product, error } = await supabase
           .from('products')
           .select('quantity, name')
@@ -358,9 +359,11 @@ export const ApiService = {
           return { valid: false, message: 'Produto não encontrado' };
         }
         
-        // REGRA ABSOLUTA: Não permitir saída maior que estoque
+        console.log(`Estoque atual no banco: ${product.quantity} unidades`);
+        
+        // VALIDAÇÃO ABSOLUTA: Não permitir saída maior que estoque
         if (product.quantity === 0) {
-          console.error(`FRONTEND BLOQUEOU: Produto sem estoque. Produto: ${product.name}`);
+          console.error(`BLOQUEIO: Produto sem estoque. Produto: ${product.name}`);
           return { 
             valid: false, 
             message: `ERRO: Produto "${product.name}" não possui estoque disponível` 
@@ -368,20 +371,43 @@ export const ApiService = {
         }
         
         if (product.quantity < quantity) {
-          console.error(`FRONTEND BLOQUEOU: Saída de ${quantity} unidades quando há apenas ${product.quantity}. Produto: ${product.name}`);
+          console.error(`BLOQUEIO: Saída de ${quantity} unidades quando há apenas ${product.quantity}. Produto: ${product.name}`);
           return { 
             valid: false, 
             message: `ERRO: Estoque insuficiente para "${product.name}". Disponível: ${product.quantity}, Solicitado: ${quantity}` 
           };
         }
         
-        console.log(`Validação FRONTEND OK: Saída de ${quantity} unidades permitida. Estoque atual: ${product.quantity}`);
+        console.log(`Validação OK: Saída de ${quantity} unidades permitida. Estoque atual: ${product.quantity}`);
       }
       
       return { valid: true };
     } catch (error) {
-      console.error("Erro crítico na validação frontend:", error);
+      console.error("Erro crítico na validação:", error);
       return { valid: false, message: 'Erro na validação - operação bloqueada por segurança' };
+    }
+  },
+
+  /**
+   * Buscar estoque atual de um produto específico (sem cache)
+   */
+  async getCurrentStock(productId: string): Promise<number> {
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .select('quantity')
+        .eq('id', productId)
+        .single();
+      
+      if (error) {
+        console.error('Erro ao buscar estoque atual:', error);
+        return 0;
+      }
+      
+      return data.quantity || 0;
+    } catch (error) {
+      console.error('Erro ao buscar estoque atual:', error);
+      return 0;
     }
   },
 
