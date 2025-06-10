@@ -1,3 +1,4 @@
+
 import React, { useState, useRef } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { ProductsHeader } from "@/components/products/ProductsHeader";
@@ -26,20 +27,23 @@ const ProductsPage: React.FC = () => {
     sortDirection: "asc"
   });
 
-  // Get categories using React Query - agora retorna objetos {id, name}
+  // Get categories using React Query - retorna objetos {id, name}
   const { useDistinctCategories } = useCategories();
   const { data: categoriesData = [], isLoading: categoriesLoading } = useDistinctCategories();
 
-  // Convert categories data to the expected format for ProductsFilters
+  // Convert categories data to the format expected by ProductsFilters
   const categories: Array<string> = categoriesData.map(cat => cat.name);
 
   // Debug logging to understand the data
   React.useEffect(() => {
+    console.log('ProductsPage - Products:', products.length);
+    console.log('ProductsPage - Categories data:', categoriesData);
+    console.log('ProductsPage - Categories for filter:', categories);
+    
     if (products.length > 0) {
-      console.log('Products data:', products.slice(0, 3));
-      console.log('Categories data:', categories);
+      console.log('Sample product:', products[0]);
     }
-  }, [products, categories]);
+  }, [products, categoriesData, categories]);
 
   const handleClearFilters = () => {
     setSearchQuery("");
@@ -51,9 +55,36 @@ const ProductsPage: React.FC = () => {
   };
 
   const handleRefresh = () => {
+    console.log('Refreshing products and clearing cache');
     refetch();
     // Clear cache to force fresh data
     ApiService.clearCache();
+  };
+
+  // Handle category change - convert category name back to ID
+  const handleCategoryChange = (categoryName: string) => {
+    console.log('Category changed to:', categoryName);
+    
+    if (categoryName === "all") {
+      setSelectedCategoryId("all");
+    } else {
+      // Find the category ID by name
+      const foundCategory = categoriesData.find(cat => cat.name === categoryName);
+      if (foundCategory) {
+        console.log('Found category ID:', foundCategory.id);
+        setSelectedCategoryId(foundCategory.id);
+      } else {
+        console.warn('Category not found:', categoryName);
+        setSelectedCategoryId("all");
+      }
+    }
+  };
+
+  // Convert current categoryId back to name for display
+  const getSelectedCategoryName = () => {
+    if (selectedCategoryId === "all") return "all";
+    const foundCategory = categoriesData.find(cat => cat.id === selectedCategoryId);
+    return foundCategory?.name || "all";
   };
 
   const activeFiltersCount = [searchQuery, selectedCategoryId !== "all" ? selectedCategoryId : ""].filter(Boolean).length;
@@ -66,8 +97,8 @@ const ProductsPage: React.FC = () => {
         <ProductsFilters
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
-          selectedCategory={selectedCategoryId}
-          setSelectedCategory={setSelectedCategoryId}
+          selectedCategory={getSelectedCategoryName()}
+          setSelectedCategory={handleCategoryChange}
           sortBy={sortBy}
           setSortBy={setSortBy}
           viewMode={viewMode}

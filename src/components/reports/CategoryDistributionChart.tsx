@@ -20,11 +20,17 @@ export const CategoryDistributionChart: React.FC = () => {
     return colors;
   };
 
+  // Debug logging
+  React.useEffect(() => {
+    console.log('CategoryDistributionChart - Analysis data:', categoryAnalysis);
+  }, [categoryAnalysis]);
+
   if (isLoading) {
     return <Skeleton className="h-64 w-full" />;
   }
 
   if (!categoryAnalysis || categoryAnalysis.length === 0) {
+    console.log('CategoryDistributionChart - No data available');
     return (
       <div className="h-64 flex items-center justify-center">
         <p className="text-muted-foreground">
@@ -46,6 +52,8 @@ export const CategoryDistributionChart: React.FC = () => {
       },
     ],
   };
+
+  console.log('CategoryDistributionChart - Chart data prepared:', chartData);
 
   return (
     <div className="space-y-4">

@@ -13,7 +13,7 @@ export function useOptimizedDashboard() {
   const { data: stats, isLoading: isStatsLoading, refetch: refetchStats } = useQuery<DashboardStats>({
     queryKey: ["dashboard-stats-optimized"],
     queryFn: () => {
-      console.log('Fetching dashboard stats...');
+      console.log('useOptimizedDashboard - Fetching dashboard stats...');
       return OptimizedApiService.getDashboardStats(true); // Force refresh
     },
     staleTime: 2 * 60 * 1000, // 2 minutos
@@ -25,7 +25,7 @@ export function useOptimizedDashboard() {
   const { data: movementsSummary, isLoading: isMovementsLoading, refetch: refetchMovements } = useQuery<MovementSummary[]>({
     queryKey: ["movements-summary"],
     queryFn: () => {
-      console.log('Fetching movements summary...');
+      console.log('useOptimizedDashboard - Fetching movements summary...');
       return OptimizedApiService.getMovementsSummary(30, true); // Force refresh
     },
     staleTime: 5 * 60 * 1000, // 5 minutos
@@ -37,7 +37,7 @@ export function useOptimizedDashboard() {
   const { data: categoryAnalysis, isLoading: isCategoryLoading, refetch: refetchCategory } = useQuery<CategoryAnalysis[]>({
     queryKey: ["category-analysis"],
     queryFn: () => {
-      console.log('Fetching category analysis...');
+      console.log('useOptimizedDashboard - Fetching category analysis...');
       return OptimizedApiService.getCategoryAnalysis(true); // Force refresh
     },
     staleTime: 10 * 60 * 1000, // 10 minutos
@@ -49,16 +49,16 @@ export function useOptimizedDashboard() {
   const { data: monthlyTrends, isLoading: isTrendsLoading, refetch: refetchTrends } = useQuery({
     queryKey: ["monthly-trends"],
     queryFn: async () => {
-      console.log('Fetching monthly trends data...');
+      console.log('useOptimizedDashboard - Fetching monthly trends data...');
       const { data, error } = await supabase.rpc('get_movements_summary', { days_back: 180 });
 
       if (error) {
-        console.error('Error fetching monthly trends:', error);
+        console.error('useOptimizedDashboard - Error fetching monthly trends:', error);
         throw error;
       }
 
       if (!data || data.length === 0) {
-        console.log('No monthly trends data found');
+        console.log('useOptimizedDashboard - No monthly trends data found');
         return [];
       }
 
@@ -85,7 +85,7 @@ export function useOptimizedDashboard() {
         .sort((a, b) => a.month.localeCompare(b.month))
         .slice(-6); // Últimos 6 meses
 
-      console.log('Monthly trends processed:', trends);
+      console.log('useOptimizedDashboard - Monthly trends processed:', trends);
       return trends;
     },
     staleTime: 5 * 60 * 1000,
@@ -97,7 +97,7 @@ export function useOptimizedDashboard() {
   const { data: monthlyComparison, isLoading: isComparisonLoading, refetch: refetchComparison } = useQuery({
     queryKey: ["monthly-comparison"],
     queryFn: async () => {
-      console.log('Fetching monthly comparison...');
+      console.log('useOptimizedDashboard - Fetching monthly comparison...');
       const now = new Date();
       const currentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
       const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
@@ -116,7 +116,7 @@ export function useOptimizedDashboard() {
         .lt('date', currentMonth.toISOString());
 
       if (currentError || lastError) {
-        console.error('Error fetching comparison data:', currentError || lastError);
+        console.error('useOptimizedDashboard - Error fetching comparison data:', currentError || lastError);
         throw new Error('Erro ao buscar dados de comparação');
       }
 
@@ -132,7 +132,7 @@ export function useOptimizedDashboard() {
           (((currentIn + currentOut) - (lastIn + lastOut)) / (lastIn + lastOut)) * 100
       };
 
-      console.log('Monthly comparison:', comparison);
+      console.log('useOptimizedDashboard - Monthly comparison:', comparison);
       return comparison;
     },
     staleTime: 5 * 60 * 1000,
@@ -142,7 +142,7 @@ export function useOptimizedDashboard() {
   
   // Função para forçar refresh de todos os dados
   const refreshAll = () => {
-    console.log('Refreshing all dashboard data...');
+    console.log('useOptimizedDashboard - Refreshing all dashboard data...');
     
     // Invalidar todas as queries relacionadas
     queryClient.invalidateQueries({ queryKey: ["dashboard-stats-optimized"] });
@@ -162,6 +162,14 @@ export function useOptimizedDashboard() {
     refetchTrends();
     refetchComparison();
   };
+
+  // Debug logging para monitorar os dados
+  React.useEffect(() => {
+    console.log('useOptimizedDashboard - Stats:', stats);
+    console.log('useOptimizedDashboard - Movements Summary:', movementsSummary?.length, 'records');
+    console.log('useOptimizedDashboard - Category Analysis:', categoryAnalysis?.length, 'categories');
+    console.log('useOptimizedDashboard - Monthly Trends:', monthlyTrends?.length, 'months');
+  }, [stats, movementsSummary, categoryAnalysis, monthlyTrends]);
 
   return {
     stats,

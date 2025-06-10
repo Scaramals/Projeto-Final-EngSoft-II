@@ -17,22 +17,22 @@ export const OptimizedApiService = {
       if (!skipCache) {
         const cachedStats = cacheService.get<DashboardStats>(cacheKey);
         if (cachedStats) {
-          console.log('Using cached dashboard stats');
+          console.log('OptimizedApiService - Using cached dashboard stats');
           return cachedStats;
         }
       }
       
-      console.log('Fetching fresh dashboard stats from database');
+      console.log('OptimizedApiService - Fetching fresh dashboard stats from database');
       const { data, error } = await supabase.rpc('get_dashboard_stats');
       
       if (error) {
-        console.error('Error fetching dashboard stats:', error);
+        console.error('OptimizedApiService - Error fetching dashboard stats:', error);
         throw error;
       }
       
       // Properly handle the Json type conversion
       const stats = data as unknown as DashboardStats;
-      console.log('Dashboard stats fetched:', stats);
+      console.log('OptimizedApiService - Dashboard stats fetched:', stats);
       
       // Cache por 2 minutos apenas se não foi skipCache
       if (!skipCache) {
@@ -41,7 +41,7 @@ export const OptimizedApiService = {
       
       return stats;
     } catch (error) {
-      console.error("Erro ao buscar estatísticas do dashboard:", error);
+      console.error("OptimizedApiService - Erro ao buscar estatísticas do dashboard:", error);
       throw error;
     }
   },
@@ -56,24 +56,24 @@ export const OptimizedApiService = {
       if (!skipCache) {
         const cached = cacheService.get<MovementSummary[]>(cacheKey);
         if (cached) {
-          console.log('Using cached movements summary');
+          console.log('OptimizedApiService - Using cached movements summary');
           return cached;
         }
       }
       
-      console.log('Fetching fresh movements summary from database');
+      console.log('OptimizedApiService - Fetching fresh movements summary from database');
       const { data, error } = await supabase.rpc('get_movements_summary', { 
         days_back: daysBack 
       });
       
       if (error) {
-        console.error('Error fetching movements summary:', error);
+        console.error('OptimizedApiService - Error fetching movements summary:', error);
         throw error;
       }
       
       // Properly handle the array type conversion
       const movements = (data || []) as unknown as MovementSummary[];
-      console.log('Movements summary fetched:', movements);
+      console.log('OptimizedApiService - Movements summary fetched:', movements.length, 'records');
       
       // Cache por 5 minutos apenas se não foi skipCache
       if (!skipCache) {
@@ -82,13 +82,13 @@ export const OptimizedApiService = {
       
       return movements;
     } catch (error) {
-      console.error("Erro ao buscar resumo de movimentações:", error);
+      console.error("OptimizedApiService - Erro ao buscar resumo de movimentações:", error);
       throw error;
     }
   },
 
   /**
-   * Obter análise de categorias otimizada
+   * Obter análise de categorias otimizada - usa a função get_category_analysis que retorna nomes das categorias
    */
   async getCategoryAnalysis(skipCache: boolean = false): Promise<CategoryAnalysis[]> {
     try {
@@ -97,22 +97,23 @@ export const OptimizedApiService = {
       if (!skipCache) {
         const cached = cacheService.get<CategoryAnalysis[]>(cacheKey);
         if (cached) {
-          console.log('Using cached category analysis');
+          console.log('OptimizedApiService - Using cached category analysis');
           return cached;
         }
       }
       
-      console.log('Fetching fresh category analysis from database');
+      console.log('OptimizedApiService - Fetching fresh category analysis from database');
       const { data, error } = await supabase.rpc('get_category_analysis');
       
       if (error) {
-        console.error('Error fetching category analysis:', error);
+        console.error('OptimizedApiService - Error fetching category analysis:', error);
         throw error;
       }
       
       // Properly handle the array type conversion
       const analysis = (data || []) as unknown as CategoryAnalysis[];
-      console.log('Category analysis fetched:', analysis);
+      console.log('OptimizedApiService - Category analysis fetched:', analysis.length, 'categories');
+      console.log('OptimizedApiService - Category analysis data:', analysis);
       
       // Cache por 10 minutos apenas se não foi skipCache
       if (!skipCache) {
@@ -121,7 +122,7 @@ export const OptimizedApiService = {
       
       return analysis;
     } catch (error) {
-      console.error("Erro ao buscar análise de categorias:", error);
+      console.error("OptimizedApiService - Erro ao buscar análise de categorias:", error);
       throw error;
     }
   },
@@ -130,7 +131,7 @@ export const OptimizedApiService = {
    * Limpar cache
    */
   clearCache(cacheKey?: string): void {
-    console.log('Clearing API cache', cacheKey ? `for key: ${cacheKey}` : 'all');
+    console.log('OptimizedApiService - Clearing API cache', cacheKey ? `for key: ${cacheKey}` : 'all');
     if (cacheKey) {
       cacheService.delete(cacheKey);
     } else {

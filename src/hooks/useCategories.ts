@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ApiService } from "@/services/api";
@@ -6,18 +7,19 @@ import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 
 /**
- * Hook para gestão de categorias
+ * Hook para gestão de categorias - refatorado para usar a nova estrutura
  */
 export function useCategories() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { user } = useAuth();
 
-  // Buscar categorias da tabela categories - retorna objetos {id, name}
+  // Buscar categorias distintas da tabela categories - retorna objetos {id, name}
   const useDistinctCategories = () => {
     return useQuery({
       queryKey: ['distinct-categories'],
       queryFn: async () => {
+        console.log('Fetching distinct categories via hook');
         return await ApiService.getDistinctCategories();
       },
       enabled: !!user,
@@ -31,6 +33,7 @@ export function useCategories() {
       queryKey: ['category-name', categoryId],
       queryFn: async () => {
         if (!categoryId) return '';
+        console.log('Fetching category name for ID:', categoryId);
         return await ApiService.getCategoryNameById(categoryId);
       },
       enabled: !!user && !!categoryId,
@@ -43,6 +46,8 @@ export function useCategories() {
     return useQuery({
       queryKey: ['categories', search],
       queryFn: async () => {
+        console.log('Fetching all categories with search:', search);
+        
         let query = supabase.from('categories').select('*');
 
         if (search) {
@@ -54,18 +59,22 @@ export function useCategories() {
         const { data, error } = await query;
 
         if (error) {
+          console.error('Error fetching categories:', error);
           throw new Error(`Erro ao buscar categorias: ${error.message}`);
         }
 
-        return (data || []).map((category) => ({
+        const categories = (data || []).map((category) => ({
           id: category.id,
           name: category.name,
           description: category.description,
           createdAt: category.created_at
         })) as Category[];
+
+        console.log('All categories fetched:', categories.length);
+        return categories;
       },
       enabled: !!user,
-      staleTime: 1000 * 60 * 5, // 5 minutos de cache para reduzir consultas
+      staleTime: 1000 * 60 * 5, // 5 minutos de cache
     });
   };
 
@@ -76,6 +85,8 @@ export function useCategories() {
       queryFn: async () => {
         if (!categoryId) throw new Error("ID da categoria é obrigatório");
         
+        console.log('Fetching category by ID:', categoryId);
+        
         const { data, error } = await supabase
           .from('categories')
           .select('*')
@@ -83,6 +94,7 @@ export function useCategories() {
           .single();
           
         if (error) {
+          console.error('Error fetching category:', error);
           throw new Error(`Erro ao buscar categoria: ${error.message}`);
         }
         
@@ -101,6 +113,8 @@ export function useCategories() {
   const useCreateCategory = () => {
     return useMutation({
       mutationFn: async (category: { name: string; description?: string }) => {
+        console.log('Creating new category:', category);
+        
         const { data, error } = await supabase
           .from('categories')
           .insert({
@@ -111,9 +125,11 @@ export function useCategories() {
           .single();
           
         if (error) {
+          console.error('Error creating category:', error);
           throw new Error(`Erro ao criar categoria: ${error.message}`);
         }
         
+        console.log('Category created successfully:', data);
         return {
           id: data.id,
           name: data.name,
@@ -130,6 +146,7 @@ export function useCategories() {
         });
       },
       onError: (error) => {
+        console.error('Error in category creation:', error);
         toast({
           variant: "destructive",
           title: "Erro ao criar categoria",
@@ -143,6 +160,8 @@ export function useCategories() {
   const useUpdateCategory = () => {
     return useMutation({
       mutationFn: async ({ id, name, description }: Partial<Category> & { id: string }) => {
+        console.log('Updating category:', { id, name, description });
+        
         const { data, error } = await supabase
           .from('categories')
           .update({ name, description })
@@ -151,9 +170,11 @@ export function useCategories() {
           .single();
           
         if (error) {
+          console.error('Error updating category:', error);
           throw new Error(`Erro ao atualizar categoria: ${error.message}`);
         }
         
+        console.log('Category updated successfully:', data);
         return {
           id: data.id,
           name: data.name,
@@ -165,12 +186,14 @@ export function useCategories() {
         queryClient.invalidateQueries({ queryKey: ['categories'] });
         queryClient.invalidateQueries({ queryKey: ['distinct-categories'] });
         queryClient.invalidateQueries({ queryKey: ['categories', variables.id] });
+        queryClient.invalidateQueries({ queryKey: ['category-name', variables.id] });
         toast({
           title: "Categoria atualizada",
           description: "As alterações foram salvas com sucesso!",
         });
       },
       onError: (error) => {
+        console.error('Error in category update:', error);
         toast({
           variant: "destructive",
           title: "Erro ao atualizar categoria",
@@ -184,15 +207,19 @@ export function useCategories() {
   const useDeleteCategory = () => {
     return useMutation({
       mutationFn: async (id: string) => {
+        console.log('Deleting category:', id);
+        
         const { error } = await supabase
           .from('categories')
           .delete()
           .eq('id', id);
           
         if (error) {
+          console.error('Error deleting category:', error);
           throw new Error(`Erro ao excluir categoria: ${error.message}`);
         }
         
+        console.log('Category deleted successfully');
         return id;
       },
       onSuccess: () => {
@@ -204,6 +231,7 @@ export function useCategories() {
         });
       },
       onError: (error) => {
+        console.error('Error in category deletion:', error);
         toast({
           variant: "destructive",
           title: "Erro ao excluir categoria",

@@ -16,8 +16,14 @@ export const CategoryDisplay: React.FC<CategoryDisplayProps> = ({
 }) => {
   const { useCategoryName } = useCategories();
   
+  // Debug logging
+  React.useEffect(() => {
+    console.log('CategoryDisplay - categoryId:', categoryId);
+  }, [categoryId]);
+  
   // Se não há categoria, mostra badge padrão
   if (!categoryId) {
+    console.log('CategoryDisplay - No categoryId provided');
     return (
       <Badge variant={variant} className={className}>
         Sem categoria
@@ -26,7 +32,12 @@ export const CategoryDisplay: React.FC<CategoryDisplayProps> = ({
   }
   
   // Busca o nome da categoria pelo ID
-  const { data: categoryName, isLoading } = useCategoryName(categoryId);
+  const { data: categoryName, isLoading, error } = useCategoryName(categoryId);
+  
+  // Debug logging
+  React.useEffect(() => {
+    console.log('CategoryDisplay - categoryName:', categoryName, 'loading:', isLoading, 'error:', error);
+  }, [categoryName, isLoading, error]);
   
   if (isLoading) {
     return (
@@ -36,9 +47,19 @@ export const CategoryDisplay: React.FC<CategoryDisplayProps> = ({
     );
   }
   
-  if (!categoryName || categoryName === 'Categoria não encontrada') {
+  if (error) {
+    console.error('CategoryDisplay - Error fetching category name:', error);
     return (
-      <Badge variant={variant} className={className}>
+      <Badge variant="destructive" className={className}>
+        Erro ao carregar
+      </Badge>
+    );
+  }
+  
+  if (!categoryName || categoryName === 'Categoria não encontrada') {
+    console.warn('CategoryDisplay - Category not found for ID:', categoryId);
+    return (
+      <Badge variant="secondary" className={className}>
         Categoria não encontrada
       </Badge>
     );

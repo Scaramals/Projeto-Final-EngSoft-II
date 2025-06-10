@@ -10,11 +10,18 @@ import { CategoryAnalysis } from "@/types";
 export const OptimizedCategoryDistributionChart: React.FC = () => {
   const { categoryAnalysis, isLoading } = useOptimizedDashboard();
 
+  // Debug logging
+  React.useEffect(() => {
+    console.log('OptimizedCategoryDistributionChart - Analysis data:', categoryAnalysis);
+    console.log('OptimizedCategoryDistributionChart - Loading state:', isLoading);
+  }, [categoryAnalysis, isLoading]);
+
   if (isLoading) {
     return <Skeleton className="h-64 w-full" />;
   }
 
   if (!categoryAnalysis || categoryAnalysis.length === 0) {
+    console.log('OptimizedCategoryDistributionChart - No category analysis data');
     return (
       <Card className="w-full">
         <CardHeader>
@@ -54,6 +61,8 @@ export const OptimizedCategoryDistributionChart: React.FC = () => {
     ],
   };
 
+  console.log('OptimizedCategoryDistributionChart - Chart data prepared:', chartData);
+
   return (
     <Card className="w-full">
       <CardHeader className="pb-2">
@@ -83,7 +92,9 @@ export const OptimizedCategoryDistributionChart: React.FC = () => {
                     label: function(context: any) {
                       const label = context.label || '';
                       const value = formatCurrency(context.raw || 0);
-                      return `${label}: ${value}`;
+                      const total = context.dataset.data.reduce((sum: number, val: number) => sum + val, 0);
+                      const percentage = total > 0 ? ((context.raw / total) * 100).toFixed(1) : '0';
+                      return `${label}: ${value} (${percentage}%)`;
                     }
                   }
                 }
