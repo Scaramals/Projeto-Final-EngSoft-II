@@ -344,6 +344,8 @@ export const ApiService = {
    */
   async validateMovement(productId: string, quantity: number, type: 'in' | 'out'): Promise<{valid: boolean, message?: string}> {
     try {
+      console.log(`Validando movimentação: ${type} de ${quantity} unidades para produto ${productId}`);
+      
       if (type === 'out') {
         const { data: product, error } = await supabase
           .from('products')
@@ -352,21 +354,34 @@ export const ApiService = {
           .single();
         
         if (error) {
+          console.error('Erro ao buscar produto para validação:', error);
           return { valid: false, message: 'Produto não encontrado' };
         }
         
-        if (product.quantity < quantity) {
+        // REGRA RIGOROSA: Não permitir saída maior que estoque
+        if (product.quantity === 0) {
+          console.error(`BLOQUEADO: Tentativa de saída em produto sem estoque. Produto: ${product.name}`);
           return { 
             valid: false, 
-            message: `Estoque insuficiente. Disponível: ${product.quantity}, Solicitado: ${quantity}` 
+            message: `ERRO: Produto "${product.name}" não possui estoque disponível` 
           };
         }
+        
+        if (product.quantity < quantity) {
+          console.error(`BLOQUEADO: Tentativa de saída de ${quantity} unidades quando há apenas ${product.quantity} em estoque. Produto: ${product.name}`);
+          return { 
+            valid: false, 
+            message: `ERRO: Estoque insuficiente para "${product.name}". Disponível: ${product.quantity}, Solicitado: ${quantity}` 
+          };
+        }
+        
+        console.log(`Validação OK: Saída de ${quantity} unidades permitida. Estoque atual: ${product.quantity}`);
       }
       
       return { valid: true };
     } catch (error) {
-      console.error("Erro ao validar movimentação:", error);
-      return { valid: false, message: 'Erro na validação' };
+      console.error("Erro crítico na validação de movimentação:", error);
+      return { valid: false, message: 'Erro na validação - operação bloqueada por segurança' };
     }
   },
 

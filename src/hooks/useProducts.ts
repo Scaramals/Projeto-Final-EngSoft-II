@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Product, StockMovement, FilterParams } from "@/types";
@@ -274,18 +273,20 @@ export function useProducts() {
     });
   };
 
-  // Add stock movement with improved validation
+  // Add stock movement with RIGOROUS validation
   const useAddStockMovement = () => {
     return useMutation({
       mutationFn: async (movement: Partial<StockMovement>) => {
-        SecureLogger.info('Validando e registrando movimentação de estoque');
+        SecureLogger.info('Iniciando registro de movimentação com validação rigorosa');
         
         if (!movement.productId || !movement.quantity || !movement.type) {
           throw new Error('Dados de movimentação incompletos');
         }
 
-        // Validação de estoque para saídas
+        // VALIDAÇÃO RIGOROSA para saídas
         if (movement.type === 'out') {
+          console.log('Aplicando validação rigorosa para saída de estoque...');
+          
           const validation = await ApiService.validateMovement(
             movement.productId, 
             movement.quantity, 
@@ -293,8 +294,11 @@ export function useProducts() {
           );
           
           if (!validation.valid) {
-            throw new Error(validation.message || 'Movimentação inválida');
+            SecureLogger.error('Movimentação BLOQUEADA pela validação rigorosa', validation.message);
+            throw new Error(validation.message || 'Movimentação bloqueada - estoque insuficiente');
           }
+          
+          SecureLogger.info('Validação rigorosa APROVADA - prosseguindo com a movimentação');
         }
         
         const dbMovement = mapStockMovementToDbStockMovement(movement, user?.id);
@@ -306,11 +310,11 @@ export function useProducts() {
           .single();
           
         if (error) {
-          SecureLogger.error('Erro ao registrar movimentação', error);
+          SecureLogger.error('Erro ao registrar movimentação no banco', error);
           throw new Error(`Erro ao registrar movimentação: ${error.message}`);
         }
         
-        SecureLogger.success('Movimentação registrada com sucesso');
+        SecureLogger.success('Movimentação registrada com sucesso após validação rigorosa');
         return mapDbStockMovementToStockMovement(data);
       },
       onSuccess: (_, variables) => {
@@ -325,11 +329,12 @@ export function useProducts() {
         // Limpar cache da API
         ApiService.clearCache();
         
+        SecureLogger.success(`Movimentação ${variables.type} de ${variables.quantity} unidades finalizada com sucesso`);
         toast.success(`${variables.type === 'in' ? 'Entrada' : 'Saída'} de ${variables.quantity} unidades registrada com sucesso!`);
       },
       onError: (error: any) => {
-        SecureLogger.error('Erro no registro da movimentação', error);
-        toast.error(`Erro ao registrar movimentação: ${error.message}`);
+        SecureLogger.error('ERRO CRÍTICO no registro da movimentação', error);
+        toast.error(`Operação bloqueada: ${error.message}`);
       }
     });
   };
