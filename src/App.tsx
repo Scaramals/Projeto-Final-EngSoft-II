@@ -26,9 +26,9 @@ import "./App.css";
 
 function App() {
   return (
-    <AuthProvider>
-      <DataProvider>
-        <Router>
+    <Router>
+      <AuthProvider>
+        <DataProvider>
           <div className="min-h-screen bg-background">
             <Routes>
               <Route path="/" element={<Index />} />
@@ -108,9 +108,9 @@ function App() {
             </Routes>
           </div>
           <Toaster />
-        </Router>
-      </DataProvider>
-    </AuthProvider>
+        </DataProvider>
+      </AuthProvider>
+    </Router>
   );
 }
 
