@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { Product, StockMovement, FilterParams, DashboardStats } from "@/types";
 import { cacheService } from "./cacheService";
@@ -32,7 +33,7 @@ export const ApiService = {
         supabase.from("products").select("*", { count: "exact", head: true }),
         
         // Contagem de produtos com estoque baixo usando RPC function
-        supabase.rpc('get_low_stock_products').select('*', { count: "exact", head: true }),
+        supabase.rpc('get_low_stock_products'),
         
         // Buscar dados para cálculo do valor total
         supabase.from("products").select("quantity, price"),
@@ -58,7 +59,7 @@ export const ApiService = {
 
       const stats = {
         totalProducts: productsResult.count || 0,
-        lowStockProducts: lowStockResult.count || 0,
+        lowStockProducts: lowStockResult.data?.length || 0,
         totalValue,
         recentMovementsCount: movementsResult.count || 0,
       };
