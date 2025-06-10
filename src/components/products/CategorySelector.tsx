@@ -58,6 +58,11 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
     }
   };
 
+  const handleValueChange = (selectedValue: string) => {
+    // Convert "no-category" back to empty string for the form
+    onChange(selectedValue === "no-category" ? "" : selectedValue);
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center gap-2 p-2 border rounded-md bg-muted">
@@ -67,14 +72,17 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
     );
   }
 
+  // Convert empty string to "no-category" for the Select component
+  const selectValue = value || "no-category";
+
   return (
     <div className="flex gap-2">
-      <Select value={value || ""} onValueChange={onChange}>
+      <Select value={selectValue} onValueChange={handleValueChange}>
         <SelectTrigger className="flex-1">
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="">Sem categoria</SelectItem>
+          <SelectItem value="no-category">Sem categoria</SelectItem>
           {categories.map((category) => (
             <SelectItem key={category.id} value={category.id}>
               {category.name}
