@@ -17,6 +17,14 @@ export interface CreateMovementData {
   supplierId?: string;
 }
 
+// Interface para o retorno da função RPC
+interface RPCValidationResult {
+  isValid: boolean;
+  currentStock: number;
+  message?: string;
+  productName?: string;
+}
+
 /**
  * Serviço principal para operações de estoque - versão 2.0
  * Agora usa as funções RPC do Supabase para evitar duplicação
@@ -45,11 +53,15 @@ export const StockService = {
       }
 
       console.log(`✅ [STOCK_SERVICE_V2] Resultado da validação:`, data);
+      
+      // Cast seguro do tipo Json para nossa interface
+      const result = data as RPCValidationResult;
+      
       return {
-        isValid: data.isValid,
-        currentStock: data.currentStock,
-        message: data.message,
-        productName: data.productName
+        isValid: result.isValid,
+        currentStock: result.currentStock,
+        message: result.message,
+        productName: result.productName
       };
     } catch (error) {
       console.error('❌ [STOCK_SERVICE_V2] Erro crítico na validação:', error);
