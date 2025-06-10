@@ -39,9 +39,43 @@ const getDisplayName = (product: Product): string => {
   return product.name;
 };
 
+// Helper function to get category display name
+const getCategoryDisplayName = (category: any): string => {
+  if (!category) return "";
+  
+  // If category is a string, return it directly
+  if (typeof category === 'string') {
+    // Check if it's a UUID string and should not be displayed
+    if (isUUID(category)) {
+      console.log('Category UUID detected instead of name:', category);
+      return "Categoria";
+    }
+    return category;
+  }
+  
+  // If category is an object, try to get the name property
+  if (typeof category === 'object' && category.name) {
+    return category.name;
+  }
+  
+  console.log('Unexpected category format:', category);
+  return "Categoria";
+};
+
 export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const stockStatus = getStockStatus(product.quantity, product.minimumStock);
   const displayName = getDisplayName(product);
+  const categoryName = getCategoryDisplayName(product.category);
+
+  // Debug logging
+  console.log('ProductCard data:', {
+    productId: product.id,
+    productName: product.name,
+    category: product.category,
+    categoryType: typeof product.category,
+    displayName,
+    categoryName
+  });
 
   return (
     <div className="bg-white rounded-lg shadow overflow-hidden card-hover border">
@@ -63,8 +97,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           <h3 className="font-semibold text-lg" title={displayName}>
             {displayName}
           </h3>
-          {product.category && (
-            <Badge variant="outline">{product.category}</Badge>
+          {categoryName && (
+            <Badge variant="outline">{categoryName}</Badge>
           )}
         </div>
         <p className="text-muted-foreground text-sm mt-1 line-clamp-2">
