@@ -92,9 +92,12 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Evitar duplo envio
-    if (isSubmitting || hasSubmitted) {
-      console.log('🚫 [FORM] Bloqueando duplo envio');
+    // PROTEÇÃO CRÍTICA: Evitar execução múltipla
+    if (isSubmitting || hasSubmitted || createMovementMutation.isPending) {
+      console.log('🚫 [FORM] Bloqueando execução múltipla');
+      console.log('🚫 [FORM] isSubmitting:', isSubmitting);
+      console.log('🚫 [FORM] hasSubmitted:', hasSubmitted);
+      console.log('🚫 [FORM] isPending:', createMovementMutation.isPending);
       return;
     }
 
@@ -132,6 +135,7 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
       productId 
     });
 
+    // MARCAR COMO SUBMETENDO IMEDIATAMENTE
     setIsSubmitting(true);
     setHasSubmitted(true);
 
@@ -152,6 +156,8 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
             description: finalValidation.message,
             variant: "destructive",
           });
+          setIsSubmitting(false);
+          setHasSubmitted(false);
           return;
         }
       }
@@ -167,15 +173,10 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
 
       console.log('✅ [FORM] Movimentação registrada com sucesso!');
       
-      toast({
-        title: "Sucesso!",
-        description: `${type === 'in' ? 'Entrada' : 'Saída'} de ${validQuantity} unidades registrada.`,
-      });
-
-      // Aguardar um pouco antes de chamar onSubmit
+      // Aguardar um pouco antes de chamar onSubmit para garantir que o cache seja atualizado
       setTimeout(() => {
         onSubmit();
-      }, 500);
+      }, 1000);
 
     } catch (error: any) {
       console.error('❌ [FORM] Erro ao registrar movimentação:', error);
@@ -240,7 +241,7 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
           <FormActions
             onCancel={onCancel}
             onSubmit={handleSubmit}
-            isSubmitting={isSubmitting}
+            isSubmitting={isSubmitting || createMovementMutation.isPending}
             isValidating={isValidating}
             hasInsufficientStock={hasInsufficientStock}
             hasSubmitted={hasSubmitted}

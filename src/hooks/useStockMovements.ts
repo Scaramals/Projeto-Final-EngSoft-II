@@ -120,15 +120,13 @@ export const useStockMovements = () => {
       },
       onSuccess: (data, variables) => {
         console.log('🎉 [MUTATION] === SUCESSO NA CRIAÇÃO ===');
-        console.log('🎉 [MUTATION] Invalidando cache...');
+        console.log('🎉 [MUTATION] Invalidando cache de forma controlada...');
         
-        // Invalidar todas as queries relacionadas
+        // Invalidar apenas as queries necessárias de forma mais controlada
         queryClient.invalidateQueries({ queryKey: ["stock-movements"] });
-        queryClient.invalidateQueries({ queryKey: ["product-movements"] });
-        queryClient.invalidateQueries({ queryKey: ["products"] });
+        queryClient.invalidateQueries({ queryKey: ["product-movements", variables.productId] });
         queryClient.invalidateQueries({ queryKey: ["product", variables.productId] });
-        queryClient.invalidateQueries({ queryKey: ["dashboard"] });
-        queryClient.invalidateQueries({ queryKey: ["low-stock-products"] });
+        queryClient.invalidateQueries({ queryKey: ["products"] });
         
         console.log('✅ [MUTATION] Cache invalidado com sucesso');
         

@@ -22,9 +22,11 @@ export const FormActions: React.FC<FormActionsProps> = ({
   const getSubmitButtonText = () => {
     if (isSubmitting) return "Registrando...";
     if (isValidating) return "Validando...";
-    if (hasSubmitted) return "Registrado";
+    if (hasSubmitted) return "Processando...";
     return "Registrar Movimentação";
   };
+
+  const isDisabled = isSubmitting || isValidating || hasInsufficientStock || hasSubmitted;
 
   return (
     <div className="flex gap-4 pt-4">
@@ -39,7 +41,7 @@ export const FormActions: React.FC<FormActionsProps> = ({
       </Button>
       <Button
         type="submit"
-        disabled={isSubmitting || isValidating || hasInsufficientStock || hasSubmitted}
+        disabled={isDisabled}
         className="flex-1"
         onClick={onSubmit}
       >
