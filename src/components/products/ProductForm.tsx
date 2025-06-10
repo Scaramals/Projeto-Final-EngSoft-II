@@ -1,8 +1,8 @@
 
-import React, { useState } from "react";
-import { z } from "zod";
+import React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -14,26 +14,17 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { CategorySelector } from "./CategorySelector";
+import { Loader2 } from "lucide-react";
 import { ProductFormData } from "@/types";
-import { CategorySelect } from "@/components/products/CategorySelect";
-import { ImageUpload } from "@/components/products/ImageUpload";
-import { PriceField } from "@/components/products/PriceField";
-import { QuantityField } from "@/components/inventory/forms/QuantityField";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { 
-  productNameSchema, 
-  currencySchema, 
-  quantitySchema 
-} from "@/utils/validators";
-import { AlertCircle, Loader2 } from "lucide-react";
 
-const productFormSchema = z.object({
-  name: productNameSchema,
+const productSchema = z.object({
+  name: z.string().min(1, "Nome é obrigatório"),
   description: z.string().optional(),
-  quantity: quantitySchema,
-  price: currencySchema,
+  quantity: z.number().min(0, "Quantidade deve ser positiva"),
+  price: z.number().min(0.01, "Preço deve ser maior que zero"),
   categoryId: z.string().optional(),
-  minimumStock: quantitySchema.optional(),
+  minimumStock: z.number().min(0, "Estoque mínimo deve ser positivo").optional(),
   imageUrl: z.string().optional(),
 });
 
@@ -50,10 +41,8 @@ export const ProductForm: React.FC<ProductFormProps> = ({
   onCancel,
   isLoading = false,
 }) => {
-  const [submitError, setSubmitError] = useState("");
-
   const form = useForm<ProductFormData>({
-    resolver: zodResolver(productFormSchema),
+    resolver: zodResolver(productSchema),
     defaultValues: {
       name: "",
       description: "",
@@ -66,50 +55,9 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     },
   });
 
-  const handleSubmit = async (data: ProductFormData) => {
-    try {
-      setSubmitError("");
-      
-      if (!data.name?.trim()) {
-        setSubmitError("Nome do produto é obrigatório");
-        return;
-      }
-
-      if (data.price <= 0) {
-        setSubmitError("Preço deve ser maior que zero");
-        return;
-      }
-
-      if (data.quantity < 0) {
-        setSubmitError("Quantidade não pode ser negativa");
-        return;
-      }
-
-      const cleanData = {
-        ...data,
-        name: data.name.trim(),
-        description: data.description?.trim() || "",
-        minimumStock: data.minimumStock || 0,
-      };
-
-      await onSubmit(cleanData);
-    } catch (error) {
-      setSubmitError("Erro ao salvar produto. Tente novamente.");
-    }
-  };
-
-  const clearError = () => setSubmitError("");
-
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-        {submitError && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{submitError}</AlertDescription>
-          </Alert>
-        )}
-
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-6">
             <FormField
@@ -119,14 +67,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                 <FormItem>
                   <FormLabel>Nome do produto*</FormLabel>
                   <FormControl>
-                    <Input
-                      placeholder="Digite o nome do produto"
-                      {...field}
-                      onChange={(e) => {
-                        field.onChange(e);
-                        clearError();
-                      }}
-                    />
+                    <Input placeholder="Digite o nome do produto" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -140,12 +81,9 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                 <FormItem>
                   <FormLabel>Categoria</FormLabel>
                   <FormControl>
-                    <CategorySelect 
-                      value={field.value || ''} 
-                      onChange={(value) => {
-                        field.onChange(value);
-                        clearError();
-                      }} 
+                    <CategorySelector 
+                      value={field.value} 
+                      onChange={field.onChange}
                     />
                   </FormControl>
                   <FormMessage />
@@ -154,26 +92,61 @@ export const ProductForm: React.FC<ProductFormProps> = ({
             />
 
             <div className="grid grid-cols-2 gap-4">
-              <QuantityField
+              <FormField
                 control={form.control}
                 name="quantity"
-                label="Quantidade"
-                required
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Quantidade*</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        {...field}
+                        onChange={(e) => field.onChange(Number(e.target.value))}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
 
-              <QuantityField
+              <FormField
                 control={form.control}
                 name="minimumStock"
-                label="Estoque mínimo"
-                placeholder="Ex: 5 (recomendado)"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Estoque mínimo</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        {...field}
+                        onChange={(e) => field.onChange(Number(e.target.value))}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
             </div>
 
-            <PriceField
+            <FormField
               control={form.control}
               name="price"
-              required
-              onErrorClear={clearError}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Preço*</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      placeholder="0.00"
+                      {...field}
+                      onChange={(e) => field.onChange(Number(e.target.value))}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
           </div>
 
@@ -187,13 +160,8 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                   <FormControl>
                     <Textarea
                       placeholder="Descreva o produto"
-                      className="h-32 resize-none"
-                      maxLength={500}
+                      className="h-32"
                       {...field}
-                      onChange={(e) => {
-                        field.onChange(e);
-                        clearError();
-                      }}
                     />
                   </FormControl>
                   <FormMessage />
@@ -206,19 +174,9 @@ export const ProductForm: React.FC<ProductFormProps> = ({
               name="imageUrl"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Imagem do produto</FormLabel>
+                  <FormLabel>URL da imagem</FormLabel>
                   <FormControl>
-                    <ImageUpload
-                      value={field.value}
-                      onChange={(url) => {
-                        field.onChange(url);
-                        clearError();
-                      }}
-                      onRemove={() => {
-                        field.onChange('');
-                        clearError();
-                      }}
-                    />
+                    <Input placeholder="https://..." {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -239,7 +197,6 @@ export const ProductForm: React.FC<ProductFormProps> = ({
           <Button 
             type="submit" 
             disabled={isLoading}
-            className="min-w-[120px]"
           >
             {isLoading ? (
               <>

@@ -1,130 +1,88 @@
 
-import React, { useState, useRef } from "react";
+import React, { useState } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { ProductsHeader } from "@/components/products/ProductsHeader";
-import { ProductsFilters } from "@/components/products/ProductsFilters";
-import { ProductsGrid } from "@/components/products/ProductsGrid";
-import { ProductsEmptyState } from "@/components/products/ProductsEmptyState";
+import { Button } from "@/components/ui/button";
+import { Plus, RefreshCw } from "lucide-react";
+import { Link } from "react-router-dom";
 import { useProducts } from "@/hooks/useProducts";
-import { useCategories } from "@/hooks/useCategories";
-import { ApiService } from "@/services/api";
-
-type SortOption = "name" | "price" | "quantity" | "created_at";
+import { ProductFilters } from "@/components/products/ProductFilters";
+import { ProductGrid } from "@/components/products/ProductGrid";
 
 const ProductsPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategoryId, setSelectedCategoryId] = useState("all");
-  const [sortBy, setSortBy] = useState<SortOption>("name");
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const searchRef = useRef<HTMLInputElement>(null);
+  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [sortBy, setSortBy] = useState("name");
   
-  // Get products with filters using React Query
-  const { useAllProducts } = useProducts();
-  const { data: products = [], isLoading, error, refetch } = useAllProducts({
+  const filters = {
     search: searchQuery || undefined,
-    categoryId: selectedCategoryId === "all" ? undefined : selectedCategoryId,
-    sortBy: sortBy === "created_at" ? "name" : sortBy,
-    sortDirection: "asc"
-  });
+    categoryId: selectedCategory === "all" ? undefined : selectedCategory,
+    sortBy: sortBy as any,
+    sortDirection: "asc" as const
+  };
 
-  // Get categories using React Query - retorna objetos {id, name}
-  const { useDistinctCategories } = useCategories();
-  const { data: categoriesData = [], isLoading: categoriesLoading } = useDistinctCategories();
-
-  // Convert categories data to the format expected by ProductsFilters
-  const categories: Array<string> = categoriesData.map(cat => cat.name);
-
-  // Debug logging to understand the data
-  React.useEffect(() => {
-    console.log('ProductsPage - Products:', products.length);
-    console.log('ProductsPage - Categories data:', categoriesData);
-    console.log('ProductsPage - Categories for filter:', categories);
-    
-    if (products.length > 0) {
-      console.log('Sample product:', products[0]);
-    }
-  }, [products, categoriesData, categories]);
+  const { useAllProducts } = useProducts();
+  const { data: products = [], isLoading, error, refetch } = useAllProducts(filters);
 
   const handleClearFilters = () => {
     setSearchQuery("");
-    setSelectedCategoryId("all");
+    setSelectedCategory("all");
     setSortBy("name");
-    if (searchRef.current) {
-      searchRef.current.focus();
-    }
   };
 
   const handleRefresh = () => {
-    console.log('Refreshing products and clearing cache');
     refetch();
-    // Clear cache to force fresh data
-    ApiService.clearCache();
   };
 
-  // Handle category change - convert category name back to ID
-  const handleCategoryChange = (categoryName: string) => {
-    console.log('Category changed to:', categoryName);
-    
-    if (categoryName === "all") {
-      setSelectedCategoryId("all");
-    } else {
-      // Find the category ID by name
-      const foundCategory = categoriesData.find(cat => cat.name === categoryName);
-      if (foundCategory) {
-        console.log('Found category ID:', foundCategory.id);
-        setSelectedCategoryId(foundCategory.id);
-      } else {
-        console.warn('Category not found:', categoryName);
-        setSelectedCategoryId("all");
-      }
-    }
-  };
+  const activeFiltersCount = [
+    searchQuery,
+    selectedCategory !== "all" ? selectedCategory : "",
+  ].filter(Boolean).length;
 
-  // Convert current categoryId back to name for display
-  const getSelectedCategoryName = () => {
-    if (selectedCategoryId === "all") return "all";
-    const foundCategory = categoriesData.find(cat => cat.id === selectedCategoryId);
-    return foundCategory?.name || "all";
-  };
-
-  const activeFiltersCount = [searchQuery, selectedCategoryId !== "all" ? selectedCategoryId : ""].filter(Boolean).length;
+  const hasFilters = activeFiltersCount > 0;
 
   return (
     <AppLayout>
       <div className="space-y-6">
-        <ProductsHeader onRefresh={handleRefresh} />
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h1 className="text-3xl font-bold">Produtos</h1>
+            <p className="text-muted-foreground">
+              Gerencie seu catálogo de produtos
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={handleRefresh}>
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Atualizar
+            </Button>
+            <Button asChild>
+              <Link to="/products/new">
+                <Plus className="mr-2 h-4 w-4" />
+                Novo Produto
+              </Link>
+            </Button>
+          </div>
+        </div>
         
-        <ProductsFilters
+        <ProductFilters
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
-          selectedCategory={getSelectedCategoryName()}
-          setSelectedCategory={handleCategoryChange}
+          selectedCategory={selectedCategory}
+          setSelectedCategory={setSelectedCategory}
           sortBy={sortBy}
           setSortBy={setSortBy}
-          viewMode={viewMode}
-          setViewMode={setViewMode}
-          categories={categories}
-          categoriesLoading={categoriesLoading}
-          activeFiltersCount={activeFiltersCount}
           onClearFilters={handleClearFilters}
-          searchRef={searchRef}
+          activeFiltersCount={activeFiltersCount}
         />
         
-        {/* Produtos */}
-        {products.length === 0 && !isLoading && !error ? (
-          <ProductsEmptyState
-            activeFiltersCount={activeFiltersCount}
-            onClearFilters={handleClearFilters}
-          />
-        ) : (
-          <ProductsGrid
-            products={products}
-            isLoading={isLoading}
-            error={error}
-            viewMode={viewMode}
-            onRefresh={handleRefresh}
-          />
-        )}
+        <ProductGrid
+          products={products}
+          isLoading={isLoading}
+          error={error}
+          onRefresh={handleRefresh}
+          hasFilters={hasFilters}
+          onClearFilters={handleClearFilters}
+        />
       </div>
     </AppLayout>
   );
