@@ -4,150 +4,153 @@ import { cacheService } from "./cacheService";
 import { DashboardStats, MovementSummary, CategoryAnalysis } from "@/types";
 
 /**
- * API otimizada usando as novas funções do banco para melhor performance
+ * API otimizada com cache melhorado
  */
 export const OptimizedApiService = {
   /**
-   * Obter estatísticas do dashboard usando função otimizada do banco
+   * Obter estatísticas do dashboard
    */
   async getDashboardStats(skipCache: boolean = false): Promise<DashboardStats> {
     try {
-      const cacheKey = 'dashboard_stats_optimized';
+      const cacheKey = 'dashboard_stats_v2';
       
       if (!skipCache) {
         const cachedStats = cacheService.get<DashboardStats>(cacheKey);
         if (cachedStats) {
-          console.log('OptimizedApiService - Using cached dashboard stats');
+          console.log('✅ OptimizedApiService - Dashboard stats from cache');
           return cachedStats;
         }
       }
       
-      console.log('OptimizedApiService - Fetching fresh dashboard stats from database');
+      console.log('🔄 OptimizedApiService - Fetching fresh dashboard stats');
       const { data, error } = await supabase.rpc('get_dashboard_stats');
       
       if (error) {
-        console.error('OptimizedApiService - Error fetching dashboard stats:', error);
+        console.error('❌ OptimizedApiService - Dashboard stats error:', error);
         throw error;
       }
       
-      // Properly handle the Json type conversion
       const stats = data as unknown as DashboardStats;
-      console.log('OptimizedApiService - Dashboard stats fetched:', stats);
+      console.log('✅ OptimizedApiService - Dashboard stats loaded:', stats);
       
-      // Cache por 2 minutos apenas se não foi skipCache
+      // Cache por 3 minutos
       if (!skipCache) {
-        cacheService.set(cacheKey, stats, 120);
+        cacheService.set(cacheKey, stats, 180000);
       }
       
       return stats;
     } catch (error) {
-      console.error("OptimizedApiService - Erro ao buscar estatísticas do dashboard:", error);
+      console.error("❌ OptimizedApiService - Erro ao buscar estatísticas:", error);
       throw error;
     }
   },
 
   /**
-   * Obter resumo de movimentações otimizado
+   * Obter resumo de movimentações
    */
   async getMovementsSummary(daysBack: number = 30, skipCache: boolean = false): Promise<MovementSummary[]> {
     try {
-      const cacheKey = `movements_summary_${daysBack}`;
+      const cacheKey = `movements_summary_${daysBack}_v2`;
       
       if (!skipCache) {
         const cached = cacheService.get<MovementSummary[]>(cacheKey);
         if (cached) {
-          console.log('OptimizedApiService - Using cached movements summary');
+          console.log('✅ OptimizedApiService - Movements summary from cache');
           return cached;
         }
       }
       
-      console.log('OptimizedApiService - Fetching fresh movements summary from database');
+      console.log('🔄 OptimizedApiService - Fetching fresh movements summary');
       const { data, error } = await supabase.rpc('get_movements_summary', { 
         days_back: daysBack 
       });
       
       if (error) {
-        console.error('OptimizedApiService - Error fetching movements summary:', error);
+        console.error('❌ OptimizedApiService - Movements summary error:', error);
         throw error;
       }
       
-      // Properly handle the array type conversion
       const movements = (data || []) as unknown as MovementSummary[];
-      console.log('OptimizedApiService - Movements summary fetched:', movements.length, 'records');
+      console.log('✅ OptimizedApiService - Movements summary loaded:', movements.length, 'records');
       
-      // Cache por 5 minutos apenas se não foi skipCache
+      // Cache por 5 minutos
       if (!skipCache) {
-        cacheService.set(cacheKey, movements, 300);
+        cacheService.set(cacheKey, movements, 300000);
       }
       
       return movements;
     } catch (error) {
-      console.error("OptimizedApiService - Erro ao buscar resumo de movimentações:", error);
+      console.error("❌ OptimizedApiService - Erro ao buscar movimentações:", error);
       throw error;
     }
   },
 
   /**
-   * Obter análise de categorias otimizada - VERSÃO FINAL CORRIGIDA
+   * Obter análise de categorias
    */
   async getCategoryAnalysis(skipCache: boolean = false): Promise<CategoryAnalysis[]> {
     try {
-      const cacheKey = 'category_analysis_final_fixed'; // Nova chave para garantir dados frescos
+      const cacheKey = 'category_analysis_v2';
       
-      console.log('OptimizedApiService - Fetching category analysis from FINAL CORRECTED database function');
+      if (!skipCache) {
+        const cached = cacheService.get<CategoryAnalysis[]>(cacheKey);
+        if (cached) {
+          console.log('✅ OptimizedApiService - Category analysis from cache');
+          return cached;
+        }
+      }
+      
+      console.log('🔄 OptimizedApiService - Fetching fresh category analysis');
       const { data, error } = await supabase.rpc('get_category_analysis');
       
       if (error) {
-        console.error('OptimizedApiService - Error fetching category analysis:', error);
+        console.error('❌ OptimizedApiService - Category analysis error:', error);
         throw error;
       }
       
-      console.log('OptimizedApiService - RAW response from final corrected function:', data);
-      
-      // Properly handle the array type conversion
       const analysis = (data || []) as unknown as CategoryAnalysis[];
-      console.log('OptimizedApiService - Processed category analysis:', analysis.length, 'categories');
+      console.log('✅ OptimizedApiService - Category analysis loaded:', analysis.length, 'categories');
       
-      // Verificação final se ainda há UUIDs
-      if (analysis.length > 0) {
-        analysis.forEach((category, index) => {
-          console.log(`OptimizedApiService - FINAL CHECK Category ${index}:`, {
-            name: category.category_name,
-            isUUID: category.category_name && category.category_name.length === 36 && category.category_name.includes('-'),
-            products: category.product_count,
-            value: category.total_value
-          });
-          
-          if (category.category_name && category.category_name.length === 36 && category.category_name.includes('-')) {
-            console.error(`OptimizedApiService - ERROR: Still UUID for category ${index}:`, category.category_name);
-          } else {
-            console.log(`OptimizedApiService - SUCCESS: Proper category name for ${index}:`, category.category_name);
-          }
-        });
-      }
-      
-      // Sempre fazer cache dos dados corretos
+      // Cache por 5 minutos
       if (!skipCache) {
-        cacheService.set(cacheKey, analysis, 300);
-        console.log('OptimizedApiService - Cached final corrected category analysis');
+        cacheService.set(cacheKey, analysis, 300000);
       }
       
       return analysis;
     } catch (error) {
-      console.error("OptimizedApiService - Erro ao buscar análise de categorias:", error);
+      console.error("❌ OptimizedApiService - Erro ao buscar análise de categorias:", error);
       throw error;
     }
   },
 
   /**
-   * Limpar cache
+   * Limpar cache específico
    */
   clearCache(cacheKey?: string): void {
-    console.log('OptimizedApiService - Clearing API cache', cacheKey ? `for key: ${cacheKey}` : 'all');
     if (cacheKey) {
       cacheService.delete(cacheKey);
+      console.log('🧹 OptimizedApiService - Cache specific key cleared:', cacheKey);
     } else {
-      cacheService.clear();
+      cacheService.deleteByPattern('dashboard_|movements_|category_');
+      console.log('🧹 OptimizedApiService - All API cache cleared');
+    }
+  },
+
+  /**
+   * Invalidar caches relacionados
+   */
+  invalidateRelatedCaches(category: string): void {
+    const patterns = {
+      dashboard: 'dashboard_',
+      movements: 'movements_',
+      categories: 'category_',
+      products: 'products_'
+    };
+    
+    const pattern = patterns[category as keyof typeof patterns];
+    if (pattern) {
+      cacheService.deleteByPattern(pattern);
+      console.log(`🧹 OptimizedApiService - Invalidated ${category} related caches`);
     }
   }
 };

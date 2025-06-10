@@ -1,7 +1,7 @@
 
 /**
- * Gerenciador central de cache do sistema
- * Responsável por limpar todos os caches de forma coordenada
+ * Gerenciador central de cache otimizado
+ * Remove limpezas automáticas desnecessárias e melhora controle
  */
 import { cacheService } from "./cacheService";
 import { OptimizedApiService } from "./optimizedApi";
@@ -9,38 +9,28 @@ import { optimizedNotificationService } from "./optimizedNotificationService";
 
 export const CacheManager = {
   /**
-   * Limpa todos os caches do sistema
+   * Limpa todos os caches do sistema de forma controlada
    */
   clearAllCaches(): void {
-    console.log('🧹 CacheManager - Iniciando limpeza completa de todos os caches...');
+    console.log('🧹 CacheManager - Iniciando limpeza de caches...');
     
     try {
-      // Limpar cache principal do serviço
-      console.log('🧹 Limpando cache principal...');
+      // Limpar cache principal
       cacheService.clear();
       
       // Limpar cache do serviço otimizado
-      console.log('🧹 Limpando cache do serviço otimizado...');
       OptimizedApiService.clearCache();
       
       // Limpar cache das notificações
-      console.log('🧹 Limpando cache das notificações...');
       optimizedNotificationService.clearCache();
       
-      // Limpar cache do localStorage se houver
-      console.log('🧹 Limpando localStorage...');
-      this.clearLocalStorageCache();
+      // Limpar caches do browser de forma seletiva
+      this.clearBrowserCaches();
       
-      // Limpar cache do sessionStorage se houver
-      console.log('🧹 Limpando sessionStorage...');
-      this.clearSessionStorageCache();
+      console.log('✅ CacheManager - Caches limpos com sucesso!');
       
-      console.log('✅ CacheManager - Todos os caches foram limpos com sucesso!');
-      
-      // Disparar evento para componentes que precisam saber da limpeza
-      window.dispatchEvent(new CustomEvent('cache-cleared', { 
-        detail: { timestamp: new Date().toISOString() } 
-      }));
+      // Disparar evento para componentes
+      this.notifyCacheCleared();
       
     } catch (error) {
       console.error('❌ CacheManager - Erro ao limpar caches:', error);
@@ -48,137 +38,142 @@ export const CacheManager = {
   },
 
   /**
-   * Limpa apenas caches específicos de uma categoria
+   * Limpa caches por categoria
    */
   clearCacheByCategory(category: 'dashboard' | 'products' | 'movements' | 'categories' | 'suppliers'): void {
     console.log(`🧹 CacheManager - Limpando cache da categoria: ${category}`);
     
-    const cacheKeys = this.getCacheKeysByCategory(category);
+    const patterns = {
+      dashboard: ['dashboard_', 'stats_', 'movements_summary'],
+      products: ['products_', 'all_products', 'low_stock'],
+      movements: ['movements_', 'stock_movements'],
+      categories: ['categories_', 'distinct_categories'],
+      suppliers: ['suppliers_', 'all_suppliers']
+    };
     
-    cacheKeys.forEach(key => {
-      cacheService.delete(key);
-      console.log(`🧹 Cache removido: ${key}`);
+    const categoryPatterns = patterns[category] || [];
+    
+    categoryPatterns.forEach(pattern => {
+      const deleted = cacheService.deleteByPattern(pattern);
+      if (deleted > 0) {
+        console.log(`🧹 Removidos ${deleted} itens para padrão: ${pattern}`);
+      }
     });
     
-    // Também limpar cache do serviço otimizado para a categoria
+    // Também limpar cache do serviço otimizado
     OptimizedApiService.clearCache();
   },
 
   /**
-   * Obtém as chaves de cache por categoria
+   * Obtém estatísticas consolidadas dos caches
    */
-  getCacheKeysByCategory(category: string): string[] {
-    const allKeys = cacheService.getKeys();
+  getCacheStats(): {
+    mainCache: any;
+    totalKeys: number;
+    categorizedKeys: Record<string, number>;
+  } {
+    const mainStats = cacheService.getStats();
     
-    const categoryMappings = {
-      dashboard: ['dashboard_stats', 'movements_summary', 'category_analysis'],
-      products: ['all_products', 'low_stock_products'],
-      movements: ['all_stock_movements', 'movements_summary'],
-      categories: ['distinct_categories', 'category_analysis'],
-      suppliers: ['all_suppliers']
+    const categorizedKeys = {
+      dashboard: 0,
+      products: 0,
+      movements: 0,
+      categories: 0,
+      suppliers: 0,
+      outros: 0
     };
     
-    const patterns = categoryMappings[category as keyof typeof categoryMappings] || [];
-    
-    return allKeys.filter(key => 
-      patterns.some(pattern => key.includes(pattern))
-    );
-  },
-
-  /**
-   * Limpa cache do localStorage relacionado ao app
-   */
-  clearLocalStorageCache(): void {
-    try {
-      const keysToRemove = [];
-      
-      // Procurar por chaves relacionadas ao app
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && (
-          key.includes('stock-control') || 
-          key.includes('dashboard') ||
-          key.includes('cache') ||
-          key.includes('temp')
-        )) {
-          keysToRemove.push(key);
-        }
-      }
-      
-      keysToRemove.forEach(key => {
-        localStorage.removeItem(key);
-        console.log(`🧹 localStorage removido: ${key}`);
-      });
-      
-    } catch (error) {
-      console.warn('⚠️ Erro ao limpar localStorage:', error);
-    }
-  },
-
-  /**
-   * Limpa cache do sessionStorage relacionado ao app
-   */
-  clearSessionStorageCache(): void {
-    try {
-      const keysToRemove = [];
-      
-      // Procurar por chaves relacionadas ao app
-      for (let i = 0; i < sessionStorage.length; i++) {
-        const key = sessionStorage.key(i);
-        if (key && (
-          key.includes('stock-control') || 
-          key.includes('dashboard') ||
-          key.includes('cache') ||
-          key.includes('temp')
-        )) {
-          keysToRemove.push(key);
-        }
-      }
-      
-      keysToRemove.forEach(key => {
-        sessionStorage.removeItem(key);
-        console.log(`🧹 sessionStorage removido: ${key}`);
-      });
-      
-    } catch (error) {
-      console.warn('⚠️ Erro ao limpar sessionStorage:', error);
-    }
-  },
-
-  /**
-   * Obtém estatísticas dos caches
-   */
-  getCacheStats(): { totalKeys: number, categories: Record<string, number> } {
-    const allKeys = cacheService.getKeys();
-    
-    const stats = {
-      totalKeys: allKeys.length,
-      categories: {
-        dashboard: 0,
-        products: 0,
-        movements: 0,
-        categories: 0,
-        suppliers: 0,
-        outros: 0
-      }
-    };
-    
-    allKeys.forEach(key => {
+    mainStats.keys.forEach(key => {
       if (key.includes('dashboard') || key.includes('stats')) {
-        stats.categories.dashboard++;
+        categorizedKeys.dashboard++;
       } else if (key.includes('product')) {
-        stats.categories.products++;
+        categorizedKeys.products++;
       } else if (key.includes('movement')) {
-        stats.categories.movements++;
+        categorizedKeys.movements++;
       } else if (key.includes('categor')) {
-        stats.categories.categories++;
+        categorizedKeys.categories++;
       } else if (key.includes('supplier')) {
-        stats.categories.suppliers++;
+        categorizedKeys.suppliers++;
       } else {
-        stats.categories.outros++;
+        categorizedKeys.outros++;
       }
     });
     
-    return stats;
+    return {
+      mainCache: mainStats,
+      totalKeys: mainStats.size,
+      categorizedKeys
+    };
+  },
+
+  /**
+   * Invalidar cache específico
+   */
+  invalidateCache(key: string): boolean {
+    return cacheService.delete(key);
+  },
+
+  /**
+   * Verificar se cache existe
+   */
+  hasCache(key: string): boolean {
+    return cacheService.has(key);
+  },
+
+  /**
+   * Limpar caches do browser de forma seletiva
+   */
+  clearBrowserCaches(): void {
+    try {
+      // Limpar localStorage relacionado ao app
+      this.clearStorageByPattern(localStorage, ['stock-control', 'dashboard', 'temp']);
+      
+      // Limpar sessionStorage relacionado ao app
+      this.clearStorageByPattern(sessionStorage, ['stock-control', 'dashboard', 'temp']);
+      
+    } catch (error) {
+      console.warn('⚠️ Erro ao limpar caches do browser:', error);
+    }
+  },
+
+  /**
+   * Limpar storage por padrões
+   */
+  clearStorageByPattern(storage: Storage, patterns: string[]): void {
+    const keysToRemove: string[] = [];
+    
+    for (let i = 0; i < storage.length; i++) {
+      const key = storage.key(i);
+      if (key && patterns.some(pattern => key.includes(pattern))) {
+        keysToRemove.push(key);
+      }
+    }
+    
+    keysToRemove.forEach(key => {
+      storage.removeItem(key);
+      console.log(`🧹 Storage removido: ${key}`);
+    });
+  },
+
+  /**
+   * Notificar componentes sobre limpeza de cache
+   */
+  notifyCacheCleared(): void {
+    window.dispatchEvent(new CustomEvent('cache-cleared', { 
+      detail: { 
+        timestamp: new Date().toISOString(),
+        source: 'CacheManager'
+      } 
+    }));
+  },
+
+  /**
+   * Configurar limpeza automática por categoria
+   */
+  scheduleCleanup(category: string, intervalMs: number = 300000): NodeJS.Timeout {
+    return setInterval(() => {
+      console.log(`🕒 Limpeza automática programada para: ${category}`);
+      this.clearCacheByCategory(category as any);
+    }, intervalMs);
   }
 };
