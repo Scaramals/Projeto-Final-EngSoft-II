@@ -120,16 +120,24 @@ export function useStockMovements() {
         console.log('🔄 [HOOK] === FIM DO REGISTRO ===');
         return mapDbStockMovementToStockMovement(data);
       },
-      onSuccess: (data, variables) => {
+      onSuccess: async (data, variables) => {
         console.log('🎉 [HOOK] === SUCESSO NA MOVIMENTAÇÃO ===');
         console.log('🎉 [HOOK] Dados retornados:', data);
         console.log('🎉 [HOOK] Variáveis:', variables);
         
-        // Invalidar queries específicas
-        console.log('🔄 [HOOK] Invalidando queries...');
-        queryClient.invalidateQueries({ queryKey: ['products', variables.productId] });
-        queryClient.invalidateQueries({ queryKey: ['productMovements', variables.productId] });
-        queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+        // FORÇAR invalidação e refetch imediato
+        console.log('🔄 [HOOK] FORÇANDO invalidação completa...');
+        
+        // Invalidar TODAS as queries relacionadas
+        await queryClient.invalidateQueries({ queryKey: ['products'] });
+        await queryClient.invalidateQueries({ queryKey: ['productMovements'] });
+        await queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+        
+        // Remover dados específicos do cache para forçar refetch
+        queryClient.removeQueries({ queryKey: ['products', variables.productId] });
+        
+        // Refetch específico do produto
+        await queryClient.refetchQueries({ queryKey: ['products', variables.productId] });
         
         SecureLogger.success(`Movimentação ${variables.type} de ${variables.quantity} unidades registrada`);
         toast.success(`${variables.type === 'in' ? 'Entrada' : 'Saída'} de ${variables.quantity} unidades registrada!`);

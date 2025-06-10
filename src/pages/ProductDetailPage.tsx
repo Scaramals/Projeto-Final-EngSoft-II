@@ -34,7 +34,8 @@ const ProductDetailPage: React.FC = () => {
   const {
     data: stockMovements = [],
     isLoading: loadingMovements,
-    error: movementsError
+    error: movementsError,
+    refetch: refetchMovements
   } = useProductMovements(productId);
   
   // Mutations
@@ -73,20 +74,24 @@ const ProductDetailPage: React.FC = () => {
       id: product.id,
       ...updatedProduct
     }, {
-      onSuccess: () => {
+      onSuccess: async () => {
         setIsEditing(false);
         // Forçar atualização dos dados
-        refetchProduct();
+        await refetchProduct();
       }
     });
   };
   
-  const handleAddMovement = () => {
+  const handleAddMovement = async () => {
     console.log('🎯 [DETAIL] === MOVIMENTAÇÃO ADICIONADA ===');
     console.log('🎯 [DETAIL] Fechando formulário e atualizando dados...');
     setIsAddingMovement(false);
-    // Forçar atualização dos dados do produto
-    refetchProduct();
+    
+    // Forçar atualização completa dos dados
+    await Promise.all([
+      refetchProduct(),
+      refetchMovements()
+    ]);
   };
   
   const handleDeleteProduct = () => {

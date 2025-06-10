@@ -61,7 +61,7 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
   const { useAddStockMovement } = useStockMovements();
   const { mutate: addStockMovement, isPending: isLoading } = useAddStockMovement();
   
-  // SEMPRE buscar produto DIRETO do banco
+  // SEMPRE buscar produto DIRETO do banco com configuração agressiva
   const { data: currentProduct, refetch: refetchProduct } = useProduct(productId);
   const bankStock = currentProduct?.quantity ?? 0;
   
@@ -172,10 +172,17 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
       console.log('✅ [FORM] Dados do movimento:', movement);
       
       addStockMovement(movement, {
-        onSuccess: (data) => {
+        onSuccess: async (data) => {
           console.log('✅ [FORM] === SUCESSO NO FORMULÁRIO ===');
           console.log('✅ [FORM] Dados retornados:', data);
           setIsSubmitting(false);
+          
+          // Aguardar um tempo para garantir que o trigger terminou
+          await new Promise(resolve => setTimeout(resolve, 100));
+          
+          // Forçar refresh dos dados antes de chamar onSubmit
+          await refetchProduct();
+          
           onSubmit();
         },
         onError: (error: any) => {
