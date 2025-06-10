@@ -67,7 +67,7 @@ export const CacheManager = {
   /**
    * Obtém as chaves de cache por categoria
    */
-  private getCacheKeysByCategory(category: string): string[] {
+  getCacheKeysByCategory(category: string): string[] {
     const allKeys = cacheService.getKeys();
     
     const categoryMappings = {
@@ -88,7 +88,7 @@ export const CacheManager = {
   /**
    * Limpa cache do localStorage relacionado ao app
    */
-  private clearLocalStorageCache(): void {
+  clearLocalStorageCache(): void {
     try {
       const keysToRemove = [];
       
@@ -118,7 +118,7 @@ export const CacheManager = {
   /**
    * Limpa cache do sessionStorage relacionado ao app
    */
-  private clearSessionStorageCache(): void {
+  clearSessionStorageCache(): void {
     try {
       const keysToRemove = [];
       
