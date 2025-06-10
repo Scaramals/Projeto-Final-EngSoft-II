@@ -129,5 +129,60 @@ export const StockService = {
       console.error('❌ [STOCK_SERVICE] Erro ao buscar movimentações:', error);
       return [];
     }
+  },
+
+  /**
+   * Validar movimentação - SIMPLIFICADO (só para UI feedback)
+   */
+  async validateMovement(productId: string, quantity: number, type: 'in' | 'out'): Promise<StockValidationResult> {
+    try {
+      const { data, error } = await supabase.rpc('validate_stock_movement', {
+        product_id_param: productId,
+        quantity_param: quantity,
+        type_param: type
+      });
+
+      if (error) {
+        console.error('❌ [STOCK_SERVICE] Erro na validação:', error);
+        return {
+          isValid: false,
+          currentStock: 0,
+          message: 'Erro na validação'
+        };
+      }
+
+      return {
+        isValid: data.isValid,
+        currentStock: data.currentStock,
+        message: data.message,
+        productName: data.productName
+      };
+    } catch (error) {
+      console.error('❌ [STOCK_SERVICE] Erro na validação:', error);
+      return {
+        isValid: false,
+        currentStock: 0,
+        message: 'Erro na validação'
+      };
+    }
+  },
+
+  /**
+   * Buscar produtos com estoque baixo
+   */
+  async getLowStockProducts(): Promise<any[]> {
+    try {
+      const { data, error } = await supabase.rpc('get_low_stock_products_v2');
+
+      if (error) {
+        console.error('❌ [STOCK_SERVICE] Erro ao buscar produtos com estoque baixo:', error);
+        return [];
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error('❌ [STOCK_SERVICE] Erro ao buscar produtos com estoque baixo:', error);
+      return [];
+    }
   }
 };
