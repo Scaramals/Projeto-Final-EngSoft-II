@@ -30,21 +30,7 @@ export const useRealtimeStock = (productId?: string) => {
 
     loadInitialStock();
 
-    // Escutar atualizações via eventos customizados
-    const handleStockUpdate = (event: CustomEvent) => {
-      if (event.detail?.productId === productId) {
-        refreshStock();
-      }
-    };
-
-    const handleGeneralUpdate = () => {
-      refreshStock();
-    };
-
-    window.addEventListener('stock-updated', handleStockUpdate as EventListener);
-    window.addEventListener('movements-updated', handleGeneralUpdate);
-
-    // Escutar mudanças via Supabase Realtime
+    // APENAS REALTIME DO SUPABASE - SEM EVENTOS CUSTOMIZADOS
     const channel = supabase
       .channel(`product-${productId}`)
       .on(
@@ -63,8 +49,6 @@ export const useRealtimeStock = (productId?: string) => {
       .subscribe();
 
     return () => {
-      window.removeEventListener('stock-updated', handleStockUpdate as EventListener);
-      window.removeEventListener('movements-updated', handleGeneralUpdate);
       supabase.removeChannel(channel);
     };
   }, [productId, refreshStock]);

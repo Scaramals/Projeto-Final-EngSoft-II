@@ -26,7 +26,7 @@ export const useStockMovements = () => {
     }
   }, []);
 
-  // CRIAR MOVIMENTAÇÃO SIMPLIFICADA
+  // CRIAR MOVIMENTAÇÃO ULTRA-SIMPLIFICADA
   const createMovement = useCallback(async (data: {
     productId: string;
     quantity: number;
@@ -42,12 +42,12 @@ export const useStockMovements = () => {
     }
   }, []);
 
-  // Hook para movimentações em tempo real
+  // Hook para movimentações em tempo real - SIMPLIFICADO
   const useRealtimeMovements = (productId?: string, limit: number = 50) => {
     useEffect(() => {
       fetchMovements(productId, limit);
 
-      // Escutar mudanças em tempo real
+      // APENAS realtime do Supabase
       const channel = supabase
         .channel('movements_realtime')
         .on(
