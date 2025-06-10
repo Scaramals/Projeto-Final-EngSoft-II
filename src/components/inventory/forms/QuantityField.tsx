@@ -1,46 +1,29 @@
 
 import React from "react";
 import { Input } from "@/components/ui/input";
-import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
-import { Control } from "react-hook-form";
 
 interface QuantityFieldProps {
-  control: Control<any>;
-  name: string;
-  label: string;
-  placeholder?: string;
-  required?: boolean;
+  value: number;
+  onChange: (value: number) => void;
+  disabled?: boolean;
 }
 
 export const QuantityField: React.FC<QuantityFieldProps> = ({
-  control,
-  name,
-  label,
-  placeholder = "Ex: 10",
-  required = false
+  value,
+  onChange,
+  disabled = false
 }) => {
   return (
-    <FormField
-      control={control}
-      name={name}
-      render={({ field }) => (
-        <FormItem>
-          <FormLabel>{label}{required && '*'}</FormLabel>
-          <FormControl>
-            <Input
-              type="text"
-              placeholder={placeholder}
-              {...field}
-              value={field.value === 0 ? '' : field.value.toString()}
-              onChange={(e) => {
-                const value = e.target.value.replace(/\D/g, '');
-                field.onChange(value === '' ? 0 : parseInt(value, 10));
-              }}
-            />
-          </FormControl>
-          <FormMessage />
-        </FormItem>
-      )}
-    />
+    <div className="space-y-2">
+      <label className="text-sm font-medium">Quantidade *</label>
+      <Input
+        type="number"
+        min="1"
+        step="1"
+        value={value}
+        onChange={(e) => onChange(parseInt(e.target.value) || 0)}
+        disabled={disabled}
+      />
+    </div>
   );
 };

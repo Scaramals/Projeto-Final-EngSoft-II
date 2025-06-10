@@ -1,15 +1,15 @@
 
 import React, { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { useSuppliers } from "@/hooks/useSuppliers";
-import { Loader2, AlertTriangle, CheckCircle } from "lucide-react";
+import { StockStatusDisplay } from "./forms/StockStatusDisplay";
+import { ErrorAlert } from "./forms/ErrorAlert";
+import { MovementTypeField } from "./forms/MovementTypeField";
+import { QuantityField } from "./forms/QuantityField";
+import { SupplierField } from "./forms/SupplierField";
+import { NotesField } from "./forms/NotesField";
+import { FormActions } from "./forms/FormActions";
 
 interface StockMovementModalProps {
   isOpen: boolean;
@@ -29,8 +29,6 @@ export const StockMovementModal: React.FC<StockMovementModalProps> = ({
   onSuccess
 }) => {
   const { toast } = useToast();
-  const { useAllSuppliers } = useSuppliers();
-  const { data: suppliers = [] } = useAllSuppliers();
 
   const [formData, setFormData] = useState({
     type: 'in' as 'in' | 'out',
@@ -142,6 +140,25 @@ export const StockMovementModal: React.FC<StockMovementModalProps> = ({
     }
   };
 
+  const handleTypeChange = (value: 'in' | 'out') => {
+    setFormData(prev => ({ ...prev, type: value }));
+    setValidationError(null);
+  };
+
+  const handleQuantityChange = (value: number) => {
+    setFormData(prev => ({ ...prev, quantity: value }));
+    setValidationError(null);
+  };
+
+  const handleSupplierChange = (value: string) => {
+    setFormData(prev => ({ ...prev, supplierId: value }));
+    setValidationError(null);
+  };
+
+  const handleNotesChange = (value: string) => {
+    setFormData(prev => ({ ...prev, notes: value }));
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-md">
@@ -150,124 +167,43 @@ export const StockMovementModal: React.FC<StockMovementModalProps> = ({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Status do estoque */}
-          <Alert>
-            <CheckCircle className="h-4 w-4" />
-            <AlertDescription>
-              <strong>{productName}</strong><br />
-              Estoque atual: {currentStock} unidades
-            </AlertDescription>
-          </Alert>
+          <StockStatusDisplay 
+            productName={productName}
+            currentStock={currentStock}
+          />
 
-          {/* Erro de validação */}
-          {validationError && (
-            <Alert variant="destructive">
-              <AlertTriangle className="h-4 w-4" />
-              <AlertDescription>{validationError}</AlertDescription>
-            </Alert>
-          )}
+          <ErrorAlert error={validationError} />
 
-          {/* Tipo de movimentação */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Tipo *</label>
-            <Select
-              value={formData.type}
-              onValueChange={(value: 'in' | 'out') => {
-                setFormData(prev => ({ ...prev, type: value }));
-                setValidationError(null);
-              }}
-              disabled={isSubmitting}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="in">Entrada</SelectItem>
-                <SelectItem value="out">Saída</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          <MovementTypeField
+            value={formData.type}
+            onChange={handleTypeChange}
+            disabled={isSubmitting}
+          />
 
-          {/* Quantidade */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Quantidade *</label>
-            <Input
-              type="number"
-              min="1"
-              step="1"
-              value={formData.quantity}
-              onChange={(e) => {
-                setFormData(prev => ({ ...prev, quantity: parseInt(e.target.value) || 0 }));
-                setValidationError(null);
-              }}
-              disabled={isSubmitting}
-            />
-          </div>
+          <QuantityField
+            value={formData.quantity}
+            onChange={handleQuantityChange}
+            disabled={isSubmitting}
+          />
 
-          {/* Fornecedor (obrigatório para entradas) */}
-          {formData.type === 'in' && (
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Fornecedor *</label>
-              <Select
-                value={formData.supplierId}
-                onValueChange={(value) => {
-                  setFormData(prev => ({ ...prev, supplierId: value }));
-                  setValidationError(null);
-                }}
-                disabled={isSubmitting}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o fornecedor" />
-                </SelectTrigger>
-                <SelectContent>
-                  {suppliers.map(supplier => (
-                    <SelectItem key={supplier.id} value={supplier.id}>
-                      {supplier.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
+          <SupplierField
+            value={formData.supplierId}
+            onChange={handleSupplierChange}
+            disabled={isSubmitting}
+            show={formData.type === 'in'}
+          />
 
-          {/* Observações */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Observações</label>
-            <Textarea
-              value={formData.notes}
-              onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-              disabled={isSubmitting}
-              placeholder="Observações opcionais..."
-              className="min-h-[60px]"
-            />
-          </div>
+          <NotesField
+            value={formData.notes}
+            onChange={handleNotesChange}
+            disabled={isSubmitting}
+          />
 
-          {/* Ações */}
-          <div className="flex gap-2 pt-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onClose}
-              disabled={isSubmitting}
-              className="flex-1"
-            >
-              Cancelar
-            </Button>
-            <Button
-              type="submit"
-              disabled={isSubmitting || !!validationError}
-              className="flex-1"
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  Registrando...
-                </>
-              ) : (
-                "Registrar"
-              )}
-            </Button>
-          </div>
+          <FormActions
+            onCancel={onClose}
+            isSubmitting={isSubmitting}
+            hasValidationError={!!validationError}
+          />
         </form>
       </DialogContent>
     </Dialog>

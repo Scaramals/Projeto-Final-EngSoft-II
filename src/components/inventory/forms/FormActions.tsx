@@ -1,35 +1,21 @@
 
 import React from "react";
 import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
 
 interface FormActionsProps {
   onCancel: () => void;
-  onSubmit: (e: React.FormEvent) => void;
   isSubmitting: boolean;
-  isValidating: boolean;
-  hasInsufficientStock: boolean;
-  hasSubmitted: boolean;
+  hasValidationError: boolean;
 }
 
 export const FormActions: React.FC<FormActionsProps> = ({
   onCancel,
-  onSubmit,
   isSubmitting,
-  isValidating,
-  hasInsufficientStock,
-  hasSubmitted
+  hasValidationError
 }) => {
-  const getSubmitButtonText = () => {
-    if (isSubmitting) return "Registrando...";
-    if (isValidating) return "Validando...";
-    if (hasSubmitted) return "Processando...";
-    return "Registrar Movimentação";
-  };
-
-  const isDisabled = isSubmitting || isValidating || hasInsufficientStock || hasSubmitted;
-
   return (
-    <div className="flex gap-4 pt-4">
+    <div className="flex gap-2 pt-2">
       <Button
         type="button"
         variant="outline"
@@ -41,11 +27,17 @@ export const FormActions: React.FC<FormActionsProps> = ({
       </Button>
       <Button
         type="submit"
-        disabled={isDisabled}
+        disabled={isSubmitting || hasValidationError}
         className="flex-1"
-        onClick={onSubmit}
       >
-        {getSubmitButtonText()}
+        {isSubmitting ? (
+          <>
+            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            Registrando...
+          </>
+        ) : (
+          "Registrar"
+        )}
       </Button>
     </div>
   );
