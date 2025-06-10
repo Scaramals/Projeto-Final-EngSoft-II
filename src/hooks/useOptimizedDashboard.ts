@@ -12,7 +12,10 @@ export function useOptimizedDashboard() {
   // Buscar estatísticas otimizadas do dashboard
   const { data: stats, isLoading: isStatsLoading, refetch: refetchStats } = useQuery<DashboardStats>({
     queryKey: ["dashboard-stats-optimized"],
-    queryFn: () => OptimizedApiService.getDashboardStats(true), // Force refresh
+    queryFn: () => {
+      console.log('Fetching dashboard stats...');
+      return OptimizedApiService.getDashboardStats(true); // Force refresh
+    },
     staleTime: 2 * 60 * 1000, // 2 minutos
     gcTime: 5 * 60 * 1000, // 5 minutos
     enabled: !!user,
@@ -21,7 +24,10 @@ export function useOptimizedDashboard() {
   // Buscar resumo de movimentações
   const { data: movementsSummary, isLoading: isMovementsLoading, refetch: refetchMovements } = useQuery<MovementSummary[]>({
     queryKey: ["movements-summary"],
-    queryFn: () => OptimizedApiService.getMovementsSummary(30, true), // Force refresh
+    queryFn: () => {
+      console.log('Fetching movements summary...');
+      return OptimizedApiService.getMovementsSummary(30, true); // Force refresh
+    },
     staleTime: 5 * 60 * 1000, // 5 minutos
     gcTime: 10 * 60 * 1000, // 10 minutos
     enabled: !!user,
@@ -30,7 +36,10 @@ export function useOptimizedDashboard() {
   // Buscar análise de categorias - usando a função do banco que retorna os nomes
   const { data: categoryAnalysis, isLoading: isCategoryLoading, refetch: refetchCategory } = useQuery<CategoryAnalysis[]>({
     queryKey: ["category-analysis"],
-    queryFn: () => OptimizedApiService.getCategoryAnalysis(true), // Force refresh
+    queryFn: () => {
+      console.log('Fetching category analysis...');
+      return OptimizedApiService.getCategoryAnalysis(true); // Force refresh
+    },
     staleTime: 10 * 60 * 1000, // 10 minutos
     gcTime: 20 * 60 * 1000, // 20 minutos
     enabled: !!user,
@@ -48,10 +57,15 @@ export function useOptimizedDashboard() {
         throw error;
       }
 
+      if (!data || data.length === 0) {
+        console.log('No monthly trends data found');
+        return [];
+      }
+
       // Agrupar por mês
       const monthlyData: { [key: string]: { in: number, out: number } } = {};
       
-      data?.forEach((movement: any) => {
+      data.forEach((movement: any) => {
         const monthKey = new Date(movement.movement_date).toISOString().slice(0, 7); // YYYY-MM
         if (!monthlyData[monthKey]) {
           monthlyData[monthKey] = { in: 0, out: 0 };
@@ -83,6 +97,7 @@ export function useOptimizedDashboard() {
   const { data: monthlyComparison, isLoading: isComparisonLoading, refetch: refetchComparison } = useQuery({
     queryKey: ["monthly-comparison"],
     queryFn: async () => {
+      console.log('Fetching monthly comparison...');
       const now = new Date();
       const currentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
       const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
@@ -101,6 +116,7 @@ export function useOptimizedDashboard() {
         .lt('date', currentMonth.toISOString());
 
       if (currentError || lastError) {
+        console.error('Error fetching comparison data:', currentError || lastError);
         throw new Error('Erro ao buscar dados de comparação');
       }
 
@@ -109,12 +125,15 @@ export function useOptimizedDashboard() {
       const lastIn = lastData?.filter(m => m.type === 'in').reduce((sum, m) => sum + m.quantity, 0) || 0;
       const lastOut = lastData?.filter(m => m.type === 'out').reduce((sum, m) => sum + m.quantity, 0) || 0;
 
-      return {
+      const comparison = {
         entriesGrowth: lastIn === 0 ? 100 : ((currentIn - lastIn) / lastIn) * 100,
         exitsGrowth: lastOut === 0 ? 100 : ((currentOut - lastOut) / lastOut) * 100,
         movementsGrowth: (currentIn + currentOut) === 0 || (lastIn + lastOut) === 0 ? 0 : 
           (((currentIn + currentOut) - (lastIn + lastOut)) / (lastIn + lastOut)) * 100
       };
+
+      console.log('Monthly comparison:', comparison);
+      return comparison;
     },
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,

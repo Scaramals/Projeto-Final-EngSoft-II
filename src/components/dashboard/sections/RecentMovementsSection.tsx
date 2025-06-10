@@ -23,6 +23,7 @@ export const RecentMovementsSection: React.FC = () => {
   const { data: recentMovements, isLoading } = useQuery({
     queryKey: ["recent-movements"],
     queryFn: async () => {
+      console.log('Fetching recent movements...');
       const { data, error } = await supabase
         .from('stock_movements')
         .select(`
@@ -36,7 +37,12 @@ export const RecentMovementsSection: React.FC = () => {
         .order('date', { ascending: false })
         .limit(10);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching recent movements:', error);
+        throw error;
+      }
+
+      console.log('Recent movements data:', data);
 
       return (data || []).map(movement => ({
         id: movement.id,
@@ -75,39 +81,39 @@ export const RecentMovementsSection: React.FC = () => {
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {recentMovements?.slice(0, 5).map((movement) => (
-            <div key={movement.id} className="flex items-center justify-between p-3 border rounded-lg">
-              <div className="flex items-center gap-3">
-                <div className={`p-2 rounded-full ${
-                  movement.type === 'in' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'
-                }`}>
-                  {movement.type === 'in' ? (
-                    <TrendingUp className="h-4 w-4" />
-                  ) : (
-                    <TrendingDown className="h-4 w-4" />
+          {recentMovements && recentMovements.length > 0 ? (
+            recentMovements.slice(0, 5).map((movement) => (
+              <div key={movement.id} className="flex items-center justify-between p-3 border rounded-lg">
+                <div className="flex items-center gap-3">
+                  <div className={`p-2 rounded-full ${
+                    movement.type === 'in' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'
+                  }`}>
+                    {movement.type === 'in' ? (
+                      <TrendingUp className="h-4 w-4" />
+                    ) : (
+                      <TrendingDown className="h-4 w-4" />
+                    )}
+                  </div>
+                  <div>
+                    <p className="font-medium">{movement.product_name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {new Date(movement.date).toLocaleDateString('pt-BR')}
+                    </p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <Badge variant={movement.type === 'in' ? 'default' : 'destructive'}>
+                    {movement.type === 'in' ? '+' : '-'}{movement.quantity}
+                  </Badge>
+                  {movement.notes && (
+                    <p className="text-xs text-muted-foreground mt-1 max-w-32 truncate">
+                      {movement.notes}
+                    </p>
                   )}
                 </div>
-                <div>
-                  <p className="font-medium">{movement.product_name}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {new Date(movement.date).toLocaleDateString('pt-BR')}
-                  </p>
-                </div>
               </div>
-              <div className="text-right">
-                <Badge variant={movement.type === 'in' ? 'default' : 'destructive'}>
-                  {movement.type === 'in' ? '+' : '-'}{movement.quantity}
-                </Badge>
-                {movement.notes && (
-                  <p className="text-xs text-muted-foreground mt-1 max-w-32 truncate">
-                    {movement.notes}
-                  </p>
-                )}
-              </div>
-            </div>
-          ))}
-          
-          {(!recentMovements || recentMovements.length === 0) && (
+            ))
+          ) : (
             <div className="text-center py-8 text-muted-foreground">
               <p>Nenhuma movimentação recente encontrada</p>
             </div>
