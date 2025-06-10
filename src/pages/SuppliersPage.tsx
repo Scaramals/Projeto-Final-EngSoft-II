@@ -39,10 +39,18 @@ const SuppliersPage = () => {
   const [search, setSearch] = useState("");
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
-  const { data: suppliers, isLoading, error } = useAllSuppliers(search);
+  const { data: suppliers, isLoading, error } = useAllSuppliers();
   const deleteMutation = useDeleteSupplier();
 
   const canManageSuppliers = isAdmin() || isDeveloper() || isMaster();
+
+  // Filter suppliers based on search term
+  const filteredSuppliers = suppliers?.filter(supplier =>
+    supplier.name.toLowerCase().includes(search.toLowerCase()) ||
+    supplier.contactName?.toLowerCase().includes(search.toLowerCase()) ||
+    supplier.email?.toLowerCase().includes(search.toLowerCase()) ||
+    supplier.phone?.toLowerCase().includes(search.toLowerCase())
+  ) || [];
 
   const handleDelete = async () => {
     if (deleteId) {
@@ -107,9 +115,9 @@ const SuppliersPage = () => {
           <CardHeader className="pb-4 sm:pb-6">
             <CardTitle className="text-lg sm:text-xl">Lista de Fornecedores</CardTitle>
             <CardDescription className="text-sm sm:text-base">
-              {suppliers && suppliers.length > 0
-                ? `Mostrando ${suppliers.length} fornecedor${
-                    suppliers.length > 1 ? "es" : ""
+              {filteredSuppliers && filteredSuppliers.length > 0
+                ? `Mostrando ${filteredSuppliers.length} fornecedor${
+                    filteredSuppliers.length > 1 ? "es" : ""
                   }`
                 : "Nenhum fornecedor encontrado"}
             </CardDescription>
@@ -124,11 +132,11 @@ const SuppliersPage = () => {
                   </div>
                 ))}
               </div>
-            ) : suppliers && suppliers.length > 0 ? (
+            ) : filteredSuppliers && filteredSuppliers.length > 0 ? (
               <div className="overflow-x-auto">
                 {/* Mobile view - Card layout */}
                 <div className="block sm:hidden space-y-4 p-4">
-                  {suppliers.map((supplier) => (
+                  {filteredSuppliers.map((supplier) => (
                     <Card key={supplier.id} className="p-4">
                       <div className="space-y-2">
                         <div className="flex items-start justify-between">
@@ -204,7 +212,7 @@ const SuppliersPage = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {suppliers.map((supplier) => (
+                      {filteredSuppliers.map((supplier) => (
                         <TableRow key={supplier.id}>
                           <TableCell className="font-medium">
                             <Link
