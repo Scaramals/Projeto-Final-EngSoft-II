@@ -17,17 +17,9 @@ export interface CreateMovementData {
   supplierId?: string;
 }
 
-// Interface para o retorno da função RPC
-interface RPCValidationResult {
-  isValid: boolean;
-  currentStock: number;
-  message?: string;
-  productName?: string;
-}
-
 /**
- * Serviço principal para operações de estoque - versão 2.0
- * Agora usa as funções RPC do Supabase para evitar duplicação
+ * Serviço SIMPLIFICADO para operações de estoque
+ * O trigger do banco cuida de toda validação e atualização automaticamente
  */
 export const StockService = {
   /**
@@ -35,7 +27,7 @@ export const StockService = {
    */
   async validateMovement(productId: string, quantity: number, type: 'in' | 'out'): Promise<StockValidationResult> {
     try {
-      console.log(`🔍 [STOCK_SERVICE_V2] Validando ${type} de ${quantity} unidades para produto ${productId}`);
+      console.log(`🔍 [STOCK_SERVICE] Validando ${type} de ${quantity} unidades para produto ${productId}`);
       
       const { data, error } = await supabase.rpc('validate_stock_movement', {
         product_id_param: productId,
@@ -44,7 +36,7 @@ export const StockService = {
       });
 
       if (error) {
-        console.error('❌ [STOCK_SERVICE_V2] Erro na validação RPC:', error);
+        console.error('❌ [STOCK_SERVICE] Erro na validação RPC:', error);
         return {
           isValid: false,
           currentStock: 0,
@@ -52,10 +44,9 @@ export const StockService = {
         };
       }
 
-      console.log(`✅ [STOCK_SERVICE_V2] Resultado da validação:`, data);
+      console.log(`✅ [STOCK_SERVICE] Resultado da validação:`, data);
       
-      // Cast seguro do tipo Json para nossa interface usando unknown primeiro
-      const result = data as unknown as RPCValidationResult;
+      const result = data as unknown as StockValidationResult;
       
       return {
         isValid: result.isValid,
@@ -64,7 +55,7 @@ export const StockService = {
         productName: result.productName
       };
     } catch (error) {
-      console.error('❌ [STOCK_SERVICE_V2] Erro crítico na validação:', error);
+      console.error('❌ [STOCK_SERVICE] Erro crítico na validação:', error);
       return {
         isValid: false,
         currentStock: 0,
@@ -74,13 +65,13 @@ export const StockService = {
   },
 
   /**
-   * Criar movimentação usando inserção direta - o trigger cuida do resto
+   * Criar movimentação - O TRIGGER CUIDA DE TUDO AUTOMATICAMENTE
    */
   async createMovement(data: CreateMovementData): Promise<{ success: boolean; message?: string; data?: any }> {
     try {
-      console.log(`🚀 [STOCK_SERVICE_V2] Criando movimentação:`, data);
+      console.log(`🚀 [STOCK_SERVICE] Criando movimentação:`, data);
 
-      // O trigger no banco fará toda a validação e atualização do estoque
+      // SIMPLES: Apenas inserir - o trigger valida e atualiza tudo
       const { data: movement, error } = await supabase
         .from('stock_movements')
         .insert({
@@ -95,9 +86,9 @@ export const StockService = {
         .single();
 
       if (error) {
-        console.error('❌ [STOCK_SERVICE_V2] Erro ao criar movimentação:', error);
+        console.error('❌ [STOCK_SERVICE] Erro ao criar movimentação:', error);
         
-        // Verificar se é erro de estoque insuficiente
+        // Verificar se é erro de estoque insuficiente do trigger
         if (error.message.includes('Estoque insuficiente')) {
           return {
             success: false,
@@ -111,7 +102,7 @@ export const StockService = {
         };
       }
 
-      console.log('✅ [STOCK_SERVICE_V2] Movimentação criada com sucesso:', movement);
+      console.log('✅ [STOCK_SERVICE] Movimentação criada com sucesso:', movement);
       
       // Disparar eventos para atualização da UI
       window.dispatchEvent(new CustomEvent('stock-updated', { detail: { productId: data.productId } }));
@@ -122,7 +113,7 @@ export const StockService = {
         data: movement
       };
     } catch (error: any) {
-      console.error('❌ [STOCK_SERVICE_V2] Erro crítico:', error);
+      console.error('❌ [STOCK_SERVICE] Erro crítico:', error);
       return {
         success: false,
         message: error.message || 'Erro inesperado'
@@ -140,13 +131,13 @@ export const StockService = {
       });
 
       if (error) {
-        console.error('❌ [STOCK_SERVICE_V2] Erro ao buscar estoque:', error);
+        console.error('❌ [STOCK_SERVICE] Erro ao buscar estoque:', error);
         return 0;
       }
 
       return data || 0;
     } catch (error) {
-      console.error('❌ [STOCK_SERVICE_V2] Erro ao buscar estoque:', error);
+      console.error('❌ [STOCK_SERVICE] Erro ao buscar estoque:', error);
       return 0;
     }
   },
@@ -161,7 +152,7 @@ export const StockService = {
       });
 
       if (error) {
-        console.error('❌ [STOCK_SERVICE_V2] Erro ao buscar movimentações:', error);
+        console.error('❌ [STOCK_SERVICE] Erro ao buscar movimentações:', error);
         return [];
       }
 
@@ -180,7 +171,7 @@ export const StockService = {
         updatedAt: movement.updated_at
       }));
     } catch (error) {
-      console.error('❌ [STOCK_SERVICE_V2] Erro ao buscar movimentações:', error);
+      console.error('❌ [STOCK_SERVICE] Erro ao buscar movimentações:', error);
       return [];
     }
   },
@@ -193,13 +184,13 @@ export const StockService = {
       const { data, error } = await supabase.rpc('get_low_stock_products_v2');
 
       if (error) {
-        console.error('❌ [STOCK_SERVICE_V2] Erro ao buscar produtos com estoque baixo:', error);
+        console.error('❌ [STOCK_SERVICE] Erro ao buscar produtos com estoque baixo:', error);
         return [];
       }
 
       return data || [];
     } catch (error) {
-      console.error('❌ [STOCK_SERVICE_V2] Erro ao buscar produtos com estoque baixo:', error);
+      console.error('❌ [STOCK_SERVICE] Erro ao buscar produtos com estoque baixo:', error);
       return [];
     }
   }

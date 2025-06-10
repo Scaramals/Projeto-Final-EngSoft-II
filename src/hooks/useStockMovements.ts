@@ -1,6 +1,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { StockService } from "@/services/stockService";
 
 export interface StockMovement {
   id: string;
@@ -22,29 +23,12 @@ export const useStockMovements = () => {
   const fetchMovements = useCallback(async (productId?: string, limit: number = 50) => {
     setIsLoading(true);
     try {
-      const { data, error } = await supabase.rpc('get_movements_with_details', {
-        limit_param: limit
-      });
-
-      if (error) throw error;
-
-      const formattedMovements = (data || []).map(movement => ({
-        id: movement.id,
-        productId: movement.product_id,
-        productName: movement.product_name || 'Produto não encontrado',
-        quantity: movement.quantity,
-        type: movement.type as 'in' | 'out',
-        date: movement.date,
-        supplierId: movement.supplier_id,
-        supplierName: movement.supplier_name,
-        notes: movement.notes,
-        createdBy: movement.created_by
-      })) as StockMovement[];
+      const allMovements = await StockService.getMovementsWithDetails(limit);
 
       if (productId) {
-        setMovements(formattedMovements.filter(m => m.productId === productId));
+        setMovements(allMovements.filter(m => m.productId === productId));
       } else {
-        setMovements(formattedMovements);
+        setMovements(allMovements);
       }
     } catch (error) {
       console.error('Erro ao buscar movimentações:', error);
@@ -54,6 +38,7 @@ export const useStockMovements = () => {
     }
   }, []);
 
+  // CRIAR MOVIMENTAÇÃO SIMPLIFICADA - SEM VALIDAÇÃO MANUAL
   const createMovement = useCallback(async (data: {
     productId: string;
     quantity: number;
@@ -62,26 +47,15 @@ export const useStockMovements = () => {
     supplierId?: string;
   }) => {
     try {
-      const { error } = await supabase
-        .from('stock_movements')
-        .insert({
-          product_id: data.productId,
-          quantity: data.quantity,
-          type: data.type,
-          notes: data.notes || null,
-          supplier_id: data.supplierId || null,
-          date: new Date().toISOString()
-        });
-
-      if (error) throw error;
-
-      return { success: true };
+      // Usar o StockService que já cuida de tudo
+      return await StockService.createMovement(data);
     } catch (error: any) {
       console.error('Erro ao criar movimentação:', error);
       return { success: false, message: error.message };
     }
   }, []);
 
+  // VALIDAÇÃO SIMPLES - APENAS CHAMADA RPC
   const validateMovement = useCallback(async (
     productId: string,
     quantity: number,
@@ -89,7 +63,7 @@ export const useStockMovements = () => {
     supplierId?: string
   ) => {
     try {
-      // Primeiro verificar se é entrada sem fornecedor
+      // Verificar se é entrada sem fornecedor
       if (type === 'in' && !supplierId) {
         return {
           isValid: false,
@@ -98,24 +72,8 @@ export const useStockMovements = () => {
         };
       }
 
-      // Usar a função existente validate_stock_movement
-      const { data, error } = await supabase.rpc('validate_stock_movement', {
-        product_id_param: productId,
-        quantity_param: quantity,
-        type_param: type
-      });
-
-      if (error) throw error;
-
-      // Cast do resultado JSON para o tipo esperado
-      const result = data as any;
-      
-      return {
-        isValid: result.isValid || false,
-        currentStock: result.currentStock || 0,
-        message: result.message || 'Erro na validação',
-        productName: result.productName
-      };
+      // Usar validação RPC do banco
+      return await StockService.validateMovement(productId, quantity, type);
     } catch (error: any) {
       console.error('Erro na validação:', error);
       return {

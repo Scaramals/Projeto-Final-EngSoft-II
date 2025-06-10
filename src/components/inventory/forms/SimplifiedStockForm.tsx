@@ -26,7 +26,7 @@ export const SimplifiedStockForm: React.FC<SimplifiedStockFormProps> = ({
   const suppliersHook = useSuppliers();
   const { data: suppliers = [] } = suppliersHook.useAllSuppliers();
   
-  // Estados do formulário - FIXO: inicialização correta
+  // Estados do formulário
   const [formData, setFormData] = useState({
     type: 'in' as 'in' | 'out',
     quantity: 0,
@@ -66,14 +66,9 @@ export const SimplifiedStockForm: React.FC<SimplifiedStockFormProps> = ({
     }
   }, [formData.type, formData.quantity, currentStock]);
 
-  // FIXO: Atualizar campo do formulário sem duplicação
+  // Atualizar campo do formulário
   const updateField = (field: string, value: any) => {
-    setFormData(prev => {
-      if (prev[field as keyof typeof prev] === value) {
-        return prev; // Não atualizar se o valor for o mesmo
-      }
-      return { ...prev, [field]: value };
-    });
+    setFormData(prev => ({ ...prev, [field]: value }));
     
     // Limpar erro do campo
     if (errors[field]) {
@@ -81,7 +76,7 @@ export const SimplifiedStockForm: React.FC<SimplifiedStockFormProps> = ({
     }
   };
 
-  // FIXO: Manipulador de quantidade específico
+  // Manipulador de quantidade
   const handleQuantityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = e.target.value;
     
@@ -119,7 +114,7 @@ export const SimplifiedStockForm: React.FC<SimplifiedStockFormProps> = ({
     return Object.keys(newErrors).length === 0;
   };
 
-  // Submeter formulário
+  // Submeter formulário - SIMPLIFICADO
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -137,6 +132,7 @@ export const SimplifiedStockForm: React.FC<SimplifiedStockFormProps> = ({
     setIsLoading(true);
 
     try {
+      // APENAS CRIAR A MOVIMENTAÇÃO - O TRIGGER CUIDA DO RESTO
       const result = await StockService.createMovement({
         productId,
         quantity: formData.quantity,
@@ -228,7 +224,7 @@ export const SimplifiedStockForm: React.FC<SimplifiedStockFormProps> = ({
             </Select>
           </div>
 
-          {/* Quantidade - FIXO */}
+          {/* Quantidade */}
           <div className="space-y-2">
             <label className="text-sm font-medium">Quantidade</label>
             <Input
