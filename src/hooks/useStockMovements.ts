@@ -2,19 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { StockService } from "@/services/stockService";
-
-export interface StockMovement {
-  id: string;
-  productId: string;
-  productName: string;
-  quantity: number;
-  type: 'in' | 'out';
-  date: string;
-  supplierId?: string;
-  supplierName?: string;
-  notes?: string;
-  createdBy?: string;
-}
+import { StockMovement } from "@/types";
 
 export const useStockMovements = () => {
   const [movements, setMovements] = useState<StockMovement[]>([]);
@@ -38,7 +26,7 @@ export const useStockMovements = () => {
     }
   }, []);
 
-  // CRIAR MOVIMENTAÇÃO SIMPLIFICADA - SEM VALIDAÇÃO MANUAL
+  // CRIAR MOVIMENTAÇÃO SIMPLIFICADA
   const createMovement = useCallback(async (data: {
     productId: string;
     quantity: number;
@@ -47,40 +35,10 @@ export const useStockMovements = () => {
     supplierId?: string;
   }) => {
     try {
-      // Usar o StockService que já cuida de tudo
       return await StockService.createMovement(data);
     } catch (error: any) {
       console.error('Erro ao criar movimentação:', error);
       return { success: false, message: error.message };
-    }
-  }, []);
-
-  // VALIDAÇÃO SIMPLES - APENAS CHAMADA RPC
-  const validateMovement = useCallback(async (
-    productId: string,
-    quantity: number,
-    type: 'in' | 'out',
-    supplierId?: string
-  ) => {
-    try {
-      // Verificar se é entrada sem fornecedor
-      if (type === 'in' && !supplierId) {
-        return {
-          isValid: false,
-          currentStock: 0,
-          message: 'Entrada de estoque obrigatoriamente deve ter um fornecedor'
-        };
-      }
-
-      // Usar validação RPC do banco
-      return await StockService.validateMovement(productId, quantity, type);
-    } catch (error: any) {
-      console.error('Erro na validação:', error);
-      return {
-        isValid: false,
-        currentStock: 0,
-        message: error.message || 'Erro na validação'
-      };
     }
   }, []);
 
@@ -123,7 +81,6 @@ export const useStockMovements = () => {
     isLoading,
     fetchMovements,
     createMovement,
-    validateMovement,
     useRealtimeMovements
   };
 };
