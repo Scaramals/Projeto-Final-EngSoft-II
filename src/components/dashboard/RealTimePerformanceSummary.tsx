@@ -1,11 +1,11 @@
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TrendingUp, TrendingDown, Package, AlertTriangle } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { SecureLogger } from "@/services/secureLogger";
 
 interface PerformanceData {
   currentMonthIn: number;
@@ -18,9 +18,12 @@ interface PerformanceData {
 }
 
 export const RealTimePerformanceSummary: React.FC = () => {
-  const { data: performanceData, isLoading } = useQuery({
-    queryKey: ['real-time-performance'],
-    queryFn: async (): Promise<PerformanceData> => {
+  const [performanceData, setPerformanceData] = useState<PerformanceData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchPerformanceData = async (): Promise<PerformanceData> => {
+    try {
       const now = new Date();
       const currentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
       const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
@@ -55,6 +58,11 @@ export const RealTimePerformanceSummary: React.FC = () => {
         supabase.rpc('get_total_stock_value')
       ]);
 
+      if (currentMovements.error) throw currentMovements.error;
+      if (lastMovements.error) throw lastMovements.error;
+      if (products.error) throw products.error;
+      if (stockValue.error) throw stockValue.error;
+
       const currentIn = currentMovements.data?.filter(m => m.type === 'in').reduce((sum, m) => sum + m.quantity, 0) || 0;
       const currentOut = currentMovements.data?.filter(m => m.type === 'out').reduce((sum, m) => sum + m.quantity, 0) || 0;
       const lastIn = lastMovements.data?.filter(m => m.type === 'in').reduce((sum, m) => sum + m.quantity, 0) || 0;
@@ -73,10 +81,50 @@ export const RealTimePerformanceSummary: React.FC = () => {
         totalProducts: products.data?.length || 0,
         totalValue: stockValue.data || 0
       };
-    },
-    refetchInterval: 30000, // Atualizar a cada 30 segundos
-    staleTime: 15000, // Considerar dados frescos por 15 segundos
-  });
+    } catch (error) {
+      SecureLogger.error('Erro ao buscar dados de performance', error);
+      throw error;
+    }
+  };
+
+  const loadData = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const data = await fetchPerformanceData();
+      setPerformanceData(data);
+    } catch (error) {
+      SecureLogger.error('Erro ao carregar dados de performance', error);
+      setError('Erro ao carregar dados');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+
+    // Atualizar a cada 30 segundos
+    const interval = setInterval(() => {
+      loadData();
+    }, 30000);
+
+    // Escutar eventos customizados para atualização
+    const handleDataUpdate = () => {
+      setTimeout(loadData, 1000); // Delay para permitir que os dados sejam salvos
+    };
+
+    window.addEventListener('dashboard-data-updated', handleDataUpdate);
+    window.addEventListener('low-stock-updated', handleDataUpdate);
+    window.addEventListener('movements-updated', handleDataUpdate);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('dashboard-data-updated', handleDataUpdate);
+      window.removeEventListener('low-stock-updated', handleDataUpdate);
+      window.removeEventListener('movements-updated', handleDataUpdate);
+    };
+  }, []);
 
   if (isLoading) {
     return (
@@ -98,7 +146,23 @@ export const RealTimePerformanceSummary: React.FC = () => {
     );
   }
 
-  if (!performanceData) return null;
+  if (error || !performanceData) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Package className="h-5 w-5" />
+            Resumo de Performance em Tempo Real
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-muted-foreground">
+            {error || 'Erro ao carregar dados de performance'}
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   const entriesGrowth = performanceData.lastMonthIn === 0 ? 100 : 
     ((performanceData.currentMonthIn - performanceData.lastMonthIn) / performanceData.lastMonthIn) * 100;
