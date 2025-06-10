@@ -1,5 +1,10 @@
-
 import { z } from "zod";
+
+// Validador para nome
+export const nameSchema = z.string()
+  .min(2, "Nome deve ter pelo menos 2 caracteres")
+  .max(100, "Nome não pode exceder 100 caracteres")
+  .regex(/^[A-Za-zÀ-ÿ0-9\s\-\.\_]+$/, "Nome contém caracteres inválidos");
 
 // Validador para CPF
 export const cpfSchema = z.string()
