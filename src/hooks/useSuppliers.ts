@@ -1,5 +1,5 @@
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Supplier } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
@@ -47,161 +47,226 @@ const mapSupplierToDbSupplier = (supplier: Partial<Supplier>, userId?: string) =
 };
 
 export function useSuppliers() {
-  const queryClient = useQueryClient();
   const { user } = useAuth();
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
 
   // Fetch all suppliers
-  const useAllSuppliers = () => {
-    return useQuery({
-      queryKey: ['suppliers'],
-      queryFn: async () => {
-        const { data, error } = await supabase
-          .from('suppliers')
-          .select('*')
-          .order('name');
-          
-        if (error) {
-          throw new Error(`Error fetching suppliers: ${error.message}`);
-        }
+  const fetchSuppliers = async () => {
+    if (!user) return;
+    
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const { data, error } = await supabase
+        .from('suppliers')
+        .select('*')
+        .order('name');
         
-        return data.map(mapDbSupplierToSupplier) as Supplier[];
-      },
-      enabled: !!user,
-    });
+      if (error) {
+        throw new Error(`Error fetching suppliers: ${error.message}`);
+      }
+      
+      const mappedSuppliers = data.map(mapDbSupplierToSupplier) as Supplier[];
+      setSuppliers(mappedSuppliers);
+    } catch (err: any) {
+      setError(err);
+      SecureLogger.error('Erro ao buscar fornecedores', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Load suppliers when user is available
+  useEffect(() => {
+    if (user) {
+      fetchSuppliers();
+    }
+  }, [user]);
+
+  const useAllSuppliers = () => {
+    return {
+      data: suppliers,
+      isLoading,
+      error,
+      refetch: fetchSuppliers
+    };
   };
 
   // Fetch a single supplier by ID
   const useSupplier = (supplierId: string | undefined) => {
-    return useQuery({
-      queryKey: ['suppliers', supplierId],
-      queryFn: async () => {
-        if (!supplierId) throw new Error("Supplier ID is required");
+    const [supplier, setSupplier] = useState<Supplier | null>(null);
+    const [loading, setLoading] = useState(false);
+    const [fetchError, setFetchError] = useState<Error | null>(null);
+
+    useEffect(() => {
+      if (!user || !supplierId) return;
+
+      const fetchSupplier = async () => {
+        setLoading(true);
+        setFetchError(null);
         
-        const { data, error } = await supabase
-          .from('suppliers')
-          .select('*')
-          .eq('id', supplierId)
-          .single();
+        try {
+          const { data, error } = await supabase
+            .from('suppliers')
+            .select('*')
+            .eq('id', supplierId)
+            .single();
+            
+          if (error) {
+            throw new Error(`Error fetching supplier: ${error.message}`);
+          }
           
-        if (error) {
-          throw new Error(`Error fetching supplier: ${error.message}`);
+          setSupplier(mapDbSupplierToSupplier(data));
+        } catch (err: any) {
+          setFetchError(err);
+          SecureLogger.error('Erro ao buscar fornecedor', err);
+        } finally {
+          setLoading(false);
         }
-        
-        return mapDbSupplierToSupplier(data);
-      },
-      enabled: !!user && !!supplierId,
-    });
+      };
+
+      fetchSupplier();
+    }, [user, supplierId]);
+
+    return {
+      data: supplier,
+      isLoading: loading,
+      error: fetchError
+    };
   };
 
   // Create a new supplier
   const useCreateSupplier = () => {
-    return useMutation({
-      mutationFn: async (supplier: Partial<Supplier>) => {
-        SecureLogger.info('Criando novo fornecedor');
-        
-        const dbSupplier = mapSupplierToDbSupplier(supplier, user?.id);
-        
-        const { data, error } = await supabase
-          .from('suppliers')
-          .insert(dbSupplier)
-          .select()
-          .single();
+    const [isCreating, setIsCreating] = useState(false);
+
+    return {
+      mutateAsync: async (supplier: Partial<Supplier>) => {
+        setIsCreating(true);
+        try {
+          SecureLogger.info('Criando novo fornecedor');
           
-        if (error) {
-          SecureLogger.error('Erro ao criar fornecedor', error);
-          throw new Error(`Erro ao criar fornecedor: ${error.message}`);
+          const dbSupplier = mapSupplierToDbSupplier(supplier, user?.id);
+          
+          const { data, error } = await supabase
+            .from('suppliers')
+            .insert(dbSupplier)
+            .select()
+            .single();
+            
+          if (error) {
+            SecureLogger.error('Erro ao criar fornecedor', error);
+            throw new Error(`Erro ao criar fornecedor: ${error.message}`);
+          }
+          
+          SecureLogger.success('Fornecedor criado com sucesso');
+          
+          // Refresh suppliers list
+          await fetchSuppliers();
+          
+          toast.success("Fornecedor criado com sucesso!");
+          
+          return mapDbSupplierToSupplier(data);
+        } catch (error: any) {
+          SecureLogger.error('Erro na criação do fornecedor', error);
+          toast.error(`Erro ao criar fornecedor: ${error.message}`);
+          throw error;
+        } finally {
+          setIsCreating(false);
         }
-        
-        SecureLogger.success('Fornecedor criado com sucesso');
-        return mapDbSupplierToSupplier(data);
       },
-      onSuccess: async () => {
-        // FORÇAR invalidação e refetch completo após criação
-        await queryClient.invalidateQueries({ queryKey: ['suppliers'] });
-        await queryClient.refetchQueries({ queryKey: ['suppliers'] });
-        
-        toast.success("Fornecedor criado com sucesso!");
-      },
-      onError: (error: any) => {
-        SecureLogger.error('Erro na criação do fornecedor', error);
-        toast.error(`Erro ao criar fornecedor: ${error.message}`);
-      }
-    });
+      isPending: isCreating,
+      isLoading: isCreating
+    };
   };
 
   // Update an existing supplier
   const useUpdateSupplier = () => {
-    return useMutation({
-      mutationFn: async ({ id, ...updates }: Partial<Supplier> & { id: string }) => {
-        SecureLogger.info('Atualizando fornecedor');
-        
-        const dbUpdates = mapSupplierToDbSupplier(updates, user?.id);
-        dbUpdates.last_modified_by = user?.id;
-        
-        const { data, error } = await supabase
-          .from('suppliers')
-          .update(dbUpdates)
-          .eq('id', id)
-          .select()
-          .single();
+    const [isUpdating, setIsUpdating] = useState(false);
+
+    return {
+      mutateAsync: async ({ id, ...updates }: Partial<Supplier> & { id: string }) => {
+        setIsUpdating(true);
+        try {
+          SecureLogger.info('Atualizando fornecedor');
           
-        if (error) {
-          SecureLogger.error('Erro ao atualizar fornecedor', error);
-          throw new Error(`Erro ao atualizar fornecedor: ${error.message}`);
+          const dbUpdates = mapSupplierToDbSupplier(updates, user?.id);
+          dbUpdates.last_modified_by = user?.id;
+          
+          const { data, error } = await supabase
+            .from('suppliers')
+            .update(dbUpdates)
+            .eq('id', id)
+            .select()
+            .single();
+            
+          if (error) {
+            SecureLogger.error('Erro ao atualizar fornecedor', error);
+            throw new Error(`Erro ao atualizar fornecedor: ${error.message}`);
+          }
+          
+          SecureLogger.success('Fornecedor atualizado com sucesso');
+          
+          // Refresh suppliers list
+          await fetchSuppliers();
+          
+          toast.success("Fornecedor atualizado com sucesso!");
+          
+          return mapDbSupplierToSupplier(data);
+        } catch (error: any) {
+          SecureLogger.error('Erro na atualização do fornecedor', error);
+          toast.error(`Erro ao atualizar fornecedor: ${error.message}`);
+          throw error;
+        } finally {
+          setIsUpdating(false);
         }
-        
-        SecureLogger.success('Fornecedor atualizado com sucesso');
-        return mapDbSupplierToSupplier(data);
       },
-      onSuccess: async (_, variables) => {
-        // FORÇAR invalidação e refetch completo após atualização
-        await queryClient.invalidateQueries({ queryKey: ['suppliers'] });
-        await queryClient.invalidateQueries({ queryKey: ['suppliers', variables.id] });
-        
-        // Refetch específico
-        await queryClient.refetchQueries({ queryKey: ['suppliers'] });
-        await queryClient.refetchQueries({ queryKey: ['suppliers', variables.id] });
-        
-        toast.success("Fornecedor atualizado com sucesso!");
-      },
-      onError: (error: any) => {
-        SecureLogger.error('Erro na atualização do fornecedor', error);
-        toast.error(`Erro ao atualizar fornecedor: ${error.message}`);
-      }
-    });
+      isPending: isUpdating,
+      isLoading: isUpdating
+    };
   };
 
   // Delete a supplier
   const useDeleteSupplier = () => {
-    return useMutation({
-      mutationFn: async (id: string) => {
-        SecureLogger.info('Excluindo fornecedor');
-        
-        const { error } = await supabase
-          .from('suppliers')
-          .delete()
-          .eq('id', id);
+    const [isDeleting, setIsDeleting] = useState(false);
+
+    return {
+      mutateAsync: async (id: string) => {
+        setIsDeleting(true);
+        try {
+          SecureLogger.info('Excluindo fornecedor');
           
-        if (error) {
-          SecureLogger.error('Erro ao excluir fornecedor', error);
-          throw new Error(`Erro ao excluir fornecedor: ${error.message}`);
+          const { error } = await supabase
+            .from('suppliers')
+            .delete()
+            .eq('id', id);
+            
+          if (error) {
+            SecureLogger.error('Erro ao excluir fornecedor', error);
+            throw new Error(`Erro ao excluir fornecedor: ${error.message}`);
+          }
+          
+          SecureLogger.success('Fornecedor excluído com sucesso');
+          
+          // Refresh suppliers list
+          await fetchSuppliers();
+          
+          toast.success("Fornecedor excluído com sucesso!");
+          
+          return id;
+        } catch (error: any) {
+          SecureLogger.error('Erro na exclusão do fornecedor', error);
+          toast.error(`Erro ao excluir fornecedor: ${error.message}`);
+          throw error;
+        } finally {
+          setIsDeleting(false);
         }
-        
-        SecureLogger.success('Fornecedor excluído com sucesso');
-        return id;
       },
-      onSuccess: async () => {
-        // FORÇAR invalidação e refetch completo após exclusão
-        await queryClient.invalidateQueries({ queryKey: ['suppliers'] });
-        await queryClient.refetchQueries({ queryKey: ['suppliers'] });
-        
-        toast.success("Fornecedor excluído com sucesso!");
-      },
-      onError: (error: any) => {
-        SecureLogger.error('Erro na exclusão do fornecedor', error);
-        toast.error(`Erro ao excluir fornecedor: ${error.message}`);
-      }
-    });
+      isPending: isDeleting,
+      isLoading: isDeleting
+    };
   };
 
   return {
