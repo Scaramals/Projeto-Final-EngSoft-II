@@ -1,15 +1,15 @@
 
 import React, { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useStockMovements } from "@/hooks/useStockMovements";
 import { useToast } from "@/hooks/use-toast";
 import { StockValidationService } from "@/services/stockValidationService";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertTriangle, CheckCircle } from "lucide-react";
+import { validateStockMovementForm, hasValidationErrors } from "@/services/stockMovementValidation";
+import { StockStatusAlert } from "./forms/StockStatusAlert";
+import { MovementTypeSelect } from "./forms/MovementTypeSelect";
+import { QuantityInput } from "./forms/QuantityInput";
+import { NotesInput } from "./forms/NotesInput";
+import { FormActions } from "./forms/FormActions";
 
 interface StockMovementFormProps {
   productId: string;
@@ -38,11 +38,7 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
   const [supplierId, setSupplierId] = useState<string>('');
 
   // Form errors
-  const [errors, setErrors] = useState<{
-    type?: string;
-    quantity?: string;
-    notes?: string;
-  }>({});
+  const [errors, setErrors] = useState(validateStockMovementForm('', 0));
 
   const { useCreateStockMovement } = useStockMovements();
   const createMovementMutation = useCreateStockMovement();
@@ -92,21 +88,6 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
     validateMovement();
   }, [type, quantity, productId, currentStock]);
 
-  const validateForm = () => {
-    const newErrors: typeof errors = {};
-
-    if (!type) {
-      newErrors.type = 'Selecione o tipo de movimentação';
-    }
-
-    if (!quantity || quantity <= 0) {
-      newErrors.quantity = 'Quantidade deve ser maior que 0';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -116,7 +97,10 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
       return;
     }
 
-    if (!validateForm()) {
+    const formErrors = validateStockMovementForm(type, quantity);
+    setErrors(formErrors);
+
+    if (hasValidationErrors(formErrors)) {
       return;
     }
 
@@ -199,107 +183,44 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Alerta de estoque atual */}
-          <Alert>
-            <CheckCircle className="h-4 w-4" />
-            <AlertDescription>
-              Estoque atual: <strong>{currentValidatedStock} unidades</strong>
-            </AlertDescription>
-          </Alert>
+          <StockStatusAlert 
+            currentStock={currentValidatedStock}
+            validationError={validationError}
+          />
 
-          {/* Tipo de movimentação */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Tipo de movimentação</label>
-            <Select
-              value={type}
-              onValueChange={(value: 'in' | 'out') => {
-                console.log('🔄 [TYPE] Tipo selecionado:', value);
-                setType(value);
-              }}
-              disabled={isSubmitting || isValidating}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione o tipo" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="in">Entrada</SelectItem>
-                <SelectItem value="out">Saída</SelectItem>
-              </SelectContent>
-            </Select>
-            {errors.type && (
-              <p className="text-sm font-medium text-destructive">{errors.type}</p>
-            )}
-          </div>
-
-          {/* Quantidade */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Quantidade</label>
-            <Input
-              type="number"
-              min="1"
-              step="1"
-              value={quantity}
-              disabled={isSubmitting || isValidating}
-              className={hasInsufficientStock ? "border-yellow-500" : ""}
-              onChange={(e) => {
-                const value = parseInt(e.target.value) || 0;
-                console.log('📝 [QUANTITY] Valor digitado:', value);
-                setQuantity(value);
-              }}
-            />
-            {type === "out" && (
-              <p className={`text-sm ${hasInsufficientStock ? "text-yellow-600" : "text-muted-foreground"}`}>
-                Estoque disponível: {currentValidatedStock} unidades
-                {hasInsufficientStock && " - ATENÇÃO: Quantidade maior que estoque!"}
-              </p>
-            )}
-            {errors.quantity && (
-              <p className="text-sm font-medium text-destructive">{errors.quantity}</p>
-            )}
-          </div>
-
-          {/* Alerta de erro de validação */}
-          {validationError && (
-            <Alert variant="destructive">
-              <AlertTriangle className="h-4 w-4" />
-              <AlertDescription>
-                {validationError}
-              </AlertDescription>
-            </Alert>
+          <MovementTypeSelect
+            value={type}
+            onChange={setType}
+            disabled={isSubmitting || isValidating}
+          />
+          {errors.type && (
+            <p className="text-sm font-medium text-destructive">{errors.type}</p>
           )}
 
-          {/* Observações */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Observações (opcional)</label>
-            <Textarea
-              placeholder="Adicione observações sobre esta movimentação..."
-              value={notes}
-              disabled={isSubmitting || isValidating}
-              onChange={(e) => setNotes(e.target.value)}
-            />
-          </div>
+          <QuantityInput
+            value={quantity}
+            onChange={setQuantity}
+            type={type}
+            currentStock={currentValidatedStock}
+            hasInsufficientStock={hasInsufficientStock}
+            disabled={isSubmitting || isValidating}
+            error={errors.quantity}
+          />
 
-          <div className="flex gap-4 pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onCancel}
-              disabled={isSubmitting}
-              className="flex-1"
-            >
-              Cancelar
-            </Button>
-            <Button
-              type="submit"
-              disabled={isSubmitting || isValidating || hasInsufficientStock || hasSubmitted}
-              className="flex-1"
-            >
-              {isSubmitting ? "Registrando..." : 
-               isValidating ? "Validando..." :
-               hasSubmitted ? "Registrado" :
-               "Registrar Movimentação"}
-            </Button>
-          </div>
+          <NotesInput
+            value={notes}
+            onChange={setNotes}
+            disabled={isSubmitting || isValidating}
+          />
+
+          <FormActions
+            onCancel={onCancel}
+            onSubmit={handleSubmit}
+            isSubmitting={isSubmitting}
+            isValidating={isValidating}
+            hasInsufficientStock={hasInsufficientStock}
+            hasSubmitted={hasSubmitted}
+          />
         </form>
       </CardContent>
     </Card>
