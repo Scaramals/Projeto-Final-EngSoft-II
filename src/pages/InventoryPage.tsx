@@ -36,7 +36,7 @@ const InventoryPage: React.FC = () => {
   const { toast } = useToast();
   const pageRef = useRef<HTMLDivElement>(null);
   
-  // Usar hook de categorias correto
+  // Usar hook de categorias para obter lista completa
   const { useAllCategories } = useCategories();
   const { data: categories = [], isLoading: loadingCategories } = useAllCategories();
   
@@ -48,6 +48,15 @@ const InventoryPage: React.FC = () => {
     sortBy: sortBy as any,
     sortDirection: sortDirection
   });
+  
+  // Criar um mapa de categorias para busca rápida
+  const categoryMap = useMemo(() => {
+    const map = new Map();
+    categories.forEach(category => {
+      map.set(category.id, category.name);
+    });
+    return map;
+  }, [categories]);
   
   // Filter products based on stock status - memoized for performance
   const filteredProducts = useMemo(() => {
@@ -77,6 +86,12 @@ const InventoryPage: React.FC = () => {
     setSearchQuery("");
     setFilter("all");
     setSelectedCategory("all");
+  };
+
+  // Função para obter o nome da categoria a partir do ID
+  const getCategoryName = (categoryId: string | null) => {
+    if (!categoryId) return "Sem categoria";
+    return categoryMap.get(categoryId) || "Categoria não encontrada";
   };
 
   return (
@@ -208,7 +223,7 @@ const InventoryPage: React.FC = () => {
                         {product.name}
                       </TableCell>
                       <TableCell>
-                        {product.category || "—"}
+                        {getCategoryName(product.category)}
                       </TableCell>
                       <TableCell className="font-medium">
                         {product.quantity}
