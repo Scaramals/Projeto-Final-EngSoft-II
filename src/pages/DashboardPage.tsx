@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Package, BarChart, AlertTriangle, ArrowUpDown, RefreshCw } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -10,7 +11,6 @@ import { useOptimizedDashboard } from "@/hooks/useOptimizedDashboard";
 import { useDashboard } from "@/hooks/useDashboard";
 import { OptimizedApiService } from "@/services/optimizedApi";
 import { useToast } from "@/hooks/use-toast";
-import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { DashboardStats } from "@/types";
 import { SecureLogger } from "@/services/secureLogger";
@@ -19,18 +19,28 @@ import { EnhancedDashboard } from "@/components/dashboard/EnhancedDashboard";
 import { WelcomeMessage } from "@/components/dashboard/WelcomeMessage";
 import { RealTimePerformanceSummary } from "@/components/dashboard/RealTimePerformanceSummary";
 import { useRealTimeNotifications } from "@/hooks/useRealTimeNotifications";
+import { useData } from "@/contexts/DataContext";
+import { useState, useEffect } from "react";
 
 const DashboardPage: React.FC = () => {
   const { toast } = useToast();
   const { refreshAll: refreshOptimized } = useOptimizedDashboard();
+  const { products, fetchProducts, loadingProducts } = useData();
   
   // Hook de notificações em tempo real
   useRealTimeNotifications();
 
+  // Estados locais para estatísticas
+  const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
+  const [isStatsLoading, setIsStatsLoading] = useState(false);
+  const [monthlyComparison, setMonthlyComparison] = useState<any>(null);
+  const [isComparisonLoading, setIsComparisonLoading] = useState(false);
+  const [lowStockCount, setLowStockCount] = useState(0);
+
   // Buscar estatísticas reais da API com comparação mensal
-  const { data: dashboardStats, isLoading: isStatsLoading, refetch: refetchStats } = useQuery({
-    queryKey: ['dashboard-stats'],
-    queryFn: async () => {
+  const fetchDashboardStats = async () => {
+    setIsStatsLoading(true);
+    try {
       SecureLogger.info('Buscando estatísticas do dashboard');
       
       const { data, error } = await supabase.rpc('get_dashboard_stats');
@@ -41,14 +51,18 @@ const DashboardPage: React.FC = () => {
       }
 
       SecureLogger.success('Estatísticas do dashboard obtidas com sucesso');
-      return data as unknown as DashboardStats;
-    },
-  });
+      setDashboardStats(data as unknown as DashboardStats);
+    } catch (error) {
+      SecureLogger.error('Erro ao buscar estatísticas', error);
+    } finally {
+      setIsStatsLoading(false);
+    }
+  };
 
   // Buscar dados de comparação mensal
-  const { data: monthlyComparison, isLoading: isComparisonLoading } = useQuery({
-    queryKey: ['monthly-comparison'],
-    queryFn: async () => {
+  const fetchMonthlyComparison = async () => {
+    setIsComparisonLoading(true);
+    try {
       SecureLogger.info('Buscando dados de comparação mensal');
       
       const now = new Date();
@@ -77,19 +91,22 @@ const DashboardPage: React.FC = () => {
       const lastIn = lastData?.filter(m => m.type === 'in').reduce((sum, m) => sum + m.quantity, 0) || 0;
       const lastOut = lastData?.filter(m => m.type === 'out').reduce((sum, m) => sum + m.quantity, 0) || 0;
 
-      return {
+      setMonthlyComparison({
         entriesGrowth: lastIn === 0 ? 100 : ((currentIn - lastIn) / lastIn) * 100,
         exitsGrowth: lastOut === 0 ? 100 : ((currentOut - lastOut) / lastOut) * 100,
         movementsGrowth: (currentIn + currentOut) === 0 || (lastIn + lastOut) === 0 ? 0 : 
           (((currentIn + currentOut) - (lastIn + lastOut)) / (lastIn + lastOut)) * 100
-      };
-    },
-  });
+      });
+    } catch (error) {
+      SecureLogger.error('Erro ao buscar comparação mensal', error);
+    } finally {
+      setIsComparisonLoading(false);
+    }
+  };
 
   // Buscar contagem de produtos com estoque baixo
-  const { data: lowStockCount, refetch: refetchLowStock } = useQuery({
-    queryKey: ['low-stock-count'],
-    queryFn: async () => {
+  const fetchLowStockCount = async () => {
+    try {
       SecureLogger.info('Buscando contagem de produtos com estoque baixo');
       
       const { data, error } = await supabase
@@ -99,26 +116,35 @@ const DashboardPage: React.FC = () => {
 
       if (error) {
         SecureLogger.error('Erro ao buscar produtos', error);
-        return 0;
+        return;
       }
 
       const lowStockItems = (data || []).filter(product => 
         product.minimum_stock && product.quantity < product.minimum_stock
       );
 
-      return lowStockItems.length;
-    },
-  });
+      setLowStockCount(lowStockItems.length);
+    } catch (error) {
+      SecureLogger.error('Erro ao buscar contagem de estoque baixo', error);
+    }
+  };
 
   const { recentMovements, refreshAll: refreshDashboard } = useDashboard();
 
-  const isLoading = isStatsLoading || isComparisonLoading;
+  const isLoading = isStatsLoading || isComparisonLoading || loadingProducts;
 
   const handleRefresh = async () => {
     try {
       SecureLogger.info('Iniciando atualização do dashboard');
       OptimizedApiService.clearCache();
-      await Promise.all([refetchStats(), refetchLowStock(), refreshDashboard(), refreshOptimized()]);
+      await Promise.all([
+        fetchDashboardStats(),
+        fetchLowStockCount(),
+        fetchMonthlyComparison(),
+        refreshDashboard(),
+        refreshOptimized(),
+        fetchProducts()
+      ]);
       toast({
         title: "Dashboard atualizado",
         description: "Os dados foram atualizados com sucesso!",
@@ -133,6 +159,14 @@ const DashboardPage: React.FC = () => {
       });
     }
   };
+
+  // Carregar dados iniciais
+  useEffect(() => {
+    fetchDashboardStats();
+    fetchMonthlyComparison();
+    fetchLowStockCount();
+    fetchProducts();
+  }, []);
 
   return (
     <AppLayout>
@@ -171,7 +205,7 @@ const DashboardPage: React.FC = () => {
             <>
               <MetricsCard
                 title="Total de Produtos"
-                value={Number(dashboardStats?.totalProducts) || 0}
+                value={Number(dashboardStats?.totalProducts) || products.length}
                 description="Produtos cadastrados"
                 icon={Package}
                 trend={{
