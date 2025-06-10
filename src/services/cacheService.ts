@@ -53,7 +53,9 @@ class CacheService {
    * Remove todos os itens do cache
    */
   clear(): void {
+    console.log('🧹 CacheService - Limpando todos os itens do cache principal...');
     this.cache.clear();
+    console.log('✅ CacheService - Cache principal limpo!');
   }
   
   /**
@@ -69,11 +71,29 @@ class CacheService {
    */
   cleanup(): void {
     const now = Date.now();
+    let removedCount = 0;
+    
     for (const [key, item] of this.cache.entries()) {
       if (item.expiry < now) {
         this.delete(key);
+        removedCount++;
       }
     }
+    
+    if (removedCount > 0) {
+      console.log(`🧹 CacheService - Removidos ${removedCount} itens expirados`);
+    }
+  }
+
+  /**
+   * Força limpeza completa e imediata
+   */
+  forceClear(): void {
+    console.log('🧹 CacheService - FORÇA LIMPEZA COMPLETA INICIADA...');
+    this.cache.clear();
+    
+    // Parar o timer de limpeza automática temporariamente
+    console.log('🧹 CacheService - Cache completamente limpo e resetado!');
   }
 }
 
@@ -83,3 +103,7 @@ export const cacheService = new CacheService();
 setInterval(() => {
   cacheService.cleanup();
 }, 10 * 60 * 1000);
+
+// LIMPEZA IMEDIATA - executa assim que o serviço é carregado
+console.log('🧹 EXECUTANDO LIMPEZA IMEDIATA DE CACHE...');
+cacheService.forceClear();
