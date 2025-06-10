@@ -3,13 +3,11 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { AlertsService, Alert } from "@/services/alertsService";
-import { useQueryClient } from "@tanstack/react-query";
 import { SecureLogger } from "@/services/secureLogger";
 
 export function useRealTimeNotifications() {
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const { toast } = useToast();
-  const queryClient = useQueryClient();
 
   useEffect(() => {
     let isSubscribed = true;
@@ -64,12 +62,12 @@ export function useRealTimeNotifications() {
                 description: `${product.name} - ${product.quantity} unidades restantes`,
               });
 
-              // Invalidar cache de forma controlada
+              // Trigger custom events for cache invalidation instead of react-query
               setTimeout(() => {
                 if (isSubscribed) {
-                  queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
-                  queryClient.invalidateQueries({ queryKey: ['low-stock-products'] });
-                  queryClient.invalidateQueries({ queryKey: ['notifications-alerts'] });
+                  window.dispatchEvent(new CustomEvent('dashboard-data-updated'));
+                  window.dispatchEvent(new CustomEvent('low-stock-updated'));
+                  window.dispatchEvent(new CustomEvent('notifications-updated'));
                 }
               }, 1000);
             }
@@ -124,12 +122,12 @@ export function useRealTimeNotifications() {
                 
                 setAlerts(prev => [newAlert, ...prev.slice(0, 49)]); // Limitar a 50 alertas
 
-                // Invalidar cache de forma controlada
+                // Trigger custom events for cache invalidation instead of react-query
                 setTimeout(() => {
                   if (isSubscribed) {
-                    queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
-                    queryClient.invalidateQueries({ queryKey: ['recent-movements'] });
-                    queryClient.invalidateQueries({ queryKey: ['notifications-alerts'] });
+                    window.dispatchEvent(new CustomEvent('dashboard-data-updated'));
+                    window.dispatchEvent(new CustomEvent('movements-updated'));
+                    window.dispatchEvent(new CustomEvent('notifications-updated'));
                   }
                 }, 1000);
               }
@@ -151,7 +149,7 @@ export function useRealTimeNotifications() {
         SecureLogger.error('Erro ao remover canais de WebSocket', error);
       }
     };
-  }, [toast, queryClient]);
+  }, [toast]);
 
   return { alerts, setAlerts };
 }
