@@ -89,20 +89,32 @@ export const useStockMovements = () => {
     supplierId?: string
   ) => {
     try {
-      const { data, error } = await supabase.rpc('validate_stock_movement_v2', {
+      // Primeiro verificar se é entrada sem fornecedor
+      if (type === 'in' && !supplierId) {
+        return {
+          isValid: false,
+          currentStock: 0,
+          message: 'Entrada de estoque obrigatoriamente deve ter um fornecedor'
+        };
+      }
+
+      // Usar a função existente validate_stock_movement
+      const { data, error } = await supabase.rpc('validate_stock_movement', {
         product_id_param: productId,
         quantity_param: quantity,
-        type_param: type,
-        supplier_id_param: supplierId || null
+        type_param: type
       });
 
       if (error) throw error;
 
+      // Cast do resultado JSON para o tipo esperado
+      const result = data as any;
+      
       return {
-        isValid: data.isValid,
-        currentStock: data.currentStock,
-        message: data.message,
-        productName: data.productName
+        isValid: result.isValid || false,
+        currentStock: result.currentStock || 0,
+        message: result.message || 'Erro na validação',
+        productName: result.productName
       };
     } catch (error: any) {
       console.error('Erro na validação:', error);

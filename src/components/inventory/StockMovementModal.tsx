@@ -70,14 +70,19 @@ export const StockMovementModal: React.FC<StockMovementModalProps> = ({
     setIsSubmitting(true);
 
     try {
-      // Usar a nova função de validação com fornecedor
+      // Validação adicional para entrada sem fornecedor
+      if (formData.type === 'in' && !formData.supplierId) {
+        setValidationError('Entrada de estoque obrigatoriamente deve ter um fornecedor');
+        return;
+      }
+
+      // Usar a função existente validate_stock_movement para validar
       const { data: validation, error: validationErr } = await supabase.rpc(
-        'validate_stock_movement_v2',
+        'validate_stock_movement',
         {
           product_id_param: productId,
           quantity_param: formData.quantity,
-          type_param: formData.type,
-          supplier_id_param: formData.type === 'in' ? formData.supplierId : null
+          type_param: formData.type
         }
       );
 
@@ -85,8 +90,11 @@ export const StockMovementModal: React.FC<StockMovementModalProps> = ({
         throw validationErr;
       }
 
-      if (!validation.isValid) {
-        setValidationError(validation.message);
+      // Cast do resultado para o tipo esperado
+      const validationResult = validation as any;
+      
+      if (!validationResult.isValid) {
+        setValidationError(validationResult.message);
         return;
       }
 
