@@ -1,10 +1,10 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Supplier, SupplierFormData } from "@/types";
-import { useToast } from "@/hooks/use-toast";
+import { Supplier } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { SecureLogger } from "@/services/secureLogger";
+import { toast } from "sonner";
 
 /**
  * Helper function to convert database response to Supplier type
@@ -27,7 +27,7 @@ const mapDbSupplierToSupplier = (dbSupplier: any): Supplier => ({
 /**
  * Helper function to convert Supplier type to database format
  */
-const mapSupplierToDbSupplier = (supplier: SupplierFormData, userId?: string) => {
+const mapSupplierToDbSupplier = (supplier: Partial<Supplier>, userId?: string) => {
   const dbSupplier: any = {};
   
   if (supplier.name !== undefined) dbSupplier.name = supplier.name;
@@ -48,46 +48,34 @@ const mapSupplierToDbSupplier = (supplier: SupplierFormData, userId?: string) =>
 
 export function useSuppliers() {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
   const { user } = useAuth();
 
   // Fetch all suppliers
-  const useAllSuppliers = (search?: string) => {
+  const useAllSuppliers = () => {
     return useQuery({
-      queryKey: ['suppliers', search],
+      queryKey: ['suppliers'],
       queryFn: async () => {
-        SecureLogger.info('Buscando fornecedores da API');
-        
-        let query = supabase.from('suppliers').select('*');
-
-        if (search) {
-          query = query.or(`name.ilike.%${search}%,cnpj.ilike.%${search}%`);
-        }
-        
-        query = query.order('name');
-        
-        const { data, error } = await query;
-
+        const { data, error } = await supabase
+          .from('suppliers')
+          .select('*')
+          .order('name');
+          
         if (error) {
-          SecureLogger.error('Erro ao buscar fornecedores', error);
-          throw new Error(`Erro ao buscar fornecedores: ${error.message}`);
+          throw new Error(`Error fetching suppliers: ${error.message}`);
         }
-
-        SecureLogger.success(`Fornecedores encontrados: ${data?.length || 0}`);
-        return (data || []).map(mapDbSupplierToSupplier) as Supplier[];
+        
+        return data.map(mapDbSupplierToSupplier) as Supplier[];
       },
       enabled: !!user,
     });
   };
 
-  // Buscar um fornecedor pelo ID
+  // Fetch a single supplier by ID
   const useSupplier = (supplierId: string | undefined) => {
     return useQuery({
       queryKey: ['suppliers', supplierId],
       queryFn: async () => {
-        if (!supplierId) throw new Error("ID do fornecedor é obrigatório");
-        
-        SecureLogger.info('Buscando fornecedor específico');
+        if (!supplierId) throw new Error("Supplier ID is required");
         
         const { data, error } = await supabase
           .from('suppliers')
@@ -96,8 +84,7 @@ export function useSuppliers() {
           .single();
           
         if (error) {
-          SecureLogger.error('Erro ao buscar fornecedor', error);
-          throw new Error(`Erro ao buscar fornecedor: ${error.message}`);
+          throw new Error(`Error fetching supplier: ${error.message}`);
         }
         
         return mapDbSupplierToSupplier(data);
@@ -106,10 +93,10 @@ export function useSuppliers() {
     });
   };
 
-  // Criar um novo fornecedor
+  // Create a new supplier
   const useCreateSupplier = () => {
     return useMutation({
-      mutationFn: async (supplier: SupplierFormData) => {
+      mutationFn: async (supplier: Partial<Supplier>) => {
         SecureLogger.info('Criando novo fornecedor');
         
         const dbSupplier = mapSupplierToDbSupplier(supplier, user?.id);
@@ -128,31 +115,27 @@ export function useSuppliers() {
         SecureLogger.success('Fornecedor criado com sucesso');
         return mapDbSupplierToSupplier(data);
       },
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ['suppliers'] });
-        toast({
-          title: "Fornecedor criado",
-          description: "O fornecedor foi criado com sucesso!",
-        });
+      onSuccess: async () => {
+        // FORÇAR invalidação e refetch completo após criação
+        await queryClient.invalidateQueries({ queryKey: ['suppliers'] });
+        await queryClient.refetchQueries({ queryKey: ['suppliers'] });
+        
+        toast.success("Fornecedor criado com sucesso!");
       },
       onError: (error: any) => {
         SecureLogger.error('Erro na criação do fornecedor', error);
-        toast({
-          variant: "destructive",
-          title: "Erro ao criar fornecedor",
-          description: error.message,
-        });
+        toast.error(`Erro ao criar fornecedor: ${error.message}`);
       }
     });
   };
 
-  // Atualizar um fornecedor existente
+  // Update an existing supplier
   const useUpdateSupplier = () => {
     return useMutation({
       mutationFn: async ({ id, ...updates }: Partial<Supplier> & { id: string }) => {
         SecureLogger.info('Atualizando fornecedor');
         
-        const dbUpdates = mapSupplierToDbSupplier(updates as SupplierFormData, user?.id);
+        const dbUpdates = mapSupplierToDbSupplier(updates, user?.id);
         dbUpdates.last_modified_by = user?.id;
         
         const { data, error } = await supabase
@@ -170,26 +153,25 @@ export function useSuppliers() {
         SecureLogger.success('Fornecedor atualizado com sucesso');
         return mapDbSupplierToSupplier(data);
       },
-      onSuccess: (_, variables) => {
-        queryClient.invalidateQueries({ queryKey: ['suppliers'] });
-        queryClient.invalidateQueries({ queryKey: ['suppliers', variables.id] });
-        toast({
-          title: "Fornecedor atualizado",
-          description: "As alterações foram salvas com sucesso!",
-        });
+      onSuccess: async (_, variables) => {
+        // FORÇAR invalidação e refetch completo após atualização
+        await queryClient.invalidateQueries({ queryKey: ['suppliers'] });
+        await queryClient.invalidateQueries({ queryKey: ['suppliers', variables.id] });
+        
+        // Refetch específico
+        await queryClient.refetchQueries({ queryKey: ['suppliers'] });
+        await queryClient.refetchQueries({ queryKey: ['suppliers', variables.id] });
+        
+        toast.success("Fornecedor atualizado com sucesso!");
       },
       onError: (error: any) => {
         SecureLogger.error('Erro na atualização do fornecedor', error);
-        toast({
-          variant: "destructive",
-          title: "Erro ao atualizar fornecedor",
-          description: error.message,
-        });
+        toast.error(`Erro ao atualizar fornecedor: ${error.message}`);
       }
     });
   };
 
-  // Excluir um fornecedor
+  // Delete a supplier
   const useDeleteSupplier = () => {
     return useMutation({
       mutationFn: async (id: string) => {
@@ -208,20 +190,16 @@ export function useSuppliers() {
         SecureLogger.success('Fornecedor excluído com sucesso');
         return id;
       },
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ['suppliers'] });
-        toast({
-          title: "Fornecedor excluído",
-          description: "O fornecedor foi removido com sucesso!",
-        });
+      onSuccess: async () => {
+        // FORÇAR invalidação e refetch completo após exclusão
+        await queryClient.invalidateQueries({ queryKey: ['suppliers'] });
+        await queryClient.refetchQueries({ queryKey: ['suppliers'] });
+        
+        toast.success("Fornecedor excluído com sucesso!");
       },
       onError: (error: any) => {
         SecureLogger.error('Erro na exclusão do fornecedor', error);
-        toast({
-          variant: "destructive",
-          title: "Erro ao excluir fornecedor",
-          description: error.message,
-        });
+        toast.error(`Erro ao excluir fornecedor: ${error.message}`);
       }
     });
   };

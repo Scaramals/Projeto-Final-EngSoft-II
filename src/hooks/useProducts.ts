@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Product, FilterParams } from "@/types";
@@ -183,9 +184,14 @@ export function useProducts() {
         SecureLogger.success('Produto criado com sucesso');
         return mapDbProductToProduct(data);
       },
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ['products'] });
-        queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+      onSuccess: async () => {
+        // FORÇAR invalidação e refetch completo após criação
+        await queryClient.invalidateQueries({ queryKey: ['products'] });
+        await queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+        await queryClient.invalidateQueries({ queryKey: ['lowStockProducts'] });
+        await queryClient.invalidateQueries({ queryKey: ['totalStockValue'] });
+        await queryClient.refetchQueries({ queryKey: ['products'] });
+        
         toast.success("Produto criado com sucesso!");
       },
       onError: (error: any) => {
@@ -219,10 +225,18 @@ export function useProducts() {
         SecureLogger.success('Produto atualizado com sucesso');
         return mapDbProductToProduct(data);
       },
-      onSuccess: (_, variables) => {
-        queryClient.invalidateQueries({ queryKey: ['products'] });
-        queryClient.invalidateQueries({ queryKey: ['products', variables.id] });
-        queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+      onSuccess: async (_, variables) => {
+        // FORÇAR invalidação e refetch completo após atualização
+        await queryClient.invalidateQueries({ queryKey: ['products'] });
+        await queryClient.invalidateQueries({ queryKey: ['products', variables.id] });
+        await queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+        await queryClient.invalidateQueries({ queryKey: ['lowStockProducts'] });
+        await queryClient.invalidateQueries({ queryKey: ['totalStockValue'] });
+        
+        // Refetch específico
+        await queryClient.refetchQueries({ queryKey: ['products'] });
+        await queryClient.refetchQueries({ queryKey: ['products', variables.id] });
+        
         toast.success("Produto atualizado com sucesso!");
       },
       onError: (error: any) => {
@@ -251,9 +265,17 @@ export function useProducts() {
         SecureLogger.success('Produto excluído com sucesso');
         return id;
       },
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ['products'] });
-        queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+      onSuccess: async () => {
+        // FORÇAR invalidação e refetch completo após exclusão
+        await queryClient.invalidateQueries({ queryKey: ['products'] });
+        await queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+        await queryClient.invalidateQueries({ queryKey: ['lowStockProducts'] });
+        await queryClient.invalidateQueries({ queryKey: ['totalStockValue'] });
+        await queryClient.invalidateQueries({ queryKey: ['productMovements'] });
+        
+        // Refetch para garantir dados atualizados
+        await queryClient.refetchQueries({ queryKey: ['products'] });
+        
         toast.success("Produto excluído com sucesso!");
       },
       onError: (error: any) => {

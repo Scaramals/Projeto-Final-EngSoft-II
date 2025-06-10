@@ -1,119 +1,100 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { ApiService } from "@/services/api";
 import { Category } from "@/types";
-import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { SecureLogger } from "@/services/secureLogger";
+import { toast } from "sonner";
 
 /**
- * Hook para gestão de categorias - refatorado para usar a nova estrutura
+ * Helper function to convert database response to Category type
  */
+const mapDbCategoryToCategory = (dbCategory: any): Category => ({
+  id: dbCategory.id,
+  name: dbCategory.name,
+  description: dbCategory.description,
+  createdAt: dbCategory.created_at,
+});
+
 export function useCategories() {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
   const { user } = useAuth();
 
-  // Buscar categorias distintas da tabela categories - retorna objetos {id, name}
-  const useDistinctCategories = () => {
+  // Fetch all categories
+  const useAllCategories = () => {
     return useQuery({
-      queryKey: ['distinct-categories'],
+      queryKey: ['categories'],
       queryFn: async () => {
-        console.log('Fetching distinct categories via hook');
-        return await ApiService.getDistinctCategories();
-      },
-      enabled: !!user,
-      staleTime: 1000 * 60 * 5, // 5 minutos de cache
-    });
-  };
-
-  // Buscar nome da categoria pelo ID
-  const useCategoryName = (categoryId: string | undefined) => {
-    return useQuery({
-      queryKey: ['category-name', categoryId],
-      queryFn: async () => {
-        if (!categoryId) return '';
-        console.log('Fetching category name for ID:', categoryId);
-        return await ApiService.getCategoryNameById(categoryId);
-      },
-      enabled: !!user && !!categoryId,
-      staleTime: 1000 * 60 * 10, // 10 minutos de cache
-    });
-  };
-
-  // Buscar todas as categorias da tabela categories
-  const useAllCategories = (search?: string) => {
-    return useQuery({
-      queryKey: ['categories', search],
-      queryFn: async () => {
-        console.log('Fetching all categories with search:', search);
-        
-        let query = supabase.from('categories').select('*');
-
-        if (search) {
-          query = query.ilike('name', `%${search}%`);
-        }
-        
-        query = query.order('name');
-        
-        const { data, error } = await query;
-
-        if (error) {
-          console.error('Error fetching categories:', error);
-          throw new Error(`Erro ao buscar categorias: ${error.message}`);
-        }
-
-        const categories = (data || []).map((category) => ({
-          id: category.id,
-          name: category.name,
-          description: category.description,
-          createdAt: category.created_at
-        })) as Category[];
-
-        console.log('All categories fetched:', categories.length);
-        return categories;
-      },
-      enabled: !!user,
-      staleTime: 1000 * 60 * 5, // 5 minutos de cache
-    });
-  };
-
-  // Buscar uma categoria pelo ID
-  const useCategory = (categoryId: string | undefined) => {
-    return useQuery({
-      queryKey: ['categories', categoryId],
-      queryFn: async () => {
-        if (!categoryId) throw new Error("ID da categoria é obrigatório");
-        
-        console.log('Fetching category by ID:', categoryId);
-        
         const { data, error } = await supabase
           .from('categories')
           .select('*')
+          .order('name');
+          
+        if (error) {
+          throw new Error(`Error fetching categories: ${error.message}`);
+        }
+        
+        return data.map(mapDbCategoryToCategory) as Category[];
+      },
+      enabled: !!user,
+    });
+  };
+
+  // Fetch distinct categories with name and id for filtering
+  const useDistinctCategories = () => {
+    return useQuery({
+      queryKey: ['distinctCategories'],
+      queryFn: async () => {
+        try {
+          const { data, error } = await supabase
+            .from('categories')
+            .select('id, name')
+            .order('name');
+          
+          if (error) {
+            console.error('Error fetching distinct categories:', error);
+            return [];
+          }
+          
+          return data || [];
+        } catch (error) {
+          console.error('Error in useDistinctCategories:', error);
+          return [];
+        }
+      },
+      enabled: !!user,
+    });
+  };
+
+  // Get category name by ID
+  const useCategoryById = (categoryId: string | undefined) => {
+    return useQuery({
+      queryKey: ['categories', categoryId],
+      queryFn: async () => {
+        if (!categoryId) return null;
+        
+        const { data, error } = await supabase
+          .from('categories')
+          .select('name')
           .eq('id', categoryId)
           .single();
           
         if (error) {
           console.error('Error fetching category:', error);
-          throw new Error(`Erro ao buscar categoria: ${error.message}`);
+          return null;
         }
         
-        return {
-          id: data.id,
-          name: data.name,
-          description: data.description,
-          createdAt: data.created_at
-        } as Category;
+        return data?.name || null;
       },
       enabled: !!user && !!categoryId,
     });
   };
 
-  // Criar uma nova categoria
+  // Create a new category
   const useCreateCategory = () => {
     return useMutation({
-      mutationFn: async (category: { name: string; description?: string }) => {
-        console.log('Creating new category:', category);
+      mutationFn: async (category: Partial<Category>) => {
+        SecureLogger.info('Criando nova categoria');
         
         const { data, error } = await supabase
           .from('categories')
@@ -125,89 +106,78 @@ export function useCategories() {
           .single();
           
         if (error) {
-          console.error('Error creating category:', error);
+          SecureLogger.error('Erro ao criar categoria', error);
           throw new Error(`Erro ao criar categoria: ${error.message}`);
         }
         
-        console.log('Category created successfully:', data);
-        return {
-          id: data.id,
-          name: data.name,
-          description: data.description,
-          createdAt: data.created_at
-        } as Category;
+        SecureLogger.success('Categoria criada com sucesso');
+        return mapDbCategoryToCategory(data);
       },
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ['categories'] });
-        queryClient.invalidateQueries({ queryKey: ['distinct-categories'] });
-        toast({
-          title: "Categoria criada",
-          description: "A categoria foi criada com sucesso!",
-        });
+      onSuccess: async () => {
+        // FORÇAR invalidação e refetch completo após criação
+        await queryClient.invalidateQueries({ queryKey: ['categories'] });
+        await queryClient.invalidateQueries({ queryKey: ['distinctCategories'] });
+        await queryClient.refetchQueries({ queryKey: ['categories'] });
+        await queryClient.refetchQueries({ queryKey: ['distinctCategories'] });
+        
+        toast.success("Categoria criada com sucesso!");
       },
-      onError: (error) => {
-        console.error('Error in category creation:', error);
-        toast({
-          variant: "destructive",
-          title: "Erro ao criar categoria",
-          description: error.message,
-        });
+      onError: (error: any) => {
+        SecureLogger.error('Erro na criação da categoria', error);
+        toast.error(`Erro ao criar categoria: ${error.message}`);
       }
     });
   };
 
-  // Atualizar uma categoria existente
+  // Update an existing category
   const useUpdateCategory = () => {
     return useMutation({
-      mutationFn: async ({ id, name, description }: Partial<Category> & { id: string }) => {
-        console.log('Updating category:', { id, name, description });
+      mutationFn: async ({ id, ...updates }: Partial<Category> & { id: string }) => {
+        SecureLogger.info('Atualizando categoria');
         
         const { data, error } = await supabase
           .from('categories')
-          .update({ name, description })
+          .update({
+            name: updates.name,
+            description: updates.description
+          })
           .eq('id', id)
           .select()
           .single();
           
         if (error) {
-          console.error('Error updating category:', error);
+          SecureLogger.error('Erro ao atualizar categoria', error);
           throw new Error(`Erro ao atualizar categoria: ${error.message}`);
         }
         
-        console.log('Category updated successfully:', data);
-        return {
-          id: data.id,
-          name: data.name,
-          description: data.description,
-          createdAt: data.created_at
-        } as Category;
+        SecureLogger.success('Categoria atualizada com sucesso');
+        return mapDbCategoryToCategory(data);
       },
-      onSuccess: (_, variables) => {
-        queryClient.invalidateQueries({ queryKey: ['categories'] });
-        queryClient.invalidateQueries({ queryKey: ['distinct-categories'] });
-        queryClient.invalidateQueries({ queryKey: ['categories', variables.id] });
-        queryClient.invalidateQueries({ queryKey: ['category-name', variables.id] });
-        toast({
-          title: "Categoria atualizada",
-          description: "As alterações foram salvas com sucesso!",
-        });
+      onSuccess: async (_, variables) => {
+        // FORÇAR invalidação e refetch completo após atualização
+        await queryClient.invalidateQueries({ queryKey: ['categories'] });
+        await queryClient.invalidateQueries({ queryKey: ['distinctCategories'] });
+        await queryClient.invalidateQueries({ queryKey: ['categories', variables.id] });
+        
+        // Refetch específico
+        await queryClient.refetchQueries({ queryKey: ['categories'] });
+        await queryClient.refetchQueries({ queryKey: ['distinctCategories'] });
+        await queryClient.refetchQueries({ queryKey: ['categories', variables.id] });
+        
+        toast.success("Categoria atualizada com sucesso!");
       },
-      onError: (error) => {
-        console.error('Error in category update:', error);
-        toast({
-          variant: "destructive",
-          title: "Erro ao atualizar categoria",
-          description: error.message,
-        });
+      onError: (error: any) => {
+        SecureLogger.error('Erro na atualização da categoria', error);
+        toast.error(`Erro ao atualizar categoria: ${error.message}`);
       }
     });
   };
 
-  // Excluir uma categoria
+  // Delete a category
   const useDeleteCategory = () => {
     return useMutation({
       mutationFn: async (id: string) => {
-        console.log('Deleting category:', id);
+        SecureLogger.info('Excluindo categoria');
         
         const { error } = await supabase
           .from('categories')
@@ -215,37 +185,33 @@ export function useCategories() {
           .eq('id', id);
           
         if (error) {
-          console.error('Error deleting category:', error);
+          SecureLogger.error('Erro ao excluir categoria', error);
           throw new Error(`Erro ao excluir categoria: ${error.message}`);
         }
         
-        console.log('Category deleted successfully');
+        SecureLogger.success('Categoria excluída com sucesso');
         return id;
       },
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ['categories'] });
-        queryClient.invalidateQueries({ queryKey: ['distinct-categories'] });
-        toast({
-          title: "Categoria excluída",
-          description: "A categoria foi removida com sucesso!",
-        });
+      onSuccess: async () => {
+        // FORÇAR invalidação e refetch completo após exclusão
+        await queryClient.invalidateQueries({ queryKey: ['categories'] });
+        await queryClient.invalidateQueries({ queryKey: ['distinctCategories'] });
+        await queryClient.refetchQueries({ queryKey: ['categories'] });
+        await queryClient.refetchQueries({ queryKey: ['distinctCategories'] });
+        
+        toast.success("Categoria excluída com sucesso!");
       },
-      onError: (error) => {
-        console.error('Error in category deletion:', error);
-        toast({
-          variant: "destructive",
-          title: "Erro ao excluir categoria",
-          description: error.message,
-        });
+      onError: (error: any) => {
+        SecureLogger.error('Erro na exclusão da categoria', error);
+        toast.error(`Erro ao excluir categoria: ${error.message}`);
       }
     });
   };
 
   return {
-    useDistinctCategories,
-    useCategoryName,
     useAllCategories,
-    useCategory,
+    useDistinctCategories,
+    useCategoryById,
     useCreateCategory,
     useUpdateCategory,
     useDeleteCategory
