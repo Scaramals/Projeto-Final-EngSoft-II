@@ -2,7 +2,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { Product } from "@/types";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, getStockStatus } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
@@ -11,19 +11,7 @@ interface ProductCardProps {
 }
 
 export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
-  const getStockStatus = (quantity: number, minimumStock?: number) => {
-    if (!minimumStock) return "good";
-    if (quantity <= 0) return "low";
-    if (quantity <= minimumStock) return "medium";
-    return "good";
-  };
-
   const stockStatus = getStockStatus(product.quantity, product.minimumStock);
-  const statusText = {
-    low: "Crítico",
-    medium: "Baixo",
-    good: "Adequado",
-  };
 
   return (
     <div className="bg-white rounded-lg shadow overflow-hidden card-hover border">
@@ -54,17 +42,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           <p className="font-bold text-lg">
             {formatCurrency(product.price)}
           </p>
-          <span
-            className={`status-badge ${
-              stockStatus === "low"
-                ? "status-low"
-                : stockStatus === "medium"
-                ? "status-medium"
-                : "status-good"
-            }`}
-          >
-            {product.quantity} un. • {statusText[stockStatus]}
-          </span>
+          <Badge className={stockStatus.class}>
+            {product.quantity} un. • {stockStatus.label}
+          </Badge>
         </div>
         <div className="mt-4">
           <Button variant="outline" className="w-full" asChild>

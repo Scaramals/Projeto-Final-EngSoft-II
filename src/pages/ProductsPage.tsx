@@ -1,3 +1,4 @@
+
 import React, { useState, useRef } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { ProductCard } from "@/components/products/ProductCard";
@@ -22,7 +23,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
-import { useQuery } from "@tanstack/react-query";
 
 type SortOption = "name" | "price" | "quantity" | "created_at";
 
@@ -68,7 +68,7 @@ const ProductsPage: React.FC = () => {
     ApiService.clearCache();
   };
 
-  const activeFiltersCount = [searchQuery, selectedCategory].filter(Boolean).length;
+  const activeFiltersCount = [searchQuery, selectedCategory !== "all" ? selectedCategory : ""].filter(Boolean).length;
 
   return (
     <AppLayout>

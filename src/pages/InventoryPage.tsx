@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useRef } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -5,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Search, Plus } from "lucide-react";
 import { formatCurrency, getStockStatus } from "@/lib/utils";
 import { Link } from "react-router-dom";
+import { useProducts } from "@/hooks/useProducts";
 import { ApiService } from "@/services/api";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -23,7 +25,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { useQuery } from "@tanstack/react-query";
 
 const InventoryPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -33,24 +34,25 @@ const InventoryPage: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const pageRef = useRef(null);
   
-  // Get products with filters using ApiService
-  const { data: products = [], isLoading, error, refetch } = useQuery({
-    queryKey: ['products', searchQuery, selectedCategory, sortBy, sortDirection],
-    queryFn: () => ApiService.getProducts({
-      search: searchQuery || undefined,
-      category: selectedCategory === "all" ? undefined : selectedCategory,
-      sortBy: sortBy as any,
-      sortDirection: sortDirection
-    }),
-    staleTime: 1000 * 60 * 2, // 2 minutes
+  // Get products with filters
+  const { useAllProducts } = useProducts();
+  const { data: products = [], isLoading, error, refetch } = useAllProducts({
+    search: searchQuery || undefined,
+    category: selectedCategory === "all" ? undefined : selectedCategory,
+    sortBy: sortBy as any,
+    sortDirection: sortDirection
   });
 
-  // Get distinct categories using ApiService
-  const { data: categories = [] } = useQuery({
-    queryKey: ['distinct-categories'],
-    queryFn: () => ApiService.getDistinctCategories(),
-    staleTime: 1000 * 60 * 5, // 5 minutes
-  });
+  // Extract unique categories from products
+  const categories = React.useMemo(() => {
+    const uniqueCategories = new Set<string>();
+    products.forEach(product => {
+      if (product.category && product.category.trim()) {
+        uniqueCategories.add(product.category);
+      }
+    });
+    return Array.from(uniqueCategories).sort();
+  }, [products]);
   
   // Filter products based on stock status - memoized for performance
   const filteredProducts = useMemo(() => {
