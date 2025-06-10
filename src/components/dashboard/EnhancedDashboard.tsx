@@ -52,7 +52,7 @@ export const EnhancedDashboard: React.FC = () => {
   })) || [];
 
   const categoryChartData = categoryAnalysis?.map(item => ({
-    name: item.category_name,
+    name: item.category_name || 'Sem categoria',
     value: Number(item.total_value),
     products: Number(item.product_count)
   })) || [];
@@ -242,7 +242,7 @@ export const EnhancedDashboard: React.FC = () => {
                     style={{ backgroundColor: COLORS[index % COLORS.length] }}
                   />
                   <div>
-                    <p className="font-medium">{category.category_name}</p>
+                    <p className="font-medium">{category.category_name || 'Sem categoria'}</p>
                     <p className="text-sm text-muted-foreground">
                       {category.product_count} produtos • {category.total_quantity} unidades
                     </p>
