@@ -13,7 +13,7 @@ const isUUID = (str: string): boolean => {
 };
 
 export const CategoryCell: React.FC<CategoryCellProps> = ({ categoryId }) => {
-  const { useCategoryName } = useCategories();
+  const { useCategoryById } = useCategories();
   
   // Se não há categoria
   if (!categoryId) return <span>Sem categoria</span>;
@@ -24,7 +24,7 @@ export const CategoryCell: React.FC<CategoryCellProps> = ({ categoryId }) => {
   }
   
   // Se parece UUID, busca o nome
-  const { data: categoryName, isLoading } = useCategoryName(categoryId);
+  const { data: categoryName, isLoading } = useCategoryById(categoryId);
   
   if (isLoading) return <span>Carregando...</span>;
   

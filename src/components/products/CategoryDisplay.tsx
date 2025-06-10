@@ -14,7 +14,7 @@ export const CategoryDisplay: React.FC<CategoryDisplayProps> = ({
   variant = "outline",
   className 
 }) => {
-  const { useCategoryName } = useCategories();
+  const { useCategoryById } = useCategories();
   
   // Debug logging
   React.useEffect(() => {
@@ -32,7 +32,7 @@ export const CategoryDisplay: React.FC<CategoryDisplayProps> = ({
   }
   
   // Busca o nome da categoria pelo ID
-  const { data: categoryName, isLoading, error } = useCategoryName(categoryId);
+  const { data: categoryName, isLoading, error } = useCategoryById(categoryId);
   
   // Debug logging
   React.useEffect(() => {
