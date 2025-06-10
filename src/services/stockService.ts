@@ -54,8 +54,8 @@ export const StockService = {
 
       console.log(`✅ [STOCK_SERVICE_V2] Resultado da validação:`, data);
       
-      // Cast seguro do tipo Json para nossa interface
-      const result = data as RPCValidationResult;
+      // Cast seguro do tipo Json para nossa interface usando unknown primeiro
+      const result = data as unknown as RPCValidationResult;
       
       return {
         isValid: result.isValid,

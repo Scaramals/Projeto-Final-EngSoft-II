@@ -92,31 +92,178 @@
 
   body {
     @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+  
+  /* Melhorias de responsividade global */
+  html {
+    overflow-x: hidden;
+  }
+  
+  /* Prevenir overflow horizontal */
+  body {
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  /* Scrollbar personalizada */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    background: hsl(var(--muted));
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border-radius: 3px;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--accent));
   }
 }
 
 @layer components {
-  .card-hover {
-    @apply transition-all duration-200 hover:shadow-md hover:-translate-y-1;
-  }
-  
+  /* Cards responsivos melhorados */
   .data-card {
-    @apply bg-white rounded-lg shadow p-6 card-hover;
+    @apply bg-card text-card-foreground rounded-lg border shadow-sm;
+    @apply p-4 sm:p-6 w-full;
+    @apply transition-all duration-200 hover:shadow-md;
   }
   
+  /* Badges de status responsivos */
   .status-badge {
-    @apply px-2 py-1 text-xs font-medium rounded-full;
+    @apply inline-flex items-center px-2 py-1 text-xs font-medium rounded-full;
+    @apply whitespace-nowrap;
   }
   
   .status-low {
-    @apply bg-red-100 text-red-800;
+    @apply bg-destructive/10 text-destructive;
   }
   
   .status-medium {
-    @apply bg-yellow-100 text-yellow-800;
+    @apply bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300;
   }
   
   .status-good {
-    @apply bg-green-100 text-green-800;
+    @apply bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300;
+  }
+  
+  /* Formulários responsivos */
+  .form-grid {
+    @apply grid gap-4;
+    @apply grid-cols-1 sm:grid-cols-2;
+  }
+  
+  .form-grid-full {
+    @apply col-span-1 sm:col-span-2;
+  }
+  
+  /* Botões responsivos */
+  .btn-responsive {
+    @apply px-3 py-2 sm:px-4 sm:py-2;
+    @apply text-sm sm:text-base;
+  }
+  
+  /* Tabelas responsivas */
+  .table-responsive {
+    @apply overflow-x-auto;
+    @apply -mx-4 sm:mx-0;
+  }
+  
+  .table-responsive table {
+    @apply min-w-full;
+  }
+  
+  /* Navegação responsiva */
+  .nav-responsive {
+    @apply flex flex-col sm:flex-row;
+    @apply gap-2 sm:gap-4;
+  }
+  
+  /* Containers flexíveis */
+  .container-responsive {
+    @apply w-full max-w-7xl mx-auto;
+    @apply px-4 sm:px-6 lg:px-8;
+  }
+  
+  /* Grids responsivos */
+  .grid-responsive-2 {
+    @apply grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6;
+  }
+  
+  .grid-responsive-3 {
+    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6;
+  }
+  
+  .grid-responsive-4 {
+    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6;
+  }
+}
+
+/* Utilities para mobile-first */
+@layer utilities {
+  .text-responsive {
+    @apply text-sm sm:text-base;
+  }
+  
+  .heading-responsive {
+    @apply text-lg sm:text-xl lg:text-2xl;
+  }
+  
+  .spacing-responsive {
+    @apply space-y-4 sm:space-y-6;
+  }
+  
+  .padding-responsive {
+    @apply p-4 sm:p-6 lg:p-8;
+  }
+  
+  .margin-responsive {
+    @apply m-4 sm:m-6 lg:m-8;
+  }
+}
+
+/* Animações suaves */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* Melhorias para componentes específicos */
+.input-responsive {
+  @apply w-full px-3 py-2 text-sm sm:text-base;
+  @apply border rounded-md;
+  @apply focus:outline-none focus:ring-2 focus:ring-primary;
+}
+
+.card-responsive {
+  @apply bg-card rounded-lg border shadow-sm;
+  @apply p-4 sm:p-6 w-full;
+  @apply transition-all duration-200;
+}
+
+/* Media queries específicas para casos extremos */
+@media (max-width: 320px) {
+  .data-card {
+    @apply p-3;
+  }
+  
+  .status-badge {
+    @apply text-xs px-1.5 py-0.5;
+  }
+}
+
+@media (min-width: 1920px) {
+  .container-responsive {
+    @apply max-w-8xl;
   }
 }
