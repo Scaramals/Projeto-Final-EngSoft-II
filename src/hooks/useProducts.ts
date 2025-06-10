@@ -1,8 +1,10 @@
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Product, StockMovement, FilterParams } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { SecureLogger } from "@/services/secureLogger";
+import { ApiService } from "@/services/api";
 import { toast } from "sonner";
 
 /**
@@ -89,33 +91,16 @@ export function useProducts() {
     return useQuery({
       queryKey: ['products', filters],
       queryFn: async () => {
-        let query = supabase.from('products').select('*');
-
-        if (filters?.search) {
-          query = query.ilike('name', `%${filters.search}%`);
+        try {
+          return await ApiService.getProducts(filters);
+        } catch (error) {
+          SecureLogger.error('Erro ao buscar produtos via hook', error);
+          throw error;
         }
-
-        if (filters?.category && filters.category !== '') {
-          query = query.eq('category', filters.category);
-        }
-        
-        // Apply sorting if provided
-        if (filters?.sortBy) {
-          const direction = filters?.sortDirection || 'asc';
-          query = query.order(filters.sortBy, { ascending: direction === 'asc' });
-        } else {
-          query = query.order('name');
-        }
-        
-        const { data, error } = await query;
-
-        if (error) {
-          throw new Error(`Error fetching products: ${error.message}`);
-        }
-
-        return data.map(mapDbProductToProduct) as Product[];
       },
-      enabled: !!user, // Only run query when user is authenticated
+      enabled: !!user,
+      staleTime: 2 * 60 * 1000, // 2 minutos
+      gcTime: 5 * 60 * 1000, // 5 minutos
     });
   };
 
@@ -209,6 +194,7 @@ export function useProducts() {
       },
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ['products'] });
+        queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
         toast.success("Produto criado com sucesso!");
       },
       onError: (error: any) => {
@@ -245,6 +231,7 @@ export function useProducts() {
       onSuccess: (_, variables) => {
         queryClient.invalidateQueries({ queryKey: ['products'] });
         queryClient.invalidateQueries({ queryKey: ['products', variables.id] });
+        queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
         toast.success("Produto atualizado com sucesso!");
       },
       onError: (error: any) => {
@@ -275,6 +262,7 @@ export function useProducts() {
       },
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ['products'] });
+        queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
         toast.success("Produto excluído com sucesso!");
       },
       onError: (error: any) => {
@@ -284,11 +272,28 @@ export function useProducts() {
     });
   };
 
-  // Add stock movement
+  // Add stock movement with improved validation
   const useAddStockMovement = () => {
     return useMutation({
       mutationFn: async (movement: Partial<StockMovement>) => {
-        SecureLogger.info('Registrando movimentação de estoque');
+        SecureLogger.info('Validando e registrando movimentação de estoque');
+        
+        if (!movement.productId || !movement.quantity || !movement.type) {
+          throw new Error('Dados de movimentação incompletos');
+        }
+
+        // Validação de estoque para saídas
+        if (movement.type === 'out') {
+          const validation = await ApiService.validateMovement(
+            movement.productId, 
+            movement.quantity, 
+            movement.type
+          );
+          
+          if (!validation.valid) {
+            throw new Error(validation.message || 'Movimentação inválida');
+          }
+        }
         
         const dbMovement = mapStockMovementToDbStockMovement(movement, user?.id);
         
@@ -307,9 +312,17 @@ export function useProducts() {
         return mapDbStockMovementToStockMovement(data);
       },
       onSuccess: (_, variables) => {
+        // Invalidar múltiplas queries relacionadas
         queryClient.invalidateQueries({ queryKey: ['products'] });
         queryClient.invalidateQueries({ queryKey: ['products', variables.productId] });
         queryClient.invalidateQueries({ queryKey: ['productMovements', variables.productId] });
+        queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+        queryClient.invalidateQueries({ queryKey: ['recent-movements'] });
+        queryClient.invalidateQueries({ queryKey: ['low-stock-products'] });
+        
+        // Limpar cache da API
+        ApiService.clearCache();
+        
         toast.success(`${variables.type === 'in' ? 'Entrada' : 'Saída'} de ${variables.quantity} unidades registrada com sucesso!`);
       },
       onError: (error: any) => {
@@ -341,15 +354,16 @@ export function useProducts() {
     return useQuery({
       queryKey: ['lowStockProducts'],
       queryFn: async () => {
-        const { data, error } = await supabase.rpc('get_low_stock_products');
-        
-        if (error) {
-          throw new Error(`Error fetching low stock products: ${error.message}`);
+        try {
+          return await ApiService.getLowStockProducts();
+        } catch (error) {
+          SecureLogger.error('Erro ao buscar produtos com estoque baixo via hook', error);
+          return [];
         }
-        
-        return data.map(mapDbProductToProduct) as Product[];
       },
       enabled: !!user,
+      staleTime: 2 * 60 * 1000,
+      gcTime: 5 * 60 * 1000,
     });
   };
 

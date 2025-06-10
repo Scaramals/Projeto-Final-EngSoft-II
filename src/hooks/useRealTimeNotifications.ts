@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { AlertsService, Alert } from "@/services/alertsService";
 import { useQueryClient } from "@tanstack/react-query";
+import { SecureLogger } from "@/services/secureLogger";
 
 export function useRealTimeNotifications() {
   const [alerts, setAlerts] = useState<Alert[]>([]);
@@ -11,10 +12,23 @@ export function useRealTimeNotifications() {
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    // Carregar alertas iniciais
-    AlertsService.getAllAlerts().then(setAlerts);
+    let isSubscribed = true;
+    
+    // Carregar alertas iniciais com tratamento de erro
+    const loadInitialAlerts = async () => {
+      try {
+        const initialAlerts = await AlertsService.getAllAlerts();
+        if (isSubscribed) {
+          setAlerts(initialAlerts);
+        }
+      } catch (error) {
+        SecureLogger.error('Erro ao carregar alertas iniciais', error);
+      }
+    };
 
-    // WebSocket para produtos com estoque baixo
+    loadInitialAlerts();
+
+    // WebSocket para produtos com estoque baixo com melhor tratamento de erro
     const productChannel = supabase
       .channel('product-changes')
       .on(
@@ -25,39 +39,48 @@ export function useRealTimeNotifications() {
           table: 'products'
         },
         async (payload) => {
-          const product = payload.new;
-          
-          // Verificar se o produto tem estoque baixo usando a função RPC
-          if (product.minimum_stock && product.quantity <= product.minimum_stock) {
-            const newAlert: Alert = {
-              id: `low-stock-${product.id}`,
-              type: 'low_stock',
-              severity: product.quantity === 0 ? 'critical' : 'high',
-              title: 'Estoque Baixo',
-              message: `${product.name} possui apenas ${product.quantity} unidades`,
-              isRead: false,
-              createdAt: new Date().toISOString(),
-            };
+          try {
+            if (!isSubscribed) return;
             
-            setAlerts(prev => [newAlert, ...prev]);
+            const product = payload.new;
             
-            toast({
-              variant: "destructive",
-              title: "⚠️ Estoque Baixo",
-              description: `${product.name} - ${product.quantity} unidades restantes`,
-            });
+            // Verificar se o produto tem estoque baixo
+            if (product.minimum_stock && product.quantity <= product.minimum_stock) {
+              const newAlert: Alert = {
+                id: `low-stock-${product.id}-${Date.now()}`,
+                type: 'low_stock',
+                severity: product.quantity === 0 ? 'critical' : 'high',
+                title: 'Estoque Baixo',
+                message: `${product.name} possui apenas ${product.quantity} unidades`,
+                isRead: false,
+                createdAt: new Date().toISOString(),
+              };
+              
+              setAlerts(prev => [newAlert, ...prev.slice(0, 49)]); // Limitar a 50 alertas
+              
+              toast({
+                variant: "destructive",
+                title: "⚠️ Estoque Baixo",
+                description: `${product.name} - ${product.quantity} unidades restantes`,
+              });
 
-            // Invalidar cache do dashboard quando houver mudanças
-            queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
-            queryClient.invalidateQueries({ queryKey: ['dashboard-stats-optimized'] });
-            queryClient.invalidateQueries({ queryKey: ['low-stock-count'] });
-            queryClient.invalidateQueries({ queryKey: ['notifications-alerts'] });
+              // Invalidar cache de forma controlada
+              setTimeout(() => {
+                if (isSubscribed) {
+                  queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+                  queryClient.invalidateQueries({ queryKey: ['low-stock-products'] });
+                  queryClient.invalidateQueries({ queryKey: ['notifications-alerts'] });
+                }
+              }, 1000);
+            }
+          } catch (error) {
+            SecureLogger.error('Erro ao processar atualização de produto', error);
           }
         }
       )
       .subscribe();
 
-    // WebSocket para movimentações de alto valor
+    // WebSocket para movimentações de alto valor com melhor tratamento
     const movementChannel = supabase
       .channel('movement-changes')
       .on(
@@ -68,45 +91,65 @@ export function useRealTimeNotifications() {
           table: 'stock_movements'
         },
         async (payload) => {
-          const movement = payload.new;
-          
-          // Buscar dados do produto para calcular valor
-          const { data: product } = await supabase
-            .from('products')
-            .select('name, price')
-            .eq('id', movement.product_id)
-            .single();
-
-          if (product) {
-            const totalValue = movement.quantity * product.price;
+          try {
+            if (!isSubscribed) return;
             
-            if (totalValue > 1000) { // Movimentação acima de R$ 1.000
-              const newAlert: Alert = {
-                id: `high-value-${movement.id}`,
-                type: 'high_value_movement',
-                severity: 'medium',
-                title: 'Movimentação de Alto Valor',
-                message: `${movement.type === 'in' ? 'Entrada' : 'Saída'} de ${movement.quantity} ${product.name} - R$ ${totalValue.toFixed(2)}`,
-                isRead: false,
-                createdAt: new Date().toISOString(),
-              };
-              
-              setAlerts(prev => [newAlert, ...prev]);
+            const movement = payload.new;
+            
+            // Buscar dados do produto para calcular valor
+            const { data: product, error } = await supabase
+              .from('products')
+              .select('name, price')
+              .eq('id', movement.product_id)
+              .single();
 
-              // Invalidar cache do dashboard quando houver mudanças
-              queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
-              queryClient.invalidateQueries({ queryKey: ['dashboard-stats-optimized'] });
-              queryClient.invalidateQueries({ queryKey: ['low-stock-count'] });
-              queryClient.invalidateQueries({ queryKey: ['notifications-alerts'] });
+            if (error) {
+              SecureLogger.error('Erro ao buscar produto para movimentação', error);
+              return;
             }
+
+            if (product) {
+              const totalValue = movement.quantity * product.price;
+              
+              if (totalValue > 1000) { // Movimentação acima de R$ 1.000
+                const newAlert: Alert = {
+                  id: `high-value-${movement.id}-${Date.now()}`,
+                  type: 'high_value_movement',
+                  severity: 'medium',
+                  title: 'Movimentação de Alto Valor',
+                  message: `${movement.type === 'in' ? 'Entrada' : 'Saída'} de ${movement.quantity} ${product.name} - R$ ${totalValue.toFixed(2)}`,
+                  isRead: false,
+                  createdAt: new Date().toISOString(),
+                };
+                
+                setAlerts(prev => [newAlert, ...prev.slice(0, 49)]); // Limitar a 50 alertas
+
+                // Invalidar cache de forma controlada
+                setTimeout(() => {
+                  if (isSubscribed) {
+                    queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+                    queryClient.invalidateQueries({ queryKey: ['recent-movements'] });
+                    queryClient.invalidateQueries({ queryKey: ['notifications-alerts'] });
+                  }
+                }, 1000);
+              }
+            }
+          } catch (error) {
+            SecureLogger.error('Erro ao processar nova movimentação', error);
           }
         }
       )
       .subscribe();
 
     return () => {
-      supabase.removeChannel(productChannel);
-      supabase.removeChannel(movementChannel);
+      isSubscribed = false;
+      
+      try {
+        supabase.removeChannel(productChannel);
+        supabase.removeChannel(movementChannel);
+      } catch (error) {
+        SecureLogger.error('Erro ao remover canais de WebSocket', error);
+      }
     };
   }, [toast, queryClient]);
 

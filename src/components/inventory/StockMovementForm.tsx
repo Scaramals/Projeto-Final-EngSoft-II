@@ -73,7 +73,7 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
   const watchType = form.watch('type');
   const watchQuantity = form.watch('quantity');
 
-  // Check if there's enough stock for outgoing movements
+  // Validação rigorosa de estoque insuficiente
   const hasInsufficientStock = watchType === 'out' && watchQuantity > currentStock;
 
   // Reset supplier when changing to 'out'
@@ -84,15 +84,27 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
   }, [watchType, form]);
 
   const handleSubmit = (values: StockMovementFormValues) => {
-    console.log('Submitting stock movement:', values);
+    console.log('Validando movimentação:', values);
     
-    if (values.type === 'out' && values.quantity > currentStock) {
-      toast({
-        variant: "destructive",
-        title: "Estoque insuficiente",
-        description: `Há apenas ${currentStock} unidades disponíveis em estoque`,
-      });
-      return;
+    // Validação final antes do envio
+    if (values.type === 'out') {
+      if (values.quantity > currentStock) {
+        toast({
+          variant: "destructive",
+          title: "Estoque insuficiente",
+          description: `Impossível registrar saída de ${values.quantity} unidades. Estoque atual: ${currentStock} unidades`,
+        });
+        return;
+      }
+      
+      if (currentStock === 0) {
+        toast({
+          variant: "destructive",
+          title: "Produto sem estoque",
+          description: "Não é possível registrar saída para produto sem estoque",
+        });
+        return;
+      }
     }
     
     const movement: Partial<StockMovement> = {
@@ -101,19 +113,19 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
       supplierId: values.type === 'out' ? undefined : values.supplierId,
     };
     
-    console.log('Final movement object:', movement);
+    console.log('Enviando movimentação:', movement);
     
     addStockMovement(movement, {
       onSuccess: (data) => {
-        console.log('Stock movement created successfully:', data);
+        console.log('Movimentação criada com sucesso:', data);
         toast({
           title: "Movimentação registrada",
           description: `${values.type === 'in' ? 'Entrada' : 'Saída'} de ${values.quantity} unidades registrada com sucesso!`,
         });
         onSubmit();
       },
-      onError: (error) => {
-        console.error('Error creating stock movement:', error);
+      onError: (error: any) => {
+        console.error('Erro ao criar movimentação:', error);
         toast({
           variant: "destructive",
           title: "Erro ao registrar movimentação",
@@ -162,18 +174,20 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
                   <Input
                     type="number"
                     min="1"
+                    max={watchType === 'out' ? currentStock : undefined}
                     step="1"
                     {...field}
                   />
                 </FormControl>
                 {watchType === "out" && (
-                  <FormDescription>
+                  <FormDescription className={currentStock === 0 ? "text-red-600" : ""}>
                     Estoque disponível: {currentStock} unidades
+                    {currentStock === 0 && " - Produto sem estoque!"}
                   </FormDescription>
                 )}
                 {hasInsufficientStock && (
                   <FormMessage>
-                    Quantidade excede o estoque disponível
+                    Quantidade excede o estoque disponível ({currentStock} unidades)
                   </FormMessage>
                 )}
                 <FormMessage />
@@ -239,7 +253,7 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
           </Button>
           <Button
             type="submit"
-            disabled={isLoading || hasInsufficientStock}
+            disabled={isLoading || hasInsufficientStock || (watchType === 'out' && currentStock === 0)}
             variant={watchType === "in" ? "default" : "destructive"}
           >
             {isLoading
