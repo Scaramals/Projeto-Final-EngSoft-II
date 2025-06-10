@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Product, StockMovement, FilterParams, DashboardStats } from "@/types";
 import { cacheService } from "./cacheService";
@@ -576,7 +575,53 @@ export const ApiService = {
       throw error;
     }
   },
-  
+
+  /**
+   * Obter análise de categorias com nomes corretos
+   */
+  async getCategoryAnalysis(skipCache: boolean = false): Promise<any[]> {
+    try {
+      const cacheKey = 'category_analysis';
+      
+      if (!skipCache) {
+        const cached = cacheService.get<any[]>(cacheKey);
+        if (cached) {
+          SecureLogger.info('Análise de categorias carregada do cache');
+          return cached;
+        }
+      }
+      
+      SecureLogger.info('Buscando análise de categorias via RPC');
+      
+      // Usar função RPC otimizada do Supabase
+      const { data, error } = await supabase.rpc('get_category_analysis');
+      
+      if (error) {
+        SecureLogger.error('Erro ao buscar análise de categorias', error);
+        throw new Error(`Erro ao buscar análise de categorias: ${error.message}`);
+      }
+      
+      if (!data) return [];
+      
+      // Garantir que os dados estão no formato correto
+      const analysis = (data as any[]).map(item => ({
+        category_name: item.category_name || 'Sem categoria',
+        product_count: Number(item.product_count) || 0,
+        total_quantity: Number(item.total_quantity) || 0,
+        total_value: Number(item.total_value) || 0,
+      }));
+      
+      // Cache por 5 minutos
+      cacheService.set(cacheKey, analysis, 300);
+      SecureLogger.success(`${analysis.length} categorias analisadas`);
+      
+      return analysis;
+    } catch (error) {
+      SecureLogger.error('Erro ao buscar análise de categorias', error);
+      return [];
+    }
+  },
+
   /**
    * Limpar o cache para uma chave específica ou para todas as chaves
    */
