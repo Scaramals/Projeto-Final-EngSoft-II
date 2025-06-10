@@ -1,36 +1,18 @@
 
-import React from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { AutoCurrencyInput } from "@/components/ui/auto-currency-input";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle, Loader2 } from "lucide-react";
 import { CategorySelector } from "./CategorySelector";
-import { Loader2 } from "lucide-react";
+import { SimpleImageUpload } from "./SimpleImageUpload";
 import { ProductFormData } from "@/types";
-
-const productSchema = z.object({
-  name: z.string().min(1, "Nome é obrigatório"),
-  description: z.string().optional(),
-  quantity: z.number().min(0, "Quantidade deve ser positiva"),
-  price: z.number().min(0.01, "Preço deve ser maior que zero"),
-  categoryId: z.string().optional(),
-  minimumStock: z.number().min(0, "Estoque mínimo deve ser positivo").optional(),
-  imageUrl: z.string().optional(),
-});
 
 interface ProductFormProps {
   defaultValues?: Partial<ProductFormData>;
-  onSubmit: (data: ProductFormData) => void;
+  onSubmit: (data: ProductFormData) => Promise<void>;
   onCancel: () => void;
   isLoading?: boolean;
 }
@@ -41,174 +23,188 @@ export const ProductForm: React.FC<ProductFormProps> = ({
   onCancel,
   isLoading = false,
 }) => {
-  const form = useForm<ProductFormData>({
-    resolver: zodResolver(productSchema),
-    defaultValues: {
-      name: "",
-      description: "",
-      quantity: 0,
-      price: 0,
-      categoryId: "",
-      minimumStock: 5,
-      imageUrl: "",
-      ...defaultValues,
-    },
+  const [formData, setFormData] = useState<ProductFormData>({
+    name: defaultValues?.name || "",
+    description: defaultValues?.description || "",
+    quantity: defaultValues?.quantity || 0,
+    price: defaultValues?.price || 0,
+    categoryId: defaultValues?.categoryId || "",
+    minimumStock: defaultValues?.minimumStock || 5,
+    imageUrl: defaultValues?.imageUrl || "",
   });
 
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+    
+    if (!formData.name.trim()) {
+      newErrors.name = "Nome do produto é obrigatório";
+    }
+    
+    if (formData.price <= 0) {
+      newErrors.price = "Preço deve ser maior que zero";
+    }
+    
+    if (formData.quantity < 0) {
+      newErrors.quantity = "Quantidade não pode ser negativa";
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!validateForm()) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await onSubmit(formData);
+    } catch (error) {
+      console.error('Erro ao salvar produto:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleChange = (field: keyof ProductFormData, value: any) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    // Limpar erro do campo quando usuário começar a digitar
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: "" }));
+    }
+  };
+
+  const hasErrors = Object.keys(errors).length > 0;
+
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-6">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nome do produto*</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Digite o nome do produto" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+    <form onSubmit={handleSubmit} className="space-y-6">
+      {hasErrors && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Por favor, corrija os erros abaixo antes de continuar.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Coluna esquerda - Informações básicas */}
+        <div className="space-y-6">
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Nome do produto*</label>
+            <Input
+              placeholder="Digite o nome do produto"
+              value={formData.name}
+              onChange={(e) => handleChange('name', e.target.value)}
             />
+            {errors.name && (
+              <p className="text-sm font-medium text-destructive">{errors.name}</p>
+            )}
+          </div>
 
-            <FormField
-              control={form.control}
-              name="categoryId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Categoria</FormLabel>
-                  <FormControl>
-                    <CategorySelector 
-                      value={field.value} 
-                      onChange={field.onChange}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Descrição</label>
+            <Textarea
+              placeholder="Descreva o produto"
+              value={formData.description}
+              onChange={(e) => handleChange('description', e.target.value)}
+              className="min-h-[100px] resize-none"
+              maxLength={500}
             />
+          </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="quantity"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Quantidade*</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        {...field}
-                        onChange={(e) => field.onChange(Number(e.target.value))}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Quantidade*</label>
+              <Input
+                type="number"
+                min="0"
+                step="1"
+                placeholder="Ex: 10"
+                value={formData.quantity}
+                onChange={(e) => handleChange('quantity', parseInt(e.target.value) || 0)}
               />
-
-              <FormField
-                control={form.control}
-                name="minimumStock"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Estoque mínimo</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        {...field}
-                        onChange={(e) => field.onChange(Number(e.target.value))}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {errors.quantity && (
+                <p className="text-sm font-medium text-destructive">{errors.quantity}</p>
+              )}
             </div>
 
-            <FormField
-              control={form.control}
-              name="price"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Preço*</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      placeholder="0.00"
-                      {...field}
-                      onChange={(e) => field.onChange(Number(e.target.value))}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Estoque mínimo</label>
+              <Input
+                type="number"
+                min="0"
+                step="1"
+                placeholder="Ex: 5"
+                value={formData.minimumStock}
+                onChange={(e) => handleChange('minimumStock', parseInt(e.target.value) || 0)}
+              />
+            </div>
           </div>
 
-          <div className="space-y-6">
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Descrição</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Descreva o produto"
-                      className="h-32"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Preço*</label>
+            <AutoCurrencyInput
+              value={formData.price}
+              onChange={(value) => handleChange('price', value)}
             />
-
-            <FormField
-              control={form.control}
-              name="imageUrl"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>URL da imagem</FormLabel>
-                  <FormControl>
-                    <Input placeholder="https://..." {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-        </div>
-
-        <div className="flex justify-end gap-2">
-          <Button 
-            type="button" 
-            variant="outline" 
-            onClick={onCancel}
-            disabled={isLoading}
-          >
-            Cancelar
-          </Button>
-          <Button 
-            type="submit" 
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                Salvando...
-              </>
-            ) : (
-              "Salvar produto"
+            {errors.price && (
+              <p className="text-sm font-medium text-destructive">{errors.price}</p>
             )}
-          </Button>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Categoria</label>
+            <CategorySelector
+              value={formData.categoryId}
+              onChange={(value) => handleChange('categoryId', value)}
+            />
+          </div>
         </div>
-      </form>
-    </Form>
+
+        {/* Coluna direita - Imagem */}
+        <div className="space-y-6">
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Imagem do produto</label>
+            <SimpleImageUpload
+              value={formData.imageUrl}
+              onChange={(url) => handleChange('imageUrl', url)}
+              onRemove={() => handleChange('imageUrl', "")}
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="flex justify-end gap-3 pt-6 border-t">
+        <Button 
+          type="button" 
+          variant="outline" 
+          onClick={onCancel}
+          disabled={isSubmitting || isLoading}
+        >
+          Cancelar
+        </Button>
+        <Button 
+          type="submit" 
+          disabled={isSubmitting || isLoading || hasErrors}
+          className="min-w-[140px]"
+        >
+          {(isSubmitting || isLoading) ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              Salvando...
+            </>
+          ) : (
+            "Salvar produto"
+          )}
+        </Button>
+      </div>
+    </form>
   );
 };
