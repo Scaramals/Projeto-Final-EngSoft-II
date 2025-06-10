@@ -18,27 +18,29 @@ interface LowStockProduct {
 export const LowStockAlert: React.FC = () => {
   const { toast } = useToast();
 
-  // Buscar produtos com estoque baixo da API
+  // Buscar produtos com estoque baixo usando função RPC
   const { data: lowStockProducts = [], isLoading } = useQuery({
     queryKey: ['low-stock-products'],
     queryFn: async () => {
       SecureLogger.info('Buscando produtos com estoque baixo para alertas');
       
-      // Usar uma consulta mais simples que funciona corretamente
-      const { data, error } = await supabase
-        .from('products')
-        .select('id, name, quantity, minimum_stock')
-        .not('minimum_stock', 'is', null);
+      // Usar função RPC que já existe no banco
+      const { data, error } = await supabase.rpc('get_low_stock_products');
 
       if (error) {
         SecureLogger.error('Erro ao buscar produtos', error);
         throw new Error(`Erro ao buscar produtos: ${error.message}`);
       }
 
-      // Filtrar no lado do cliente produtos com estoque baixo
-      const lowStockItems = (data || []).filter(product => 
-        product.minimum_stock && product.quantity < product.minimum_stock
-      ).sort((a, b) => a.quantity - b.quantity);
+      // Converter e ordenar os produtos
+      const lowStockItems = (data || [])
+        .map(product => ({
+          id: product.id,
+          name: product.name,
+          quantity: product.quantity,
+          minimum_stock: product.minimum_stock
+        }))
+        .sort((a, b) => a.quantity - b.quantity);
 
       SecureLogger.success(`Produtos com estoque baixo encontrados: ${lowStockItems.length}`);
       return lowStockItems as LowStockProduct[];

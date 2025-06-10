@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Product, StockMovement, FilterParams, DashboardStats } from "@/types";
 import { cacheService } from "./cacheService";
@@ -32,11 +31,8 @@ export const ApiService = {
         // Contagem total de produtos
         supabase.from("products").select("*", { count: "exact", head: true }),
         
-        // Contagem de produtos com estoque baixo usando consulta SQL direta
-        supabase.from("products")
-          .select("*", { count: "exact", head: true })
-          .filter("quantity", "lte", "minimum_stock")
-          .gt("quantity", 0),
+        // Contagem de produtos com estoque baixo usando RPC function
+        supabase.rpc('get_low_stock_products').select('*', { count: "exact", head: true }),
         
         // Buscar dados para cálculo do valor total
         supabase.from("products").select("quantity, price"),
@@ -90,19 +86,16 @@ export const ApiService = {
       }
     }
     
-    // Use uma consulta SQL direta que compara quantity com minimum_stock
+    // Usar função RPC para buscar produtos com estoque baixo
     const { data, error } = await supabase
-      .from("products")
-      .select("*")
-      .filter("quantity", "lte", "minimum_stock")
-      .gt("quantity", 0)
+      .rpc('get_low_stock_products')
       .order("quantity")
       .limit(limit);
 
     if (error) throw error;
     
     // Converter modelo do banco para nossa interface Product
-    const products = data.map(item => ({
+    const products = (data || []).map(item => ({
       id: item.id,
       name: item.name,
       description: item.description || '',
