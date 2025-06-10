@@ -69,11 +69,12 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
   const formRef = useRef<HTMLFormElement>(null);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
-  console.log('🔍 [FORM] === DADOS DO FORMULÁRIO ===');
+  console.log('🔍 [FORM] === ESTADO ATUAL DO FORMULÁRIO ===');
   console.log('🔍 [FORM] Product ID:', productId);
   console.log('🔍 [FORM] Current Stock (prop):', currentStock);
   console.log('🔍 [FORM] Bank Stock (query):', bankStock);
-  console.log('🔍 [FORM] Produto do banco:', currentProduct?.name);
+  console.log('🔍 [FORM] Produto completo:', currentProduct);
+  console.log('🔍 [FORM] Timestamp:', new Date().toISOString());
 
   const form = useForm<StockMovementFormValues>({
     resolver: zodResolver(stockMovementSchema),
@@ -92,10 +93,10 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
   const realStock = bankStock;
   const hasInsufficientStock = watchType === 'out' && watchQuantity > realStock;
 
-  console.log('📊 [FORM] === STATUS ATUAL ===');
-  console.log('📊 [FORM] Estoque REAL do banco:', realStock);
-  console.log('📊 [FORM] Tipo:', watchType);
-  console.log('📊 [FORM] Quantidade:', watchQuantity);
+  console.log('📊 [FORM] === ANÁLISE DE ESTOQUE ===');
+  console.log('📊 [FORM] Estoque REAL:', realStock);
+  console.log('📊 [FORM] Tipo movimento:', watchType);
+  console.log('📊 [FORM] Quantidade solicitada:', watchQuantity);
   console.log('📊 [FORM] Tem estoque insuficiente?', hasInsufficientStock);
 
   // Reset supplier when changing to 'out'
@@ -107,14 +108,14 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
 
   // Refresh product data when form opens
   React.useEffect(() => {
-    console.log('🔄 [FORM] Forçando atualização dos dados do produto');
+    console.log('🔄 [FORM] Forçando refresh dos dados do produto...');
     refetchProduct();
   }, [refetchProduct]);
 
   // Validação visual para feedback imediato
   React.useEffect(() => {
     if (watchType === 'out' && watchQuantity > realStock) {
-      console.log(`⚠️ [FORM] VALIDAÇÃO VISUAL: ${watchQuantity} > ${realStock}`);
+      console.log(`⚠️ [FORM] VALIDAÇÃO VISUAL FALHOU: ${watchQuantity} > ${realStock}`);
       form.setError('quantity', {
         type: 'manual',
         message: `Quantidade solicitada (${watchQuantity}) é maior que o estoque disponível (${realStock})`
@@ -125,9 +126,11 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
   }, [watchType, watchQuantity, realStock, form]);
 
   const handleSubmit = async (values: StockMovementFormValues) => {
-    console.log('🚀 [FORM] === INICIANDO SUBMISSÃO ===');
+    console.log('🚀 [FORM] === INICIANDO SUBMISSÃO DO FORMULÁRIO ===');
     console.log('🚀 [FORM] Valores do formulário:', values);
     console.log('🚀 [FORM] Estoque real antes da submissão:', realStock);
+    console.log('🚀 [FORM] Product ID:', productId);
+    console.log('🚀 [FORM] Timestamp:', new Date().toISOString());
     
     // Prevenir submissões duplas
     if (isSubmitting || isLoading) {
@@ -139,7 +142,7 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
     
     try {
       // VALIDAÇÃO FINAL com dados frescos do banco
-      console.log('🔍 [FORM] Executando validação final...');
+      console.log('🔍 [FORM] === EXECUTANDO VALIDAÇÃO FINAL ===');
       const validation = await StockValidationService.validateMovement(
         productId, 
         values.quantity, 
@@ -149,7 +152,7 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
       console.log('📋 [FORM] Resultado da validação:', validation);
       
       if (!validation.valid) {
-        console.error('❌ [FORM] Validação falhou:', validation.message);
+        console.error('❌ [FORM] VALIDAÇÃO FALHOU:', validation.message);
         toast({
           variant: "destructive",
           title: "Movimentação bloqueada",
@@ -165,16 +168,19 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
         supplierId: values.type === 'out' ? undefined : values.supplierId,
       };
       
-      console.log('✅ [FORM] Enviando movimentação validada:', movement);
+      console.log('✅ [FORM] === ENVIANDO MOVIMENTAÇÃO VALIDADA ===');
+      console.log('✅ [FORM] Dados do movimento:', movement);
       
       addStockMovement(movement, {
         onSuccess: (data) => {
-          console.log('✅ [FORM] Movimentação registrada com sucesso:', data);
+          console.log('✅ [FORM] === SUCESSO NO FORMULÁRIO ===');
+          console.log('✅ [FORM] Dados retornados:', data);
           setIsSubmitting(false);
           onSubmit();
         },
         onError: (error: any) => {
-          console.error('❌ [FORM] Erro na submissão:', error);
+          console.error('❌ [FORM] === ERRO NO FORMULÁRIO ===');
+          console.error('❌ [FORM] Erro completo:', error);
           setIsSubmitting(false);
         }
       });

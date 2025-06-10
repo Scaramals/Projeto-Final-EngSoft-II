@@ -47,25 +47,45 @@ export function useStockMovements() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
-  // Add stock movement - FOCO ÚNICO: registrar UMA movimentação
+  // Add stock movement
   const useAddStockMovement = () => {
     return useMutation({
       mutationFn: async (movement: Partial<StockMovement>) => {
-        console.log('🔄 [HOOK] Iniciando registro de movimentação:', movement);
+        console.log('🔄 [HOOK] === INICIANDO REGISTRO DE MOVIMENTAÇÃO ===');
+        console.log('🔄 [HOOK] Dados recebidos:', movement);
+        console.log('🔄 [HOOK] User ID:', user?.id);
+        console.log('🔄 [HOOK] Timestamp:', new Date().toISOString());
         
         if (!movement.productId || !movement.quantity || !movement.type) {
+          console.error('❌ [HOOK] Dados incompletos');
           throw new Error('Dados de movimentação incompletos');
         }
 
         if (!user?.id) {
+          console.error('❌ [HOOK] Usuário não autenticado');
           throw new Error('Usuário não autenticado');
+        }
+
+        // Verificar estoque atual ANTES da inserção
+        console.log('🔍 [HOOK] Verificando estoque atual antes da inserção...');
+        const { data: preCheck, error: preCheckError } = await supabase
+          .from('products')
+          .select('quantity, name')
+          .eq('id', movement.productId)
+          .single();
+        
+        if (preCheckError) {
+          console.error('❌ [HOOK] Erro na verificação prévia:', preCheckError);
+        } else {
+          console.log(`📊 [HOOK] Estoque PRÉ-inserção: ${preCheck.quantity} para ${preCheck.name}`);
         }
 
         // Converter para formato do banco
         const dbMovement = mapStockMovementToDbStockMovement(movement, user.id);
-        console.log('💾 [HOOK] Dados para inserção no banco:', dbMovement);
+        console.log('💾 [HOOK] Dados formatados para inserção:', dbMovement);
         
-        // Inserir no banco - APENAS UMA VEZ
+        // Inserir no banco
+        console.log('🔄 [HOOK] Executando inserção no banco...');
         const { data, error } = await supabase
           .from('stock_movements')
           .insert(dbMovement)
@@ -73,28 +93,56 @@ export function useStockMovements() {
           .single();
           
         if (error) {
-          console.error('❌ [HOOK] Erro no banco:', error);
+          console.error('❌ [HOOK] Erro na inserção:', error);
+          console.error('❌ [HOOK] Código do erro:', error.code);
+          console.error('❌ [HOOK] Detalhes:', error.details);
+          console.error('❌ [HOOK] Hint:', error.hint);
           throw new Error(`Erro ao registrar movimentação: ${error.message}`);
         }
         
-        console.log('✅ [HOOK] Movimentação registrada no banco:', data);
+        console.log('✅ [HOOK] Movimentação inserida:', data);
+        
+        // Verificar estoque atual APÓS a inserção
+        console.log('🔍 [HOOK] Verificando estoque atual APÓS a inserção...');
+        const { data: postCheck, error: postCheckError } = await supabase
+          .from('products')
+          .select('quantity, name, updated_at')
+          .eq('id', movement.productId)
+          .single();
+        
+        if (postCheckError) {
+          console.error('❌ [HOOK] Erro na verificação pós-inserção:', postCheckError);
+        } else {
+          console.log(`📊 [HOOK] Estoque PÓS-inserção: ${postCheck.quantity} para ${postCheck.name}`);
+          console.log(`📊 [HOOK] Última atualização: ${postCheck.updated_at}`);
+        }
+        
+        console.log('🔄 [HOOK] === FIM DO REGISTRO ===');
         return mapDbStockMovementToStockMovement(data);
       },
       onSuccess: (data, variables) => {
-        console.log('🎉 [HOOK] Sucesso - invalidando queries específicas');
+        console.log('🎉 [HOOK] === SUCESSO NA MOVIMENTAÇÃO ===');
+        console.log('🎉 [HOOK] Dados retornados:', data);
+        console.log('🎉 [HOOK] Variáveis:', variables);
         
-        // Invalidar apenas queries necessárias
+        // Invalidar queries específicas
+        console.log('🔄 [HOOK] Invalidando queries...');
         queryClient.invalidateQueries({ queryKey: ['products', variables.productId] });
         queryClient.invalidateQueries({ queryKey: ['productMovements', variables.productId] });
         queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
         
         SecureLogger.success(`Movimentação ${variables.type} de ${variables.quantity} unidades registrada`);
         toast.success(`${variables.type === 'in' ? 'Entrada' : 'Saída'} de ${variables.quantity} unidades registrada!`);
+        console.log('🎉 [HOOK] === FIM DO SUCESSO ===');
       },
       onError: (error: any) => {
-        console.error('❌ [HOOK] Erro:', error.message);
+        console.error('❌ [HOOK] === ERRO NA MOVIMENTAÇÃO ===');
+        console.error('❌ [HOOK] Erro completo:', error);
+        console.error('❌ [HOOK] Mensagem:', error.message);
+        console.error('❌ [HOOK] Stack:', error.stack);
         SecureLogger.error('Erro no registro da movimentação', error);
         toast.error(`Erro: ${error.message}`);
+        console.error('❌ [HOOK] === FIM DO ERRO ===');
       }
     });
   };

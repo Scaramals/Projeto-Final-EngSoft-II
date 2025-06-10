@@ -26,7 +26,8 @@ const ProductDetailPage: React.FC = () => {
   const { 
     data: product, 
     isLoading: loadingProduct,
-    error: productError 
+    error: productError,
+    refetch: refetchProduct
   } = useProduct(productId);
   
   // Get stock movements
@@ -41,6 +42,13 @@ const ProductDetailPage: React.FC = () => {
   const { mutate: deleteProduct, isPending: isDeleting } = useDeleteProduct();
   
   const stockStatus = product ? getStockStatus(product.quantity, product.minimumStock) : { class: '', label: '' };
+  
+  console.log('🔍 [DETAIL] === ESTADO DA PÁGINA DE DETALHE ===');
+  console.log('🔍 [DETAIL] Product ID:', productId);
+  console.log('🔍 [DETAIL] Produto carregado:', product);
+  console.log('🔍 [DETAIL] Estoque atual:', product?.quantity);
+  console.log('🔍 [DETAIL] Loading?', loadingProduct);
+  console.log('🔍 [DETAIL] Error?', productError);
   
   // Transform product data for ProductForm
   const getProductFormDefaultValues = () => {
@@ -67,13 +75,18 @@ const ProductDetailPage: React.FC = () => {
     }, {
       onSuccess: () => {
         setIsEditing(false);
+        // Forçar atualização dos dados
+        refetchProduct();
       }
     });
   };
   
   const handleAddMovement = () => {
-    console.log('🎯 [DETAIL] Movimentação adicionada, fechando formulário');
+    console.log('🎯 [DETAIL] === MOVIMENTAÇÃO ADICIONADA ===');
+    console.log('🎯 [DETAIL] Fechando formulário e atualizando dados...');
     setIsAddingMovement(false);
+    // Forçar atualização dos dados do produto
+    refetchProduct();
   };
   
   const handleDeleteProduct = () => {
