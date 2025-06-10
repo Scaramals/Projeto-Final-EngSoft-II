@@ -1,4 +1,5 @@
 
+import React from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { OptimizedApiService } from "@/services/optimizedApi";
 import { useAuth } from "@/contexts/AuthContext";

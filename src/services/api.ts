@@ -217,8 +217,8 @@ export const ApiService = {
         userId: movement.user_id,
         createdBy: movement.created_by,
         updatedAt: movement.updated_at,
-        productName: movement.product_name,
-        supplierName: movement.supplier_name,
+        // Remove as propriedades que não existem na tabela
+        // productName e supplierName devem ser buscados via JOIN ou separadamente
       })) as StockMovement[];
 
       console.log('Stock movements fetched:', stockMovements.length);
