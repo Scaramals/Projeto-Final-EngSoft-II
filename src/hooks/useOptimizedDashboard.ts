@@ -1,6 +1,5 @@
 
-import React from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import React, { useState, useEffect } from "react";
 import { OptimizedApiService } from "@/services/optimizedApi";
 import { useAuth } from "@/contexts/AuthContext";
 import { DashboardStats, MovementSummary, CategoryAnalysis } from "@/types";
@@ -8,49 +7,81 @@ import { supabase } from "@/integrations/supabase/client";
 
 export function useOptimizedDashboard() {
   const { user } = useAuth();
-  const queryClient = useQueryClient();
 
-  // Buscar estatísticas otimizadas do dashboard
-  const { data: stats, isLoading: isStatsLoading, refetch: refetchStats } = useQuery<DashboardStats>({
-    queryKey: ["dashboard-stats-optimized"],
-    queryFn: () => {
+  // State for dashboard stats
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [isStatsLoading, setIsStatsLoading] = useState(false);
+
+  // State for movements summary
+  const [movementsSummary, setMovementsSummary] = useState<MovementSummary[]>([]);
+  const [isMovementsLoading, setIsMovementsLoading] = useState(false);
+
+  // State for category analysis
+  const [categoryAnalysis, setCategoryAnalysis] = useState<CategoryAnalysis[]>([]);
+  const [isCategoryLoading, setIsCategoryLoading] = useState(false);
+
+  // State for monthly trends
+  const [monthlyTrends, setMonthlyTrends] = useState<any[]>([]);
+  const [isTrendsLoading, setIsTrendsLoading] = useState(false);
+
+  // State for monthly comparison
+  const [monthlyComparison, setMonthlyComparison] = useState<any>(null);
+  const [isComparisonLoading, setIsComparisonLoading] = useState(false);
+
+  // Fetch dashboard stats
+  const fetchStats = async () => {
+    if (!user) return;
+    
+    setIsStatsLoading(true);
+    try {
       console.log('useOptimizedDashboard - Fetching dashboard stats...');
-      return OptimizedApiService.getDashboardStats(true); // Force refresh
-    },
-    staleTime: 2 * 60 * 1000, // 2 minutos
-    gcTime: 5 * 60 * 1000, // 5 minutos
-    enabled: !!user,
-  });
+      const data = await OptimizedApiService.getDashboardStats(true);
+      setStats(data);
+    } catch (error) {
+      console.error('useOptimizedDashboard - Error fetching stats:', error);
+    } finally {
+      setIsStatsLoading(false);
+    }
+  };
 
-  // Buscar resumo de movimentações
-  const { data: movementsSummary, isLoading: isMovementsLoading, refetch: refetchMovements } = useQuery<MovementSummary[]>({
-    queryKey: ["movements-summary"],
-    queryFn: () => {
+  // Fetch movements summary
+  const fetchMovements = async () => {
+    if (!user) return;
+    
+    setIsMovementsLoading(true);
+    try {
       console.log('useOptimizedDashboard - Fetching movements summary...');
-      return OptimizedApiService.getMovementsSummary(30, true); // Force refresh
-    },
-    staleTime: 5 * 60 * 1000, // 5 minutos
-    gcTime: 10 * 60 * 1000, // 10 minutos
-    enabled: !!user,
-  });
+      const data = await OptimizedApiService.getMovementsSummary(30, true);
+      setMovementsSummary(data);
+    } catch (error) {
+      console.error('useOptimizedDashboard - Error fetching movements:', error);
+    } finally {
+      setIsMovementsLoading(false);
+    }
+  };
 
-  // Buscar análise de categorias - VERSÃO FINAL CORRIGIDA
-  const { data: categoryAnalysis, isLoading: isCategoryLoading, refetch: refetchCategory } = useQuery<CategoryAnalysis[]>({
-    queryKey: ["category-analysis-final-fixed"], // Nova query key para função final corrigida
-    queryFn: () => {
+  // Fetch category analysis
+  const fetchCategory = async () => {
+    if (!user) return;
+    
+    setIsCategoryLoading(true);
+    try {
       console.log('useOptimizedDashboard - Fetching category analysis with FINAL CORRECTED database function...');
-      return OptimizedApiService.getCategoryAnalysis(true); // Force refresh
-    },
-    staleTime: 5 * 60 * 1000, // 5 minutos
-    gcTime: 10 * 60 * 1000, // 10 minutos
-    enabled: !!user,
-    retry: 1,
-  });
+      const data = await OptimizedApiService.getCategoryAnalysis(true);
+      setCategoryAnalysis(data);
+    } catch (error) {
+      console.error('useOptimizedDashboard - Error fetching category analysis:', error);
+    } finally {
+      setIsCategoryLoading(false);
+    }
+  };
 
-  // Buscar dados de tendência mensal - corrigir para usar dados reais
-  const { data: monthlyTrends, isLoading: isTrendsLoading, refetch: refetchTrends } = useQuery({
-    queryKey: ["monthly-trends"],
-    queryFn: async () => {
+  // Fetch monthly trends
+  const fetchTrends = async () => {
+    if (!user) return;
+    
+    setIsTrendsLoading(true);
+    try {
       console.log('useOptimizedDashboard - Fetching monthly trends data...');
       const { data, error } = await supabase.rpc('get_movements_summary', { days_back: 180 });
 
@@ -61,7 +92,8 @@ export function useOptimizedDashboard() {
 
       if (!data || data.length === 0) {
         console.log('useOptimizedDashboard - No monthly trends data found');
-        return [];
+        setMonthlyTrends([]);
+        return;
       }
 
       // Agrupar por mês
@@ -88,17 +120,20 @@ export function useOptimizedDashboard() {
         .slice(-6); // Últimos 6 meses
 
       console.log('useOptimizedDashboard - Monthly trends processed:', trends);
-      return trends;
-    },
-    staleTime: 5 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
-    enabled: !!user,
-  });
+      setMonthlyTrends(trends);
+    } catch (error) {
+      console.error('useOptimizedDashboard - Error fetching trends:', error);
+    } finally {
+      setIsTrendsLoading(false);
+    }
+  };
 
-  // Buscar comparação mensal para métricas
-  const { data: monthlyComparison, isLoading: isComparisonLoading, refetch: refetchComparison } = useQuery({
-    queryKey: ["monthly-comparison"],
-    queryFn: async () => {
+  // Fetch monthly comparison
+  const fetchComparison = async () => {
+    if (!user) return;
+    
+    setIsComparisonLoading(true);
+    try {
       console.log('useOptimizedDashboard - Fetching monthly comparison...');
       const now = new Date();
       const currentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -135,34 +170,38 @@ export function useOptimizedDashboard() {
       };
 
       console.log('useOptimizedDashboard - Monthly comparison:', comparison);
-      return comparison;
-    },
-    staleTime: 5 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
-    enabled: !!user,
-  });
-  
+      setMonthlyComparison(comparison);
+    } catch (error) {
+      console.error('useOptimizedDashboard - Error fetching comparison:', error);
+    } finally {
+      setIsComparisonLoading(false);
+    }
+  };
+
+  // Load all data when user is available
+  useEffect(() => {
+    if (user) {
+      fetchStats();
+      fetchMovements();
+      fetchCategory();
+      fetchTrends();
+      fetchComparison();
+    }
+  }, [user]);
+
   // Função para forçar refresh de todos os dados
   const refreshAll = () => {
     console.log('useOptimizedDashboard - FINAL FORCE REFRESH with corrected function...');
     
-    // Invalidar todas as queries relacionadas
-    queryClient.invalidateQueries({ queryKey: ["dashboard-stats-optimized"] });
-    queryClient.invalidateQueries({ queryKey: ["movements-summary"] });
-    queryClient.invalidateQueries({ queryKey: ["category-analysis-final-fixed"] });
-    queryClient.invalidateQueries({ queryKey: ["monthly-trends"] });
-    queryClient.invalidateQueries({ queryKey: ["monthly-comparison"] });
-    queryClient.invalidateQueries({ queryKey: ["recent-movements"] });
-    
-    // Também limpar cache do service
+    // Limpar cache do service
     OptimizedApiService.clearCache();
     
-    // Fazer refetch manual
-    refetchStats();
-    refetchMovements();
-    refetchCategory();
-    refetchTrends();
-    refetchComparison();
+    // Fazer refetch de todos os dados
+    fetchStats();
+    fetchMovements();
+    fetchCategory();
+    fetchTrends();
+    fetchComparison();
   };
 
   // Debug logging final para category analysis
@@ -196,13 +235,15 @@ export function useOptimizedDashboard() {
     console.log('useOptimizedDashboard - FINAL CHECK - Monthly Trends:', monthlyTrends?.length, 'months');
   }, [stats, movementsSummary, categoryAnalysis, monthlyTrends]);
 
+  const isLoading = isStatsLoading || isMovementsLoading || isCategoryLoading || isTrendsLoading || isComparisonLoading;
+
   return {
     stats,
     movementsSummary,
     categoryAnalysis,
     monthlyTrends,
     monthlyComparison,
-    isLoading: isStatsLoading || isMovementsLoading || isCategoryLoading || isTrendsLoading || isComparisonLoading,
+    isLoading,
     refreshAll,
   };
 }
