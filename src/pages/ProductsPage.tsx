@@ -13,7 +13,7 @@ type SortOption = "name" | "price" | "quantity" | "created_at";
 
 const ProductsPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategoryId, setSelectedCategoryId] = useState("all"); // Mudança: agora é categoryId
+  const [selectedCategoryId, setSelectedCategoryId] = useState("all");
   const [sortBy, setSortBy] = useState<SortOption>("name");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const searchRef = useRef<HTMLInputElement>(null);
@@ -22,14 +22,20 @@ const ProductsPage: React.FC = () => {
   const { useAllProducts } = useProducts();
   const { data: products = [], isLoading, error, refetch } = useAllProducts({
     search: searchQuery || undefined,
-    categoryId: selectedCategoryId === "all" ? undefined : selectedCategoryId, // Mudança
+    categoryId: selectedCategoryId === "all" ? undefined : selectedCategoryId,
     sortBy: sortBy === "created_at" ? "name" : sortBy,
     sortDirection: "asc"
   });
 
   // Get categories using React Query - agora retorna objetos {id, name}
   const { useDistinctCategories } = useCategories();
-  const { data: categories = [], isLoading: categoriesLoading } = useDistinctCategories();
+  const { data: categoriesData = [], isLoading: categoriesLoading } = useDistinctCategories();
+
+  // Convert categories data to the expected format for ProductsFilters
+  const categories: Array<{id: string, name: string}> = categoriesData.map(cat => ({
+    id: cat.id,
+    name: cat.name
+  }));
 
   // Debug logging to understand the data
   React.useEffect(() => {
@@ -41,7 +47,7 @@ const ProductsPage: React.FC = () => {
 
   const handleClearFilters = () => {
     setSearchQuery("");
-    setSelectedCategoryId("all"); // Mudança
+    setSelectedCategoryId("all");
     setSortBy("name");
     if (searchRef.current) {
       searchRef.current.focus();
@@ -64,13 +70,13 @@ const ProductsPage: React.FC = () => {
         <ProductsFilters
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
-          selectedCategory={selectedCategoryId} // Passa o ID da categoria
-          setSelectedCategory={setSelectedCategoryId} // Agora recebe ID
+          selectedCategory={selectedCategoryId}
+          setSelectedCategory={setSelectedCategoryId}
           sortBy={sortBy}
           setSortBy={setSortBy}
           viewMode={viewMode}
           setViewMode={setViewMode}
-          categories={categories} // Agora são objetos {id, name}
+          categories={categories}
           categoriesLoading={categoriesLoading}
           activeFiltersCount={activeFiltersCount}
           onClearFilters={handleClearFilters}

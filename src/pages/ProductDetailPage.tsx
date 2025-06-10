@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -11,6 +12,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { useProducts } from "@/hooks/useProducts";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { CategoryDisplay } from "@/components/products/CategoryDisplay";
 
 const ProductDetailPage: React.FC = () => {
   const { productId } = useParams<{ productId: string }>();
@@ -50,7 +52,7 @@ const ProductDetailPage: React.FC = () => {
       description: product.description,
       quantity: product.quantity,
       price: product.price,
-      category: product.category,
+      categoryId: product.categoryId,
       minimumStock: product.minimumStock,
       imageUrl: product.imageUrl,
       suppliers: product.suppliers?.map(supplier => supplier.id) || []
@@ -218,7 +220,7 @@ const ProductDetailPage: React.FC = () => {
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <p className="text-sm text-muted-foreground">Categoria</p>
-                          <p>{product.category || "Não categorizado"}</p>
+                          <CategoryDisplay categoryId={product.categoryId} />
                         </div>
                         <div>
                           <p className="text-sm text-muted-foreground">Preço</p>

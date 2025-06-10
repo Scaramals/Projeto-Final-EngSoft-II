@@ -45,6 +45,7 @@ export interface StockMovement {
   date: string;
   supplierId?: string;
   supplierName?: string;
+  productName?: string;
   notes?: string;
   userId?: string;
   createdBy?: string;
@@ -77,4 +78,34 @@ export interface CategoryAnalysis {
   product_count: number;
   total_quantity: number;
   total_value: number;
+}
+
+export interface Profile {
+  id: string;
+  full_name?: string;
+  role?: string;
+  is_master?: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SupplierFormData {
+  name: string;
+  cnpj?: string;
+  contactName?: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  notes?: string;
+}
+
+export interface ProductFormData {
+  name: string;
+  description?: string;
+  quantity: number;
+  price: number;
+  categoryId?: string;
+  minimumStock?: number;
+  imageUrl?: string;
+  suppliers?: string[];
 }

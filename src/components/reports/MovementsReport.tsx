@@ -47,6 +47,10 @@ export const MovementsReport: React.FC<MovementsReportProps> = ({ dateRange }) =
           type: movement.type,
           date: movement.date,
           notes: movement.notes || "",
+          updatedAt: movement.updated_at || movement.date,
+          supplierId: movement.supplier_id,
+          createdBy: movement.created_by,
+          userId: movement.user_id,
         }));
         
         setMovements(transformedData);

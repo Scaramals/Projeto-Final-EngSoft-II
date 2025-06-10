@@ -16,7 +16,7 @@ const mapDbProductToProduct = (dbProduct: any): Product => ({
   description: dbProduct.description,
   quantity: dbProduct.quantity,
   price: dbProduct.price,
-  category: dbProduct.category,
+  categoryId: dbProduct.category_id,
   imageUrl: dbProduct.image_url,
   minimumStock: dbProduct.minimum_stock,
   createdAt: dbProduct.created_at,
@@ -37,7 +37,9 @@ const mapDbStockMovementToStockMovement = (dbMovement: any): StockMovement => ({
   notes: dbMovement.notes,
   supplierId: dbMovement.supplier_id,
   createdBy: dbMovement.created_by,
-  updatedAt: dbMovement.updated_at,
+  updatedAt: dbMovement.updated_at || dbMovement.date,
+  productName: dbMovement.product_name,
+  supplierName: dbMovement.supplier_name,
 });
 
 /**
@@ -50,7 +52,7 @@ const mapProductToDbProduct = (product: Partial<Product>, userId?: string) => {
   if (product.description !== undefined) dbProduct.description = product.description;
   if (product.quantity !== undefined) dbProduct.quantity = product.quantity;
   if (product.price !== undefined) dbProduct.price = product.price;
-  if (product.category !== undefined) dbProduct.category = product.category;
+  if (product.categoryId !== undefined) dbProduct.category_id = product.categoryId;
   if (product.imageUrl !== undefined) dbProduct.image_url = product.imageUrl;
   if (product.minimumStock !== undefined) dbProduct.minimum_stock = product.minimumStock;
   
