@@ -37,8 +37,8 @@ export const ApiService = {
         query = query.ilike('name', `%${filters.search}%`);
       }
 
-      if (filters?.category) {
-        query = query.eq('category', filters.category);
+      if (filters?.categoryId) {
+        query = query.eq('category_id', filters.categoryId);
       }
 
       // Aplicar ordenação
@@ -61,7 +61,7 @@ export const ApiService = {
         description: product.description,
         quantity: product.quantity,
         price: product.price,
-        category: product.category,
+        categoryId: product.category_id, // Mudança: mapear category_id para categoryId
         imageUrl: product.image_url,
         minimumStock: product.minimum_stock,
         createdAt: product.created_at,
@@ -110,7 +110,7 @@ export const ApiService = {
         description: product.description,
         quantity: product.quantity,
         price: product.price,
-        category: product.category,
+        categoryId: product.category_id, // Mudança: mapear category_id para categoryId
         imageUrl: product.image_url,
         minimumStock: product.minimum_stock,
         createdAt: product.created_at,
@@ -131,12 +131,12 @@ export const ApiService = {
   },
 
   /**
-   * Obter categorias da tabela categories
+   * Obter categorias da tabela categories - retorna objetos completos
    */
-  async getDistinctCategories(): Promise<string[]> {
+  async getDistinctCategories(): Promise<Array<{id: string, name: string}>> {
     try {
       const cacheKey = 'distinct_categories';
-      const cached = cacheService.get<string[]>(cacheKey);
+      const cached = cacheService.get<Array<{id: string, name: string}>>(cacheKey);
       
       if (cached) {
         SecureLogger.info('[CACHE] Categorias carregadas do cache');
@@ -148,7 +148,7 @@ export const ApiService = {
       // Buscar categorias da tabela categories
       const { data, error } = await supabase
         .from('categories')
-        .select('name')
+        .select('id, name')
         .order('name');
 
       if (error) {
@@ -156,11 +156,10 @@ export const ApiService = {
         throw error;
       }
 
-      // Extrair nomes das categorias
+      // Retornar objetos com id e name
       const categories = (data || [])
-        .map(item => item.name)
-        .filter(name => name && name.trim() !== '')
-        .sort();
+        .filter(item => item.name && item.name.trim() !== '')
+        .sort((a, b) => a.name.localeCompare(b.name));
 
       // Cache por 5 minutos
       cacheService.set(cacheKey, categories, 300);

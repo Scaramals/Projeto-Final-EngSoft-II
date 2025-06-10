@@ -9,7 +9,7 @@ import { useProducts } from "@/hooks/useProducts";
 import { useCategories } from "@/hooks/useCategories";
 import { ApiService } from "@/services/api";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CategoryCell } from "@/components/inventory/CategoryCell";
+import { CategoryDisplay } from "@/components/products/CategoryDisplay";
 import {
   Select,
   SelectContent,
@@ -34,17 +34,13 @@ const isUUID = (str: string): boolean => {
 };
 
 // Helper function to generate a display name if the name is a UUID
-const getDisplayName = (productName: string, description?: string, category?: string): string => {
+const getDisplayName = (productName: string, description?: string): string => {
   if (!productName) return "Produto sem nome";
   
   // If name looks like a UUID, try to create a meaningful name
   if (isUUID(productName)) {
     if (description && description.trim()) {
       return description.substring(0, 50);
-    }
-    
-    if (category) {
-      return `${category} - Produto ${productName.substring(0, 8)}`;
     }
     
     return `Produto ${productName.substring(0, 8)}`;
@@ -58,19 +54,19 @@ const InventoryPage: React.FC = () => {
   const [sortBy, setSortBy] = useState<string>("name");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [filter, setFilter] = useState<"all" | "low" | "medium" | "good">("all");
-  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>("all"); // Mudança: agora é categoryId
   const pageRef = useRef(null);
   
   // Get products with filters using React Query
   const { useAllProducts } = useProducts();
   const { data: products = [], isLoading, error, refetch } = useAllProducts({
     search: searchQuery || undefined,
-    category: selectedCategory === "all" ? undefined : selectedCategory,
+    categoryId: selectedCategoryId === "all" ? undefined : selectedCategoryId, // Mudança
     sortBy: sortBy as any,
     sortDirection: sortDirection
   });
 
-  // Get categories using React Query
+  // Get categories using React Query - agora retorna objetos {id, name}
   const { useDistinctCategories } = useCategories();
   const { data: categories = [], isLoading: categoriesLoading } = useDistinctCategories();
   
@@ -101,7 +97,7 @@ const InventoryPage: React.FC = () => {
   const handleClearFilters = () => {
     setSearchQuery("");
     setFilter("all");
-    setSelectedCategory("all");
+    setSelectedCategoryId("all"); // Mudança
   };
 
   const handleRefresh = () => {
@@ -160,8 +156,8 @@ const InventoryPage: React.FC = () => {
             </Select>
             
             <Select
-              value={selectedCategory}
-              onValueChange={setSelectedCategory}
+              value={selectedCategoryId}
+              onValueChange={setSelectedCategoryId}
             >
               <SelectTrigger className="w-[160px]">
                 <SelectValue placeholder="Categoria" />
@@ -172,8 +168,8 @@ const InventoryPage: React.FC = () => {
                   <SelectItem value="loading" disabled>Carregando...</SelectItem>
                 ) : (
                   categories.map((category) => (
-                    <SelectItem key={category} value={category}>
-                      {category}
+                    <SelectItem key={category.id} value={category.id}>
+                      {category.name}
                     </SelectItem>
                   ))
                 )}
@@ -266,7 +262,7 @@ const InventoryPage: React.FC = () => {
                           )}
                         </TableCell>
                         <TableCell>
-                          <CategoryCell categoryId={product.category} />
+                          <CategoryDisplay categoryId={product.categoryId} />
                         </TableCell>
                         <TableCell className="text-right">
                           {product.quantity}

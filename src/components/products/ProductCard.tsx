@@ -30,10 +30,6 @@ const getDisplayName = (product: Product): string => {
       return product.description.substring(0, 50);
     }
     
-    if (product.category) {
-      return `${product.category} - Produto ${product.name.substring(0, 8)}`;
-    }
-    
     return `Produto ${product.name.substring(0, 8)}`;
   }
   
@@ -64,7 +60,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           <h3 className="font-semibold text-lg" title={displayName}>
             {displayName}
           </h3>
-          <CategoryDisplay categoryId={product.category} />
+          <CategoryDisplay categoryId={product.categoryId} />
         </div>
         <p className="text-muted-foreground text-sm mt-1 line-clamp-2">
           {product.description || "Sem descrição disponível"}

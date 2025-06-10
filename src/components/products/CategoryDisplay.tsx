@@ -9,12 +9,6 @@ interface CategoryDisplayProps {
   className?: string;
 }
 
-// Helper function to check if a string looks like a UUID
-const isUUID = (str: string): boolean => {
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-  return uuidRegex.test(str);
-};
-
 export const CategoryDisplay: React.FC<CategoryDisplayProps> = ({ 
   categoryId, 
   variant = "outline",
@@ -22,19 +16,16 @@ export const CategoryDisplay: React.FC<CategoryDisplayProps> = ({
 }) => {
   const { useCategoryName } = useCategories();
   
-  // Se não há categoria, não mostra nada
-  if (!categoryId) return null;
-  
-  // Se é uma string que não parece UUID, mostra diretamente
-  if (typeof categoryId === 'string' && !isUUID(categoryId)) {
+  // Se não há categoria, mostra badge padrão
+  if (!categoryId) {
     return (
       <Badge variant={variant} className={className}>
-        {categoryId}
+        Sem categoria
       </Badge>
     );
   }
   
-  // Se parece UUID, busca o nome
+  // Busca o nome da categoria pelo ID
   const { data: categoryName, isLoading } = useCategoryName(categoryId);
   
   if (isLoading) {
@@ -48,7 +39,7 @@ export const CategoryDisplay: React.FC<CategoryDisplayProps> = ({
   if (!categoryName || categoryName === 'Categoria não encontrada') {
     return (
       <Badge variant={variant} className={className}>
-        Categoria
+        Categoria não encontrada
       </Badge>
     );
   }

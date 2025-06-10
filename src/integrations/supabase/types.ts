@@ -72,6 +72,7 @@ export type Database = {
       products: {
         Row: {
           category: string | null
+          category_id: string | null
           created_at: string
           created_by: string | null
           description: string | null
@@ -86,6 +87,7 @@ export type Database = {
         }
         Insert: {
           category?: string | null
+          category_id?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -100,6 +102,7 @@ export type Database = {
         }
         Update: {
           category?: string | null
+          category_id?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -112,7 +115,15 @@ export type Database = {
           quantity?: number
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "products_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -262,6 +273,7 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: {
           category: string | null
+          category_id: string | null
           created_at: string
           created_by: string | null
           description: string | null
@@ -321,6 +333,7 @@ export type Database = {
         Args: { category_filter: string }
         Returns: {
           category: string | null
+          category_id: string | null
           created_at: string
           created_by: string | null
           description: string | null

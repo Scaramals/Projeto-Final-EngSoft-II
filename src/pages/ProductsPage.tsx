@@ -13,7 +13,7 @@ type SortOption = "name" | "price" | "quantity" | "created_at";
 
 const ProductsPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [selectedCategoryId, setSelectedCategoryId] = useState("all"); // Mudança: agora é categoryId
   const [sortBy, setSortBy] = useState<SortOption>("name");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const searchRef = useRef<HTMLInputElement>(null);
@@ -22,12 +22,12 @@ const ProductsPage: React.FC = () => {
   const { useAllProducts } = useProducts();
   const { data: products = [], isLoading, error, refetch } = useAllProducts({
     search: searchQuery || undefined,
-    category: selectedCategory === "all" ? undefined : selectedCategory,
+    categoryId: selectedCategoryId === "all" ? undefined : selectedCategoryId, // Mudança
     sortBy: sortBy === "created_at" ? "name" : sortBy,
     sortDirection: "asc"
   });
 
-  // Get categories using React Query
+  // Get categories using React Query - agora retorna objetos {id, name}
   const { useDistinctCategories } = useCategories();
   const { data: categories = [], isLoading: categoriesLoading } = useDistinctCategories();
 
@@ -41,7 +41,7 @@ const ProductsPage: React.FC = () => {
 
   const handleClearFilters = () => {
     setSearchQuery("");
-    setSelectedCategory("all");
+    setSelectedCategoryId("all"); // Mudança
     setSortBy("name");
     if (searchRef.current) {
       searchRef.current.focus();
@@ -54,7 +54,7 @@ const ProductsPage: React.FC = () => {
     ApiService.clearCache();
   };
 
-  const activeFiltersCount = [searchQuery, selectedCategory !== "all" ? selectedCategory : ""].filter(Boolean).length;
+  const activeFiltersCount = [searchQuery, selectedCategoryId !== "all" ? selectedCategoryId : ""].filter(Boolean).length;
 
   return (
     <AppLayout>
@@ -64,13 +64,13 @@ const ProductsPage: React.FC = () => {
         <ProductsFilters
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
-          selectedCategory={selectedCategory}
-          setSelectedCategory={setSelectedCategory}
+          selectedCategory={selectedCategoryId} // Passa o ID da categoria
+          setSelectedCategory={setSelectedCategoryId} // Agora recebe ID
           sortBy={sortBy}
           setSortBy={setSortBy}
           viewMode={viewMode}
           setViewMode={setViewMode}
-          categories={categories}
+          categories={categories} // Agora são objetos {id, name}
           categoriesLoading={categoriesLoading}
           activeFiltersCount={activeFiltersCount}
           onClearFilters={handleClearFilters}

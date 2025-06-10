@@ -13,7 +13,7 @@ export function useCategories() {
   const { toast } = useToast();
   const { user } = useAuth();
 
-  // Buscar categorias da tabela categories
+  // Buscar categorias da tabela categories - retorna objetos {id, name}
   const useDistinctCategories = () => {
     return useQuery({
       queryKey: ['distinct-categories'],
@@ -38,7 +38,7 @@ export function useCategories() {
     });
   };
 
-  // Buscar todas as categorias da tabela categories (se ainda existir)
+  // Buscar todas as categorias da tabela categories
   const useAllCategories = (search?: string) => {
     return useQuery({
       queryKey: ['categories', search],
@@ -123,6 +123,7 @@ export function useCategories() {
       },
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ['categories'] });
+        queryClient.invalidateQueries({ queryKey: ['distinct-categories'] });
         toast({
           title: "Categoria criada",
           description: "A categoria foi criada com sucesso!",
@@ -162,6 +163,7 @@ export function useCategories() {
       },
       onSuccess: (_, variables) => {
         queryClient.invalidateQueries({ queryKey: ['categories'] });
+        queryClient.invalidateQueries({ queryKey: ['distinct-categories'] });
         queryClient.invalidateQueries({ queryKey: ['categories', variables.id] });
         toast({
           title: "Categoria atualizada",
@@ -195,6 +197,7 @@ export function useCategories() {
       },
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ['categories'] });
+        queryClient.invalidateQueries({ queryKey: ['distinct-categories'] });
         toast({
           title: "Categoria excluída",
           description: "A categoria foi removida com sucesso!",
