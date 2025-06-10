@@ -1,6 +1,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { ApiService } from "@/services/api";
 import { Category } from "@/types";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -13,7 +14,19 @@ export function useCategories() {
   const { toast } = useToast();
   const { user } = useAuth();
 
-  // Buscar todas as categorias
+  // Buscar categorias distintas da tabela products
+  const useDistinctCategories = () => {
+    return useQuery({
+      queryKey: ['distinct-categories'],
+      queryFn: async () => {
+        return await ApiService.getDistinctCategories();
+      },
+      enabled: !!user,
+      staleTime: 1000 * 60 * 5, // 5 minutos de cache
+    });
+  };
+
+  // Buscar todas as categorias da tabela categories (se ainda existir)
   const useAllCategories = (search?: string) => {
     return useQuery({
       queryKey: ['categories', search],
@@ -186,6 +199,7 @@ export function useCategories() {
   };
 
   return {
+    useDistinctCategories,
     useAllCategories,
     useCategory,
     useCreateCategory,

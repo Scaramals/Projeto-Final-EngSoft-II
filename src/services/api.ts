@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Product, StockMovement, FilterParams } from "@/types";
 import { SecureLogger } from "./secureLogger";
@@ -83,7 +82,7 @@ export const ApiService = {
   },
 
   /**
-   * Obter produtos com estoque baixo - corrigida a query
+   * Obter produtos com estoque baixo - usando função RPC
    */
   async getLowStockProducts(): Promise<Product[]> {
     try {
@@ -128,6 +127,51 @@ export const ApiService = {
     } catch (error) {
       SecureLogger.error('[ERROR] Erro ao buscar produtos com estoque baixo', error);
       return []; // Retornar array vazio em caso de erro
+    }
+  },
+
+  /**
+   * Obter categorias distintas diretamente da tabela products
+   */
+  async getDistinctCategories(): Promise<string[]> {
+    try {
+      const cacheKey = 'distinct_categories';
+      const cached = cacheService.get<string[]>(cacheKey);
+      
+      if (cached) {
+        SecureLogger.info('[CACHE] Categorias carregadas do cache');
+        return cached;
+      }
+
+      SecureLogger.info('[INFO] Buscando categorias distintas');
+      
+      // Buscar categorias distintas diretamente da tabela products
+      const { data, error } = await supabase
+        .from('products')
+        .select('category')
+        .not('category', 'is', null)
+        .order('category');
+
+      if (error) {
+        SecureLogger.error('[ERROR] Erro ao buscar categorias', error);
+        throw error;
+      }
+
+      // Extrair categorias únicas
+      const categories = Array.from(new Set(
+        (data || [])
+          .map(item => item.category)
+          .filter(category => category && category.trim() !== '')
+      )).sort();
+
+      // Cache por 5 minutos
+      cacheService.set(cacheKey, categories, 300);
+      
+      SecureLogger.success(`[SUCCESS] ${categories.length} categorias carregadas`);
+      return categories;
+    } catch (error) {
+      SecureLogger.error('[ERROR] Erro ao buscar categorias', error);
+      return [];
     }
   },
 

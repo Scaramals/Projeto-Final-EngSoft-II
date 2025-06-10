@@ -36,9 +36,9 @@ const InventoryPage: React.FC = () => {
   const { toast } = useToast();
   const pageRef = useRef<HTMLDivElement>(null);
   
-  // Usar hook de categorias para obter lista completa
-  const { useAllCategories } = useCategories();
-  const { data: categories = [], isLoading: loadingCategories } = useAllCategories();
+  // Usar hook de categorias para obter lista de nomes de categorias
+  const { useDistinctCategories } = useCategories();
+  const { data: categories = [], isLoading: loadingCategories } = useDistinctCategories();
   
   // Get products with filters
   const { useAllProducts } = useProducts();
@@ -48,15 +48,6 @@ const InventoryPage: React.FC = () => {
     sortBy: sortBy as any,
     sortDirection: sortDirection
   });
-  
-  // Criar um mapa de categorias para busca rápida
-  const categoryMap = useMemo(() => {
-    const map = new Map();
-    categories.forEach(category => {
-      map.set(category.id, category.name);
-    });
-    return map;
-  }, [categories]);
   
   // Filter products based on stock status - memoized for performance
   const filteredProducts = useMemo(() => {
@@ -86,12 +77,6 @@ const InventoryPage: React.FC = () => {
     setSearchQuery("");
     setFilter("all");
     setSelectedCategory("all");
-  };
-
-  // Função para obter o nome da categoria a partir do ID
-  const getCategoryName = (categoryId: string | null) => {
-    if (!categoryId) return "Sem categoria";
-    return categoryMap.get(categoryId) || "Categoria não encontrada";
   };
 
   return (
@@ -151,8 +136,8 @@ const InventoryPage: React.FC = () => {
                 <SelectContent>
                   <SelectItem value="all">Todas categorias</SelectItem>
                   {categories.map((category) => (
-                    <SelectItem key={category.id} value={category.id}>
-                      {category.name}
+                    <SelectItem key={category} value={category}>
+                      {category}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -223,7 +208,7 @@ const InventoryPage: React.FC = () => {
                         {product.name}
                       </TableCell>
                       <TableCell>
-                        {getCategoryName(product.category)}
+                        {product.category || "Sem categoria"}
                       </TableCell>
                       <TableCell className="font-medium">
                         {product.quantity}
