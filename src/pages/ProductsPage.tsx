@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { ProductCard } from "@/components/products/ProductCard";
@@ -29,33 +28,34 @@ type SortOption = "name" | "price" | "quantity" | "created_at";
 
 const ProductsPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("all");
   const [sortBy, setSortBy] = useState<SortOption>("name");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const searchRef = useRef<HTMLInputElement>(null);
   
-  // Get products with filters using ApiService
-  const { data: products = [], isLoading, error, refetch } = useQuery({
-    queryKey: ['products', searchQuery, selectedCategory, sortBy],
-    queryFn: () => ApiService.getProducts({
-      search: searchQuery || undefined,
-      category: selectedCategory || undefined,
-      sortBy: sortBy === "created_at" ? "name" : sortBy,
-      sortDirection: "asc"
-    }),
-    staleTime: 1000 * 60 * 2, // 2 minutes
+  // Get products with filters
+  const { useAllProducts } = useProducts();
+  const { data: products = [], isLoading, error, refetch } = useAllProducts({
+    search: searchQuery,
+    category: selectedCategory === "all" ? undefined : selectedCategory,
+    sortBy: sortBy === "created_at" ? "name" : sortBy,
+    sortDirection: "asc"
   });
 
-  // Get distinct categories using ApiService
-  const { data: categories = [] } = useQuery({
-    queryKey: ['distinct-categories'],
-    queryFn: () => ApiService.getDistinctCategories(),
-    staleTime: 1000 * 60 * 5, // 5 minutes
-  });
+  // Extract unique categories from products
+  const categories = React.useMemo(() => {
+    const uniqueCategories = new Set<string>();
+    products.forEach(product => {
+      if (product.category && product.category.trim()) {
+        uniqueCategories.add(product.category);
+      }
+    });
+    return Array.from(uniqueCategories).sort();
+  }, [products]);
 
   const handleClearFilters = () => {
     setSearchQuery("");
-    setSelectedCategory("");
+    setSelectedCategory("all");
     setSortBy("name");
     if (searchRef.current) {
       searchRef.current.focus();
@@ -116,7 +116,7 @@ const ProductsPage: React.FC = () => {
                 <SelectValue placeholder="Categoria" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todas Categorias</SelectItem>
+                <SelectItem value="all">Todas Categorias</SelectItem>
                 {categories.map((category) => (
                   <SelectItem key={category} value={category}>
                     {category}
