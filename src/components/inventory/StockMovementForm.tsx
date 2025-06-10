@@ -14,11 +14,14 @@ import { StockMovement } from "@/types";
 import { useToast } from "@/components/ui/use-toast";
 import { useProducts } from "@/hooks/useProducts";
 import { useSuppliers } from "@/hooks/useSuppliers";
+import { useStockMovements } from "@/hooks/useStockMovements";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Input } from "../ui/input";
+import { MovementTypeField } from "./MovementTypeField";
+import { QuantityField } from "./QuantityField";
+import { StockValidationService } from "@/services/stockValidationService";
 
 interface StockMovementFormProps {
   productId: string;
@@ -53,8 +56,9 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
   currentStock = 0,
 }) => {
   const { toast } = useToast();
-  const { useAddStockMovement, useProduct } = useProducts();
+  const { useProduct } = useProducts();
   const { useAllSuppliers } = useSuppliers();
+  const { useAddStockMovement } = useStockMovements();
   const { mutate: addStockMovement, isPending: isLoading } = useAddStockMovement();
   
   const { data: currentProduct } = useProduct(productId);
@@ -62,6 +66,7 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
   
   const { data: suppliers = [] } = useAllSuppliers();
   const formRef = useRef<HTMLFormElement>(null);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   const form = useForm<StockMovementFormValues>({
     resolver: zodResolver(stockMovementSchema),
@@ -78,7 +83,7 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
 
   const hasInsufficientStock = watchType === 'out' && watchQuantity > realTimeStock;
 
-  console.log('📊 Estoque atual:', realTimeStock, 'Quantidade solicitada:', watchQuantity);
+  console.log('📊 [FORM] Estoque atual:', realTimeStock, 'Quantidade solicitada:', watchQuantity);
 
   // Reset supplier when changing to 'out'
   React.useEffect(() => {
@@ -99,50 +104,63 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
     }
   }, [watchType, watchQuantity, realTimeStock, form]);
 
-  const handleSubmit = (values: StockMovementFormValues) => {
-    console.log('🔍 Enviando movimentação UMA VEZ:', values);
+  const handleSubmit = async (values: StockMovementFormValues) => {
+    console.log('🚀 [FORM] Iniciando submissão:', values);
     
-    // Prevenir múltiplas submissões
-    if (isLoading) {
-      console.log('⚠️ Já está processando, ignorando nova submissão');
+    // Prevenir submissões duplas
+    if (isSubmitting || isLoading) {
+      console.log('⚠️ [FORM] Submissão já em andamento, ignorando');
       return;
     }
     
-    if (values.quantity <= 0) {
-      toast({
-        variant: "destructive",
-        title: "Quantidade inválida",
-        description: "A quantidade deve ser maior que zero",
-      });
-      return;
-    }
+    setIsSubmitting(true);
     
-    const movement: Partial<StockMovement> = {
-      ...values,
-      productId,
-      supplierId: values.type === 'out' ? undefined : values.supplierId,
-    };
-    
-    console.log('✅ Enviando movimentação única:', movement);
-    
-    addStockMovement(movement, {
-      onSuccess: (data) => {
-        console.log('✅ Movimentação registrada:', data);
-        toast({
-          title: "Movimentação registrada",
-          description: `${values.type === 'in' ? 'Entrada' : 'Saída'} de ${values.quantity} unidades registrada com sucesso!`,
-        });
-        onSubmit();
-      },
-      onError: (error: any) => {
-        console.error('❌ Erro:', error);
+    try {
+      // Validação final do estoque
+      const validation = await StockValidationService.validateMovement(
+        productId, 
+        values.quantity, 
+        values.type
+      );
+      
+      if (!validation.valid) {
         toast({
           variant: "destructive",
-          title: "Erro ao registrar movimentação", 
-          description: error.message || "Ocorreu um erro inesperado.",
+          title: "Movimentação bloqueada",
+          description: validation.message,
         });
+        setIsSubmitting(false);
+        return;
       }
-    });
+      
+      const movement: Partial<StockMovement> = {
+        ...values,
+        productId,
+        supplierId: values.type === 'out' ? undefined : values.supplierId,
+      };
+      
+      console.log('✅ [FORM] Enviando movimentação validada:', movement);
+      
+      addStockMovement(movement, {
+        onSuccess: (data) => {
+          console.log('✅ [FORM] Movimentação registrada com sucesso:', data);
+          setIsSubmitting(false);
+          onSubmit();
+        },
+        onError: (error: any) => {
+          console.error('❌ [FORM] Erro:', error);
+          setIsSubmitting(false);
+        }
+      });
+    } catch (error) {
+      console.error('❌ [FORM] Erro na validação:', error);
+      setIsSubmitting(false);
+      toast({
+        variant: "destructive",
+        title: "Erro na validação",
+        description: "Ocorreu um erro ao validar a movimentação",
+      });
+    }
   };
 
   return (
@@ -153,25 +171,7 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
             control={form.control}
             name="type"
             render={({ field }) => (
-              <FormItem>
-                <FormLabel>Tipo de movimentação</FormLabel>
-                <Select
-                  onValueChange={field.onChange}
-                  defaultValue={field.value}
-                  disabled={isLoading}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o tipo" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="in">Entrada</SelectItem>
-                    <SelectItem value="out">Saída</SelectItem>
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
+              <MovementTypeField field={field} isLoading={isLoading || isSubmitting} />
             )}
           />
           
@@ -179,26 +179,13 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
             control={form.control}
             name="quantity"
             render={({ field }) => (
-              <FormItem>
-                <FormLabel>Quantidade</FormLabel>
-                <FormControl>
-                  <Input
-                    type="number"
-                    min="1"
-                    step="1"
-                    disabled={isLoading}
-                    {...field}
-                    className={hasInsufficientStock ? "border-yellow-500" : ""}
-                  />
-                </FormControl>
-                {watchType === "out" && (
-                  <FormDescription className={hasInsufficientStock ? "text-yellow-600" : ""}>
-                    Estoque disponível: {realTimeStock} unidades
-                    {hasInsufficientStock && " - ATENÇÃO: Quantidade maior que estoque!"}
-                  </FormDescription>
-                )}
-                <FormMessage />
-              </FormItem>
+              <QuantityField 
+                field={field}
+                movementType={watchType}
+                currentStock={realTimeStock}
+                isLoading={isLoading || isSubmitting}
+                hasInsufficientStock={hasInsufficientStock}
+              />
             )}
           />
 
@@ -212,7 +199,7 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
                   <Select
                     onValueChange={field.onChange}
                     value={field.value || ""}
-                    disabled={isLoading}
+                    disabled={isLoading || isSubmitting}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -247,7 +234,7 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
                     {...field}
                     placeholder="Informe detalhes sobre esta movimentação"
                     rows={3}
-                    disabled={isLoading}
+                    disabled={isLoading || isSubmitting}
                   />
                 </FormControl>
                 <FormMessage />
@@ -257,15 +244,15 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
         </div>
         
         <div className="flex justify-end space-x-3">
-          <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading}>
+          <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading || isSubmitting}>
             Cancelar
           </Button>
           <Button
             type="submit"
-            disabled={isLoading}
+            disabled={isLoading || isSubmitting}
             variant={watchType === "in" ? "default" : "destructive"}
           >
-            {isLoading
+            {isLoading || isSubmitting
               ? "Processando..."
               : watchType === "in"
               ? "Registrar entrada"

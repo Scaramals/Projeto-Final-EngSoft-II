@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -73,6 +72,7 @@ const ProductDetailPage: React.FC = () => {
   };
   
   const handleAddMovement = () => {
+    console.log('🎯 [DETAIL] Movimentação adicionada, fechando formulário');
     setIsAddingMovement(false);
   };
   
@@ -144,10 +144,10 @@ const ProductDetailPage: React.FC = () => {
           </div>
           <div className="bg-white rounded-lg shadow p-6">
             <StockMovementForm
-              productId={product.id}
+              productId={product?.id || ''}
               onSubmit={handleAddMovement}
               onCancel={() => setIsAddingMovement(false)}
-              currentStock={product.quantity}
+              currentStock={product?.quantity || 0}
             />
           </div>
         </div>
@@ -155,7 +155,7 @@ const ProductDetailPage: React.FC = () => {
         <div className="space-y-6">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
-              <h1 className="text-3xl font-bold">{product.name}</h1>
+              <h1 className="text-3xl font-bold">{product?.name || 'Carregando...'}</h1>
               <p className="text-muted-foreground">Detalhes do produto</p>
             </div>
             <div className="flex space-x-3">
@@ -185,7 +185,7 @@ const ProductDetailPage: React.FC = () => {
                     <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
                     <AlertDialogDescription>
                       Esta ação não pode ser desfeita. Isso excluirá permanentemente o produto 
-                      "{product.name}" e todos os dados associados.
+                      "{product?.name}" e todos os dados associados.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>

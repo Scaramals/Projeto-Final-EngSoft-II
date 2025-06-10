@@ -1,6 +1,7 @@
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Product, StockMovement, FilterParams } from "@/types";
+import { Product, FilterParams } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { SecureLogger } from "@/services/secureLogger";
 import { ApiService } from "@/services/api";
@@ -25,23 +26,6 @@ const mapDbProductToProduct = (dbProduct: any): Product => ({
 });
 
 /**
- * Helper function to convert database response to StockMovement type
- */
-const mapDbStockMovementToStockMovement = (dbMovement: any): StockMovement => ({
-  id: dbMovement.id,
-  productId: dbMovement.product_id,
-  quantity: dbMovement.quantity,
-  type: dbMovement.type as 'in' | 'out',
-  date: dbMovement.date,
-  notes: dbMovement.notes,
-  supplierId: dbMovement.supplier_id,
-  createdBy: dbMovement.created_by,
-  updatedAt: dbMovement.updated_at || dbMovement.date,
-  productName: dbMovement.product_name,
-  supplierName: dbMovement.supplier_name,
-});
-
-/**
  * Helper function to convert Product type to database format
  */
 const mapProductToDbProduct = (product: Partial<Product>, userId?: string) => {
@@ -61,26 +45,6 @@ const mapProductToDbProduct = (product: Partial<Product>, userId?: string) => {
   }
   
   return dbProduct;
-};
-
-/**
- * Helper function to convert StockMovement type to database format
- */
-const mapStockMovementToDbStockMovement = (movement: Partial<StockMovement>, userId?: string) => {
-  const dbMovement: any = {};
-  
-  if (movement.productId !== undefined) dbMovement.product_id = movement.productId;
-  if (movement.quantity !== undefined) dbMovement.quantity = movement.quantity;
-  if (movement.type !== undefined) dbMovement.type = movement.type;
-  if (movement.notes !== undefined) dbMovement.notes = movement.notes;
-  if (movement.supplierId !== undefined) dbMovement.supplier_id = movement.supplierId;
-  
-  if (userId) {
-    dbMovement.created_by = userId;
-    dbMovement.user_id = userId;
-  }
-  
-  return dbMovement;
 };
 
 export function useProducts() {
@@ -131,7 +95,7 @@ export function useProducts() {
       queryFn: async () => {
         if (!productId) throw new Error("Product ID is required");
         
-        console.log('🔄 Buscando produto ATUALIZADO do banco de dados:', productId);
+        console.log('🔄 [PRODUCTS] Buscando produto ATUALIZADO do banco:', productId);
         const { data, error } = await supabase
           .from('products')
           .select('*')
@@ -139,12 +103,12 @@ export function useProducts() {
           .single();
           
         if (error) {
-          console.error('❌ Erro ao buscar produto:', error);
+          console.error('❌ [PRODUCTS] Erro ao buscar produto:', error);
           throw new Error(`Error fetching product: ${error.message}`);
         }
         
         const product = mapDbProductToProduct(data);
-        console.log('📊 Produto carregado com estoque REAL:', product.quantity);
+        console.log('📊 [PRODUCTS] Produto carregado com estoque REAL:', product.quantity);
         return product;
       },
       enabled: !!user && !!productId,
@@ -173,7 +137,19 @@ export function useProducts() {
           throw new Error(`Erro ao buscar movimentações: ${error.message}`);
         }
         
-        return data.map(mapDbStockMovementToStockMovement) as StockMovement[];
+        return data.map((dbMovement: any) => ({
+          id: dbMovement.id,
+          productId: dbMovement.product_id,
+          quantity: dbMovement.quantity,
+          type: dbMovement.type as 'in' | 'out',
+          date: dbMovement.date,
+          notes: dbMovement.notes,
+          supplierId: dbMovement.supplier_id,
+          createdBy: dbMovement.created_by,
+          updatedAt: dbMovement.updated_at || dbMovement.date,
+          productName: dbMovement.product_name,
+          supplierName: dbMovement.supplier_name,
+        }));
       },
       enabled: !!user && !!productId,
     });
@@ -281,67 +257,6 @@ export function useProducts() {
     });
   };
 
-  // Add stock movement - SIMPLIFICADO para evitar execuções duplicadas
-  const useAddStockMovement = () => {
-    return useMutation({
-      mutationFn: async (movement: Partial<StockMovement>) => {
-        SecureLogger.info('Registrando movimentação de estoque');
-        
-        if (!movement.productId || !movement.quantity || !movement.type) {
-          throw new Error('Dados de movimentação incompletos');
-        }
-
-        console.log('💾 Registrando ÚNICA movimentação no banco:', movement);
-        
-        const dbMovement = mapStockMovementToDbStockMovement(movement, user?.id);
-        
-        const { data, error } = await supabase
-          .from('stock_movements')
-          .insert(dbMovement)
-          .select()
-          .single();
-          
-        if (error) {
-          console.error('❌ Erro no banco:', error);
-          SecureLogger.error('Erro no banco de dados', error);
-          
-          if (error.message && error.message.includes('Estoque insuficiente')) {
-            throw new Error(`Estoque insuficiente: ${error.message}`);
-          }
-          
-          throw new Error(`Erro ao registrar movimentação: ${error.message}`);
-        }
-        
-        console.log('✅ Movimentação registrada com sucesso - UMA VEZ');
-        SecureLogger.success('Movimentação registrada com sucesso');
-        return mapDbStockMovementToStockMovement(data);
-      },
-      onSuccess: (_, variables) => {
-        console.log('🔄 Invalidando queries uma única vez...');
-        
-        // APENAS invalidar queries necessárias - sem múltiplos refetches
-        queryClient.invalidateQueries({ queryKey: ['products', variables.productId] });
-        queryClient.invalidateQueries({ queryKey: ['productMovements', variables.productId] });
-        queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
-        
-        // Limpar cache da API
-        ApiService.clearCache();
-        
-        SecureLogger.success(`Movimentação ${variables.type} de ${variables.quantity} unidades registrada com SUCESSO`);
-        toast.success(`${variables.type === 'in' ? 'Entrada' : 'Saída'} de ${variables.quantity} unidades registrada com sucesso!`);
-      },
-      onError: (error: any) => {
-        console.error('❌ ERRO:', error.message);
-        SecureLogger.error('ERRO no registro da movimentação', error);
-        toast.error(`Operação bloqueada: ${error.message}`);
-        
-        // Apenas um refetch para sincronizar após erro
-        queryClient.invalidateQueries({ queryKey: ['products'] });
-        ApiService.clearCache();
-      }
-    });
-  };
-
   // Get top selling products
   const useTopSellingProducts = (limit: number = 5) => {
     return useQuery({
@@ -402,7 +317,6 @@ export function useProducts() {
     useCreateProduct,
     useUpdateProduct,
     useDeleteProduct,
-    useAddStockMovement,
     useTopSellingProducts,
     useLowStockProducts,
     useTotalStockValue
