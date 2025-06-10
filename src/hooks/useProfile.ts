@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Profile } from "@/types";
@@ -58,10 +57,10 @@ export function useProfile(userId?: string | null, options?: UseProfileOptions) 
         if (data) {
           const profileData: Profile = {
             id: data.id,
-            fullName: data.full_name,
+            full_name: data.full_name, // Corrigido
             role: data.role as 'admin' | 'employee',
-            createdAt: data.created_at,
-            updatedAt: data.updated_at
+            created_at: data.created_at,
+            updated_at: data.updated_at
           };
           
           // Armazene o perfil em cache por 10 minutos
@@ -115,10 +114,10 @@ export function useProfile(userId?: string | null, options?: UseProfileOptions) 
       if (data) {
         const profileData: Profile = {
           id: data.id,
-          fullName: data.full_name,
+          full_name: data.full_name, // Corrigido
           role: data.role as 'admin' | 'employee',
-          createdAt: data.created_at,
-          updatedAt: data.updated_at
+          created_at: data.created_at,
+          updated_at: data.updated_at
         };
         
         cacheService.set(`profile_${userId}`, profileData, 600);

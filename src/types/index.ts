@@ -82,7 +82,7 @@ export interface CategoryAnalysis {
 
 export interface Profile {
   id: string;
-  full_name?: string;
+  full_name?: string; // Corrigido: usar full_name em vez de fullName
   role?: string;
   is_master?: boolean;
   created_at: string;
@@ -97,6 +97,9 @@ export interface SupplierFormData {
   phone?: string;
   address?: string;
   notes?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
 }
 
 export interface ProductFormData {
@@ -104,7 +107,7 @@ export interface ProductFormData {
   description?: string;
   quantity: number;
   price: number;
-  categoryId?: string;
+  categoryId?: string; // Corrigido: usar categoryId em vez de category
   minimumStock?: number;
   imageUrl?: string;
   suppliers?: string[];

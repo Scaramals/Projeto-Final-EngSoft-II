@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { ProductsHeader } from "@/components/products/ProductsHeader";
@@ -32,10 +31,7 @@ const ProductsPage: React.FC = () => {
   const { data: categoriesData = [], isLoading: categoriesLoading } = useDistinctCategories();
 
   // Convert categories data to the expected format for ProductsFilters
-  const categories: Array<{id: string, name: string}> = categoriesData.map(cat => ({
-    id: cat.id,
-    name: cat.name
-  }));
+  const categories: Array<string> = categoriesData.map(cat => cat.name);
 
   // Debug logging to understand the data
   React.useEffect(() => {

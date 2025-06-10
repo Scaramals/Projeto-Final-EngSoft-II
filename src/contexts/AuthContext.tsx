@@ -66,10 +66,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (data) {
         const profileData: Profile = {
           id: data.id,
-          fullName: data.full_name,
+          full_name: data.full_name, // Corrigido
           role: data.role as 'admin' | 'employee' | 'developer',
-          createdAt: data.created_at,
-          updatedAt: data.updated_at,
+          created_at: data.created_at,
+          updated_at: data.updated_at,
           is_master: data.is_master || false
         };
         
@@ -337,7 +337,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoading(true);
       const updates = {
         id: user.id,
-        full_name: profileData.fullName,
+        full_name: profileData.full_name, // Corrigido
         updated_at: new Date().toISOString(),
       };
 
@@ -353,7 +353,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const updatedProfile = {
           ...profile,
           ...profileData,
-          updatedAt: new Date().toISOString()
+          updated_at: new Date().toISOString()
         };
         
         setProfile(updatedProfile);

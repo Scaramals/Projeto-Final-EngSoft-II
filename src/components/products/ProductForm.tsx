@@ -31,7 +31,7 @@ const productFormSchema = z.object({
   description: z.string().optional(),
   quantity: quantitySchema,
   price: currencySchema,
-  category: z.string().optional(),
+  categoryId: z.string().optional(), // Corrigido
   minimumStock: quantitySchema.optional(),
   imageUrl: z.string().optional(),
 });
@@ -58,7 +58,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
       description: "",
       quantity: 0,
       price: 0,
-      category: "",
+      categoryId: "", // Corrigido
       minimumStock: 5,
       imageUrl: "",
       ...defaultValues,
@@ -134,7 +134,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
 
             <FormField
               control={form.control}
-              name="category"
+              name="categoryId" // Corrigido
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Categoria</FormLabel>

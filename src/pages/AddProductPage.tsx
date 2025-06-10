@@ -24,7 +24,7 @@ const AddProductPage: React.FC = () => {
         description: productData.description,
         quantity: productData.quantity,
         price: productData.price,
-        category: productData.category,
+        categoryId: productData.categoryId, // Corrigido
         minimumStock: productData.minimumStock,
         imageUrl: productData.imageUrl,
       };

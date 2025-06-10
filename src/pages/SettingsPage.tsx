@@ -30,7 +30,7 @@ const SettingsPage: React.FC = () => {
       setEmail(user.email || "");
     }
     if (profile) {
-      setName(profile.fullName || "");
+      setName(profile.full_name || ""); // Corrigido
     }
   }, [user, profile]);
 
@@ -39,7 +39,7 @@ const SettingsPage: React.FC = () => {
     setIsProfileLoading(true);
     
     try {
-      await updateProfile({ fullName: name });
+      await updateProfile({ full_name: name }); // Corrigido
     } catch (error) {
       console.error("Error updating profile:", error);
     } finally {
