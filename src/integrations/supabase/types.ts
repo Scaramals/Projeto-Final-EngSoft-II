@@ -265,6 +265,10 @@ export type Database = {
           total_value: number
         }[]
       }
+      get_current_stock: {
+        Args: { product_id_param: string }
+        Returns: number
+      }
       get_dashboard_stats: {
         Args: Record<PropertyKey, never>
         Returns: Json
@@ -285,6 +289,17 @@ export type Database = {
           price: number
           quantity: number
           updated_at: string
+        }[]
+      }
+      get_low_stock_products_v2: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          name: string
+          quantity: number
+          minimum_stock: number
+          category: string
+          price: number
         }[]
       }
       get_movements_report: {
@@ -312,6 +327,22 @@ export type Database = {
           total_in: number
           total_out: number
           net_movement: number
+        }[]
+      }
+      get_movements_with_details: {
+        Args: { limit_param?: number }
+        Returns: {
+          id: string
+          product_id: string
+          product_name: string
+          quantity: number
+          type: string
+          date: string
+          notes: string
+          supplier_id: string
+          supplier_name: string
+          created_by: string
+          updated_at: string
         }[]
       }
       get_product_movement_history: {
@@ -401,6 +432,14 @@ export type Database = {
       is_permanent_admin: {
         Args: { user_id: string }
         Returns: boolean
+      }
+      validate_stock_movement: {
+        Args: {
+          product_id_param: string
+          quantity_param: number
+          type_param: string
+        }
+        Returns: Json
       }
     }
     Enums: {

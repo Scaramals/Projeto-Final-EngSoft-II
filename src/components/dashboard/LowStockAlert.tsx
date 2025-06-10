@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { StockService } from "@/services/stockService";
 import { SecureLogger } from "@/services/secureLogger";
 
 interface LowStockProduct {
@@ -12,6 +12,8 @@ interface LowStockProduct {
   name: string;
   quantity: number;
   minimum_stock: number | null;
+  category?: string;
+  price?: number;
 }
 
 export const LowStockAlert: React.FC = () => {
@@ -19,31 +21,24 @@ export const LowStockAlert: React.FC = () => {
   const [lowStockProducts, setLowStockProducts] = useState<LowStockProduct[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Buscar produtos com estoque baixo usando função RPC
+  // Buscar produtos com estoque baixo usando função RPC otimizada
   const fetchLowStockProducts = async () => {
     try {
-      SecureLogger.info('Buscando produtos com estoque baixo para alertas');
+      SecureLogger.info('Buscando produtos com estoque baixo');
       
-      // Usar função RPC que já existe no banco
-      const { data, error } = await supabase.rpc('get_low_stock_products');
-
-      if (error) {
-        SecureLogger.error('Erro ao buscar produtos', error);
-        throw new Error(`Erro ao buscar produtos: ${error.message}`);
-      }
-
-      // Converter e ordenar os produtos
-      const lowStockItems = (data || [])
-        .map(product => ({
-          id: product.id,
-          name: product.name,
-          quantity: product.quantity,
-          minimum_stock: product.minimum_stock
-        }))
-        .sort((a, b) => a.quantity - b.quantity);
+      const products = await StockService.getLowStockProducts();
+      
+      const lowStockItems = products.map(product => ({
+        id: product.id,
+        name: product.name,
+        quantity: product.quantity,
+        minimum_stock: product.minimum_stock,
+        category: product.category,
+        price: product.price
+      }));
 
       SecureLogger.success(`Produtos com estoque baixo encontrados: ${lowStockItems.length}`);
-      setLowStockProducts(lowStockItems as LowStockProduct[]);
+      setLowStockProducts(lowStockItems);
     } catch (error) {
       SecureLogger.error('Erro ao buscar produtos com estoque baixo', error);
       setLowStockProducts([]);

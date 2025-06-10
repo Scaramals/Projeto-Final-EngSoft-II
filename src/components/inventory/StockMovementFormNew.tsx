@@ -25,7 +25,8 @@ export const StockMovementFormNew: React.FC<StockMovementFormNewProps> = ({
   const { toast } = useToast();
   const [currentStock, setCurrentStock] = useState(0);
   const [isLoadingStock, setIsLoadingStock] = useState(true);
-  const [hasSubmitted, setHasSubmitted] = useState(false);
+  const [validationMessage, setValidationMessage] = useState<string | null>(null);
+  const [isValidating, setIsValidating] = useState(false);
 
   const {
     formData,
@@ -60,37 +61,42 @@ export const StockMovementFormNew: React.FC<StockMovementFormNewProps> = ({
 
   // Validação em tempo real para saídas
   useEffect(() => {
-    if (formData.type === 'out' && formData.quantity > 0 && currentStock > 0) {
+    if (formData.type === 'out' && formData.quantity > 0) {
       const validateRealTime = async () => {
-        const validation = await StockService.validateMovement(
-          productId,
-          formData.quantity,
-          formData.type
-        );
+        setIsValidating(true);
+        try {
+          const validation = await StockService.validateMovement(
+            productId,
+            formData.quantity,
+            formData.type
+          );
 
-        if (!validation.isValid) {
-          setErrors(prev => ({
-            ...prev,
-            quantity: validation.message
-          }));
-        } else {
-          setErrors(prev => ({
-            ...prev,
-            quantity: undefined
-          }));
+          if (!validation.isValid) {
+            setValidationMessage(validation.message || null);
+          } else {
+            setValidationMessage(null);
+          }
+        } catch (error) {
+          console.error('Erro na validação:', error);
+          setValidationMessage('Erro ao validar movimentação');
+        } finally {
+          setIsValidating(false);
         }
       };
 
       const timeoutId = setTimeout(validateRealTime, 300);
       return () => clearTimeout(timeoutId);
+    } else {
+      setValidationMessage(null);
+      setIsValidating(false);
     }
-  }, [formData.type, formData.quantity, currentStock, productId, setErrors]);
+  }, [formData.type, formData.quantity, productId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     // Prevenir submissão múltipla
-    if (isSubmitting || hasSubmitted) {
+    if (isSubmitting) {
       console.log('🚫 Submissão bloqueada - já em andamento');
       return;
     }
@@ -101,9 +107,18 @@ export const StockMovementFormNew: React.FC<StockMovementFormNewProps> = ({
       return;
     }
 
+    // Verificar se há erro de validação
+    if (validationMessage) {
+      toast({
+        title: "Erro de validação",
+        description: validationMessage,
+        variant: "destructive",
+      });
+      return;
+    }
+
     console.log('🚀 Iniciando submissão:', formData);
     setIsSubmitting(true);
-    setHasSubmitted(true);
 
     try {
       const result = await StockService.createMovement({
@@ -140,13 +155,11 @@ export const StockMovementFormNew: React.FC<StockMovementFormNewProps> = ({
       });
     } finally {
       setIsSubmitting(false);
-      // Permitir nova submissão após 2 segundos
-      setTimeout(() => setHasSubmitted(false), 2000);
     }
   };
 
-  const isOutOfStock = formData.type === 'out' && formData.quantity > currentStock;
-  const canSubmit = !isSubmitting && !hasSubmitted && !isLoadingStock && !isOutOfStock;
+  const hasInsufficientStock = validationMessage !== null && formData.type === 'out';
+  const canSubmit = !isSubmitting && !isLoadingStock && !hasInsufficientStock && !isValidating;
 
   return (
     <Card className="w-full max-w-2xl mx-auto">
@@ -178,12 +191,10 @@ export const StockMovementFormNew: React.FC<StockMovementFormNewProps> = ({
             </Alert>
           )}
 
-          {isOutOfStock && (
+          {validationMessage && (
             <Alert variant="destructive">
               <AlertTriangle className="h-4 w-4" />
-              <AlertDescription>
-                Quantidade solicitada é maior que o estoque disponível!
-              </AlertDescription>
+              <AlertDescription>{validationMessage}</AlertDescription>
             </Alert>
           )}
 
@@ -223,13 +234,17 @@ export const StockMovementFormNew: React.FC<StockMovementFormNewProps> = ({
                 }
               }}
               disabled={isSubmitting}
-              className={isOutOfStock ? "border-yellow-500" : ""}
+              className={hasInsufficientStock ? "border-red-500" : ""}
               placeholder="Digite a quantidade"
             />
             {formData.type === "out" && (
-              <p className={`text-sm ${isOutOfStock ? "text-yellow-600" : "text-muted-foreground"}`}>
+              <p className={`text-sm ${hasInsufficientStock ? "text-red-600" : "text-muted-foreground"}`}>
                 Estoque disponível: {currentStock} unidades
-                {isOutOfStock && " - ATENÇÃO: Quantidade maior que estoque!"}
+                {isValidating && (
+                  <span className="ml-2">
+                    <Loader2 className="h-3 w-3 animate-spin inline" />
+                  </span>
+                )}
               </p>
             )}
             {errors.quantity && (

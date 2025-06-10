@@ -11,8 +11,22 @@ export const useStockMovements = () => {
   const fetchAllStockMovements = useCallback(async () => {
     setIsLoadingAll(true);
     try {
-      console.log("[INFO] Buscando todas as movimentações de estoque");
+      console.log("[INFO] Buscando todas as movimentações via RPC");
       
+      const movements = await StockService.getMovementsWithDetails(100);
+      setAllStockMovements(movements);
+    } catch (error) {
+      console.error("Erro ao buscar movimentações:", error);
+      setAllStockMovements([]);
+    } finally {
+      setIsLoadingAll(false);
+    }
+  }, []);
+
+  const fetchProductMovements = useCallback(async (productId: string): Promise<StockMovement[]> => {
+    if (!productId) return [];
+    
+    try {
       const { data, error } = await supabase
         .from("stock_movements")
         .select(`
@@ -20,14 +34,15 @@ export const useStockMovements = () => {
           products!inner(name),
           suppliers(name, cnpj)
         `)
+        .eq('product_id', productId)
         .order("date", { ascending: false });
 
       if (error) {
-        console.error("Erro ao buscar movimentações:", error);
-        throw error;
+        console.error("Erro ao buscar movimentações do produto:", error);
+        return [];
       }
 
-      const movements = (data || []).map((movement) => ({
+      return (data || []).map((movement) => ({
         id: movement.id,
         productId: movement.product_id,
         productName: movement.products?.name,
@@ -41,20 +56,6 @@ export const useStockMovements = () => {
         createdBy: movement.created_by,
         updatedAt: movement.updated_at,
       })) as StockMovement[];
-
-      setAllStockMovements(movements);
-    } catch (error) {
-      console.error("Erro ao buscar movimentações:", error);
-    } finally {
-      setIsLoadingAll(false);
-    }
-  }, []);
-
-  const fetchProductMovements = useCallback(async (productId: string): Promise<StockMovement[]> => {
-    if (!productId) return [];
-    
-    try {
-      return await StockService.getProductMovements(productId);
     } catch (error) {
       console.error("Erro ao buscar movimentações do produto:", error);
       return [];
@@ -72,8 +73,26 @@ export const useStockMovements = () => {
 
       window.addEventListener('movements-updated', handleUpdate);
       
+      // Escutar realtime do Supabase
+      const channel = supabase
+        .channel('stock_movements_changes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'stock_movements'
+          },
+          () => {
+            console.log('📡 Movimentação atualizada via Realtime');
+            fetchAllStockMovements();
+          }
+        )
+        .subscribe();
+      
       return () => {
         window.removeEventListener('movements-updated', handleUpdate);
+        supabase.removeChannel(channel);
       };
     }, [fetchAllStockMovements]);
 

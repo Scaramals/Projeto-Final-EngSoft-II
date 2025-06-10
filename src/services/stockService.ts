@@ -6,6 +6,7 @@ export interface StockValidationResult {
   isValid: boolean;
   currentStock: number;
   message?: string;
+  productName?: string;
 }
 
 export interface CreateMovementData {
@@ -17,94 +18,64 @@ export interface CreateMovementData {
 }
 
 /**
- * Serviço principal para operações de estoque
+ * Serviço principal para operações de estoque - versão 2.0
+ * Agora usa as funções RPC do Supabase para evitar duplicação
  */
 export const StockService = {
   /**
-   * Validar movimentação de estoque em tempo real
+   * Validar movimentação usando função RPC do banco
    */
   async validateMovement(productId: string, quantity: number, type: 'in' | 'out'): Promise<StockValidationResult> {
     try {
-      console.log(`🔍 [STOCK_SERVICE] Validando ${type} de ${quantity} unidades para produto ${productId}`);
+      console.log(`🔍 [STOCK_SERVICE_V2] Validando ${type} de ${quantity} unidades para produto ${productId}`);
       
-      // Buscar estoque atual diretamente do banco
-      const { data: product, error } = await supabase
-        .from('products')
-        .select('quantity, name')
-        .eq('id', productId)
-        .single();
+      const { data, error } = await supabase.rpc('validate_stock_movement', {
+        product_id_param: productId,
+        quantity_param: quantity,
+        type_param: type
+      });
 
       if (error) {
-        console.error('❌ [STOCK_SERVICE] Erro ao buscar produto:', error);
+        console.error('❌ [STOCK_SERVICE_V2] Erro na validação RPC:', error);
         return {
           isValid: false,
           currentStock: 0,
-          message: 'Produto não encontrado'
+          message: 'Erro ao validar movimentação'
         };
       }
 
-      const currentStock = product.quantity;
-      console.log(`📊 [STOCK_SERVICE] Estoque atual: ${currentStock}`);
-
-      // Validação para saídas
-      if (type === 'out') {
-        if (currentStock === 0) {
-          return {
-            isValid: false,
-            currentStock,
-            message: `Produto "${product.name}" sem estoque disponível`
-          };
-        }
-
-        if (currentStock < quantity) {
-          return {
-            isValid: false,
-            currentStock,
-            message: `Estoque insuficiente. Disponível: ${currentStock}, Solicitado: ${quantity}`
-          };
-        }
-      }
-
+      console.log(`✅ [STOCK_SERVICE_V2] Resultado da validação:`, data);
       return {
-        isValid: true,
-        currentStock
+        isValid: data.isValid,
+        currentStock: data.currentStock,
+        message: data.message,
+        productName: data.productName
       };
     } catch (error) {
-      console.error('❌ [STOCK_SERVICE] Erro na validação:', error);
+      console.error('❌ [STOCK_SERVICE_V2] Erro crítico na validação:', error);
       return {
         isValid: false,
         currentStock: 0,
-        message: 'Erro ao validar movimentação'
+        message: 'Erro inesperado na validação'
       };
     }
   },
 
   /**
-   * Criar movimentação de estoque
+   * Criar movimentação usando inserção direta - o trigger cuida do resto
    */
   async createMovement(data: CreateMovementData): Promise<{ success: boolean; message?: string; data?: any }> {
     try {
-      console.log(`🚀 [STOCK_SERVICE] Criando movimentação:`, data);
+      console.log(`🚀 [STOCK_SERVICE_V2] Criando movimentação:`, data);
 
-      // Validação final antes da criação
-      const validation = await this.validateMovement(data.productId, data.quantity, data.type);
-      
-      if (!validation.isValid) {
-        console.error('❌ [STOCK_SERVICE] Validação falhou:', validation.message);
-        return {
-          success: false,
-          message: validation.message
-        };
-      }
-
-      // Criar movimentação
+      // O trigger no banco fará toda a validação e atualização do estoque
       const { data: movement, error } = await supabase
         .from('stock_movements')
         .insert({
           product_id: data.productId,
           quantity: data.quantity,
           type: data.type,
-          notes: data.notes || '',
+          notes: data.notes || null,
           supplier_id: data.supplierId || null,
           date: new Date().toISOString()
         })
@@ -112,16 +83,23 @@ export const StockService = {
         .single();
 
       if (error) {
-        console.error('❌ [STOCK_SERVICE] Erro ao criar movimentação:', error);
+        console.error('❌ [STOCK_SERVICE_V2] Erro ao criar movimentação:', error);
+        
+        // Verificar se é erro de estoque insuficiente
+        if (error.message.includes('Estoque insuficiente')) {
+          return {
+            success: false,
+            message: error.message
+          };
+        }
+        
         return {
           success: false,
-          message: error.message.includes('Estoque insuficiente') 
-            ? error.message 
-            : 'Erro ao registrar movimentação'
+          message: 'Erro ao registrar movimentação'
         };
       }
 
-      console.log('✅ [STOCK_SERVICE] Movimentação criada com sucesso:', movement);
+      console.log('✅ [STOCK_SERVICE_V2] Movimentação criada com sucesso:', movement);
       
       // Disparar eventos para atualização da UI
       window.dispatchEvent(new CustomEvent('stock-updated', { detail: { productId: data.productId } }));
@@ -132,7 +110,7 @@ export const StockService = {
         data: movement
       };
     } catch (error: any) {
-      console.error('❌ [STOCK_SERVICE] Erro crítico:', error);
+      console.error('❌ [STOCK_SERVICE_V2] Erro crítico:', error);
       return {
         success: false,
         message: error.message || 'Erro inesperado'
@@ -141,65 +119,76 @@ export const StockService = {
   },
 
   /**
-   * Buscar movimentações de um produto
+   * Buscar estoque atual usando função RPC otimizada
    */
-  async getProductMovements(productId: string): Promise<StockMovement[]> {
+  async getCurrentStock(productId: string): Promise<number> {
     try {
-      const { data, error } = await supabase
-        .from('stock_movements')
-        .select(`
-          *,
-          products!inner(name),
-          suppliers(name, cnpj)
-        `)
-        .eq('product_id', productId)
-        .order('date', { ascending: false });
+      const { data, error } = await supabase.rpc('get_current_stock', {
+        product_id_param: productId
+      });
 
       if (error) {
-        console.error('❌ [STOCK_SERVICE] Erro ao buscar movimentações:', error);
+        console.error('❌ [STOCK_SERVICE_V2] Erro ao buscar estoque:', error);
+        return 0;
+      }
+
+      return data || 0;
+    } catch (error) {
+      console.error('❌ [STOCK_SERVICE_V2] Erro ao buscar estoque:', error);
+      return 0;
+    }
+  },
+
+  /**
+   * Buscar movimentações usando função RPC otimizada
+   */
+  async getMovementsWithDetails(limit: number = 50): Promise<StockMovement[]> {
+    try {
+      const { data, error } = await supabase.rpc('get_movements_with_details', {
+        limit_param: limit
+      });
+
+      if (error) {
+        console.error('❌ [STOCK_SERVICE_V2] Erro ao buscar movimentações:', error);
         return [];
       }
 
       return (data || []).map(movement => ({
         id: movement.id,
         productId: movement.product_id,
-        productName: movement.products?.name,
+        productName: movement.product_name,
         quantity: movement.quantity,
         type: movement.type as 'in' | 'out',
         date: movement.date,
         supplierId: movement.supplier_id,
-        supplierName: movement.suppliers?.name,
+        supplierName: movement.supplier_name,
         notes: movement.notes,
-        userId: movement.user_id,
+        userId: movement.created_by,
         createdBy: movement.created_by,
         updatedAt: movement.updated_at
       }));
     } catch (error) {
-      console.error('❌ [STOCK_SERVICE] Erro ao buscar movimentações:', error);
+      console.error('❌ [STOCK_SERVICE_V2] Erro ao buscar movimentações:', error);
       return [];
     }
   },
 
   /**
-   * Buscar estoque atual de um produto
+   * Buscar produtos com estoque baixo usando nova função RPC
    */
-  async getCurrentStock(productId: string): Promise<number> {
+  async getLowStockProducts(): Promise<any[]> {
     try {
-      const { data, error } = await supabase
-        .from('products')
-        .select('quantity')
-        .eq('id', productId)
-        .single();
+      const { data, error } = await supabase.rpc('get_low_stock_products_v2');
 
       if (error) {
-        console.error('❌ [STOCK_SERVICE] Erro ao buscar estoque:', error);
-        return 0;
+        console.error('❌ [STOCK_SERVICE_V2] Erro ao buscar produtos com estoque baixo:', error);
+        return [];
       }
 
-      return data.quantity || 0;
+      return data || [];
     } catch (error) {
-      console.error('❌ [STOCK_SERVICE] Erro ao buscar estoque:', error);
-      return 0;
+      console.error('❌ [STOCK_SERVICE_V2] Erro ao buscar produtos com estoque baixo:', error);
+      return [];
     }
   }
 };
