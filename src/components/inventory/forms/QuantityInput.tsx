@@ -38,21 +38,26 @@ export const QuantityInput: React.FC<QuantityInputProps> = ({
 
   return (
     <div className="space-y-2">
-      <label className="text-sm font-medium">Quantidade</label>
+      <label className="text-sm font-medium">Quantidade*</label>
       <Input
         type="number"
-        min="0"
+        min="1"
         step="1"
         value={value === 0 ? '' : value.toString()}
         disabled={disabled}
         className={hasInsufficientStock ? "border-yellow-500" : ""}
         onChange={handleInputChange}
-        placeholder="Digite a quantidade"
+        placeholder="Digite a quantidade (obrigatório)"
       />
       {type === "out" && (
         <p className={`text-sm ${hasInsufficientStock ? "text-yellow-600" : "text-muted-foreground"}`}>
           Estoque disponível: {currentStock} unidades
           {hasInsufficientStock && " - ATENÇÃO: Quantidade maior que estoque!"}
+        </p>
+      )}
+      {value === 0 && (
+        <p className="text-sm font-medium text-destructive">
+          Quantidade é obrigatória e deve ser maior que zero
         </p>
       )}
       {error && (

@@ -50,6 +50,10 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     if (formData.quantity < 0) {
       newErrors.quantity = "Quantidade não pode ser negativa";
     }
+
+    if (formData.minimumStock < 0) {
+      newErrors.minimumStock = "Estoque mínimo não pode ser negativo";
+    }
     
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -145,6 +149,9 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                 value={formData.minimumStock}
                 onChange={(e) => handleChange('minimumStock', parseInt(e.target.value) || 0)}
               />
+              {errors.minimumStock && (
+                <p className="text-sm font-medium text-destructive">{errors.minimumStock}</p>
+              )}
             </div>
           </div>
 

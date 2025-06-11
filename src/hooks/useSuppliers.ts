@@ -148,10 +148,20 @@ export function useSuppliers() {
         try {
           SecureLogger.info('Criando novo fornecedor');
           
+          // Validação obrigatória no frontend
+          if (!supplier.name || supplier.name.trim() === '') {
+            throw new Error('Nome do fornecedor é obrigatório');
+          }
+          
+          if (!supplier.cnpj || supplier.cnpj.trim() === '') {
+            throw new Error('CNPJ é obrigatório');
+          }
+          
           // Limpar campos vazios antes de enviar
           const cleanedSupplier = {
             ...supplier,
-            cnpj: supplier.cnpj && supplier.cnpj.trim() !== '' ? supplier.cnpj.trim() : null,
+            name: supplier.name.trim(),
+            cnpj: supplier.cnpj.trim(),
             contactName: supplier.contactName && supplier.contactName.trim() !== '' ? supplier.contactName.trim() : null,
             email: supplier.email && supplier.email.trim() !== '' ? supplier.email.trim() : null,
             phone: supplier.phone && supplier.phone.trim() !== '' ? supplier.phone.trim() : null,

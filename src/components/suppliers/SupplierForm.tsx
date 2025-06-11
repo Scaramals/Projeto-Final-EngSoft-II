@@ -14,17 +14,15 @@ import {
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { CnpjInput } from '@/components/ui/cnpj-input';
+import { PhoneInput } from '@/components/ui/phone-input';
 import { SupplierFormData } from '@/types';
-
-const cnpjRegex = /^\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}$/;
 
 const supplierSchema = z.object({
   name: z.string().min(2, 'O nome deve ter pelo menos 2 caracteres'),
   cnpj: z.string()
-    .optional()
-    .refine((val) => !val || val.trim() === '' || cnpjRegex.test(val), {
-      message: 'CNPJ deve estar no formato 00.000.000/0000-00'
-    }),
+    .min(1, 'CNPJ é obrigatório')
+    .regex(/^\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}$/, 'CNPJ deve estar no formato 00.000.000/0000-00'),
   contactName: z.string().optional(),
   email: z.string().email('Email inválido').optional().or(z.literal('')),
   phone: z.string().optional(),
@@ -57,27 +55,20 @@ const SupplierForm: React.FC<SupplierFormProps> = ({
     }
   });
 
-  const formatCNPJ = (value: string) => {
-    const numbers = value.replace(/\D/g, '');
-    if (numbers.length <= 14) {
-      return numbers
-        .replace(/(\d{2})(\d)/, '$1.$2')
-        .replace(/(\d{3})(\d)/, '$1.$2')
-        .replace(/(\d{3})(\d)/, '$1/$2')
-        .replace(/(\d{4})(\d)/, '$1-$2');
-    }
-    return value;
-  };
-
   const handleFormSubmit = (data: SupplierFormData) => {
-    // Limpar CNPJ vazio para evitar conflitos de unique constraint
-    const cleanedData = {
-      ...data,
-      cnpj: data.cnpj && data.cnpj.trim() !== '' ? data.cnpj : undefined
-    };
+    // Validação adicional
+    if (!data.name.trim()) {
+      form.setError('name', { message: 'Nome do fornecedor é obrigatório' });
+      return;
+    }
     
-    console.log('📝 [SUPPLIER_FORM] Dados enviados:', cleanedData);
-    onSubmit(cleanedData);
+    if (!data.cnpj.trim()) {
+      form.setError('cnpj', { message: 'CNPJ é obrigatório' });
+      return;
+    }
+
+    console.log('📝 [SUPPLIER_FORM] Dados enviados:', data);
+    onSubmit(data);
   };
 
   return (
@@ -107,17 +98,12 @@ const SupplierForm: React.FC<SupplierFormProps> = ({
             name="cnpj"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-sm sm:text-base">CNPJ</FormLabel>
+                <FormLabel className="text-sm sm:text-base">CNPJ*</FormLabel>
                 <FormControl>
-                  <Input 
-                    placeholder="00.000.000/0000-00 (opcional)" 
-                    className="text-sm sm:text-base" 
-                    {...field}
-                    onChange={(e) => {
-                      const formatted = formatCNPJ(e.target.value);
-                      field.onChange(formatted);
-                    }}
-                    maxLength={18}
+                  <CnpjInput
+                    value={field.value}
+                    onChange={field.onChange}
+                    className="text-sm sm:text-base"
                   />
                 </FormControl>
                 <FormMessage />
@@ -171,10 +157,10 @@ const SupplierForm: React.FC<SupplierFormProps> = ({
               <FormItem>
                 <FormLabel className="text-sm sm:text-base">Telefone</FormLabel>
                 <FormControl>
-                  <Input 
-                    placeholder="Telefone de contato" 
-                    className="text-sm sm:text-base" 
-                    {...field} 
+                  <PhoneInput
+                    value={field.value}
+                    onChange={field.onChange}
+                    className="text-sm sm:text-base"
                   />
                 </FormControl>
                 <FormMessage />
