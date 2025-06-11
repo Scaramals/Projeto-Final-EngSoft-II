@@ -26,7 +26,7 @@ export const useStockMovements = () => {
     }
   }, []);
 
-  // CRIAR MOVIMENTAÇÃO ULTRA-SIMPLIFICADA
+  // CRIAR MOVIMENTAÇÃO COM LOGS DETALHADOS
   const createMovement = useCallback(async (data: {
     productId: string;
     quantity: number;
@@ -34,17 +34,26 @@ export const useStockMovements = () => {
     notes?: string;
     supplierId?: string;
   }) => {
+    console.log(`🎯 [USE_STOCK_MOVEMENTS] === INÍCIO CREATE MOVEMENT ===`);
+    console.log(`🎯 [USE_STOCK_MOVEMENTS] Hook chamado com:`, data);
+    console.log(`🎯 [USE_STOCK_MOVEMENTS] Timestamp:`, new Date().toISOString());
+    
     try {
-      return await StockService.createMovement(data);
+      const result = await StockService.createMovement(data);
+      console.log(`🎯 [USE_STOCK_MOVEMENTS] Resultado do serviço:`, result);
+      console.log(`🎯 [USE_STOCK_MOVEMENTS] === FIM CREATE MOVEMENT ===`);
+      return result;
     } catch (error: any) {
-      console.error('Erro ao criar movimentação:', error);
+      console.error('❌ [USE_STOCK_MOVEMENTS] Erro no hook:', error);
+      console.log(`🎯 [USE_STOCK_MOVEMENTS] === FIM CREATE MOVEMENT (ERRO) ===`);
       return { success: false, message: error.message };
     }
   }, []);
 
-  // Hook para movimentações em tempo real - SIMPLIFICADO
+  // Hook para movimentações em tempo real - SIMPLIFICADO COM LOGS
   const useRealtimeMovements = (productId?: string, limit: number = 50) => {
     useEffect(() => {
+      console.log(`📡 [REALTIME] Configurando realtime para produto:`, productId);
       fetchMovements(productId, limit);
 
       // APENAS realtime do Supabase
@@ -57,14 +66,15 @@ export const useStockMovements = () => {
             schema: 'public',
             table: 'stock_movements'
           },
-          () => {
-            console.log('📡 Movimentação atualizada via Realtime');
+          (payload) => {
+            console.log('📡 [REALTIME] Movimentação atualizada via Realtime:', payload);
             fetchMovements(productId, limit);
           }
         )
         .subscribe();
 
       return () => {
+        console.log(`📡 [REALTIME] Removendo canal realtime`);
         supabase.removeChannel(channel);
       };
     }, [productId, limit, fetchMovements]);

@@ -28,9 +28,30 @@ export const StockService = {
    */
   async createMovement(data: CreateMovementData): Promise<{ success: boolean; message?: string; data?: any }> {
     try {
-      console.log(`🚀 [STOCK_SERVICE] Criando movimentação SIMPLES:`, data);
+      console.log(`🚀 [STOCK_SERVICE] === INÍCIO CRIAÇÃO MOVIMENTAÇÃO ===`);
+      console.log(`🚀 [STOCK_SERVICE] Dados recebidos:`, data);
+      console.log(`🚀 [STOCK_SERVICE] Timestamp:`, new Date().toISOString());
+
+      // BUSCAR ESTOQUE ANTES DA MOVIMENTAÇÃO
+      const { data: productBefore, error: productError } = await supabase
+        .from('products')
+        .select('quantity, name')
+        .eq('id', data.productId)
+        .single();
+
+      if (productError) {
+        console.error('❌ [STOCK_SERVICE] Erro ao buscar produto:', productError);
+        return {
+          success: false,
+          message: 'Produto não encontrado'
+        };
+      }
+
+      console.log(`📊 [STOCK_SERVICE] Estoque ANTES: ${productBefore.quantity} para produto "${productBefore.name}"`);
 
       // APENAS INSERIR - SEM VALIDAÇÃO MANUAL, SEM EVENTOS CUSTOMIZADOS
+      console.log(`💾 [STOCK_SERVICE] Inserindo movimentação no banco...`);
+      
       const { data: movement, error } = await supabase
         .from('stock_movements')
         .insert({
@@ -60,7 +81,37 @@ export const StockService = {
         };
       }
 
-      console.log('✅ [STOCK_SERVICE] Movimentação criada:', movement);
+      console.log('✅ [STOCK_SERVICE] Movimentação inserida no banco:', movement);
+
+      // BUSCAR ESTOQUE DEPOIS DA MOVIMENTAÇÃO
+      const { data: productAfter, error: productAfterError } = await supabase
+        .from('products')
+        .select('quantity, name')
+        .eq('id', data.productId)
+        .single();
+
+      if (productAfterError) {
+        console.error('❌ [STOCK_SERVICE] Erro ao buscar produto após movimentação:', productAfterError);
+      } else {
+        console.log(`📊 [STOCK_SERVICE] Estoque DEPOIS: ${productAfter.quantity} para produto "${productAfter.name}"`);
+        
+        const expectedChange = data.type === 'in' ? data.quantity : -data.quantity;
+        const actualChange = productAfter.quantity - productBefore.quantity;
+        
+        console.log(`🔍 [STOCK_SERVICE] ANÁLISE:`);
+        console.log(`   - Mudança esperada: ${expectedChange}`);
+        console.log(`   - Mudança real: ${actualChange}`);
+        console.log(`   - Status: ${actualChange === expectedChange ? '✅ CORRETO' : '❌ INCORRETO'}`);
+        
+        if (actualChange !== expectedChange) {
+          console.error(`🚨 [STOCK_SERVICE] DUPLICAÇÃO DETECTADA!`);
+          console.error(`   - Movimentação: ${data.type} ${data.quantity}`);
+          console.error(`   - Esperado: ${expectedChange}`);
+          console.error(`   - Real: ${actualChange}`);
+        }
+      }
+      
+      console.log(`🚀 [STOCK_SERVICE] === FIM CRIAÇÃO MOVIMENTAÇÃO ===`);
       
       // SEM EVENTOS CUSTOMIZADOS - APENAS REALTIME DO SUPABASE
       return {

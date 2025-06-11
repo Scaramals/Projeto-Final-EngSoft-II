@@ -114,13 +114,22 @@ export const SimplifiedStockForm: React.FC<SimplifiedStockFormProps> = ({
     return Object.keys(newErrors).length === 0;
   };
 
-  // Submeter formulário - SIMPLIFICADO
+  // Submeter formulário - COM LOGS DETALHADOS
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (isLoading) return;
+    console.log(`🔥 [FORM] === INÍCIO SUBMIT ===`);
+    console.log(`🔥 [FORM] Dados do formulário:`, formData);
+    console.log(`🔥 [FORM] isLoading atual:`, isLoading);
+    console.log(`🔥 [FORM] Timestamp:`, new Date().toISOString());
+
+    if (isLoading) {
+      console.log('🚫 [FORM] Submissão bloqueada - já em andamento');
+      return;
+    }
 
     if (!validateForm()) {
+      console.log('❌ [FORM] Validação falhou:', errors);
       toast({
         title: "Erro de validação",
         description: "Corrija os campos marcados em vermelho",
@@ -129,6 +138,18 @@ export const SimplifiedStockForm: React.FC<SimplifiedStockFormProps> = ({
       return;
     }
 
+    // Verificar se há erro de validação
+    if (validationMessage) {
+      console.log('❌ [FORM] Validação em tempo real falhou:', validationMessage);
+      toast({
+        title: "Erro de validação",
+        description: validationMessage,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    console.log('🚀 [FORM] Iniciando submissão...');
     setIsLoading(true);
 
     try {
@@ -141,7 +162,10 @@ export const SimplifiedStockForm: React.FC<SimplifiedStockFormProps> = ({
         supplierId: formData.supplierId // Agora sempre obrigatório
       });
 
+      console.log('📊 [FORM] Resultado da criação:', result);
+
       if (result.success) {
+        console.log('✅ [FORM] Movimentação criada com sucesso');
         toast({
           title: "Sucesso",
           description: `${formData.type === 'in' ? 'Entrada' : 'Saída'} registrada com sucesso`,
@@ -155,8 +179,10 @@ export const SimplifiedStockForm: React.FC<SimplifiedStockFormProps> = ({
           supplierId: ''
         });
         
+        console.log('🔥 [FORM] === FIM SUBMIT (SUCESSO) ===');
         onSuccess();
       } else {
+        console.log('❌ [FORM] Erro na criação:', result.message);
         toast({
           title: "Erro",
           description: result.message || "Erro ao registrar movimentação",
@@ -164,7 +190,7 @@ export const SimplifiedStockForm: React.FC<SimplifiedStockFormProps> = ({
         });
       }
     } catch (error) {
-      console.error('Erro:', error);
+      console.error('❌ [FORM] Erro na submissão:', error);
       toast({
         title: "Erro",
         description: "Erro inesperado ao processar solicitação",
@@ -172,6 +198,7 @@ export const SimplifiedStockForm: React.FC<SimplifiedStockFormProps> = ({
       });
     } finally {
       setIsLoading(false);
+      console.log('🔥 [FORM] === FIM SUBMIT ===');
     }
   };
 
