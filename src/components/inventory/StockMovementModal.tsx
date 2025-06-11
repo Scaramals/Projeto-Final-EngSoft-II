@@ -41,8 +41,12 @@ export const StockMovementModal: React.FC<StockMovementModalProps> = ({
   const [validationError, setValidationError] = useState<string | null>(null);
 
   const validateForm = () => {
+    console.log(`🔍 [MODAL] === INÍCIO VALIDAÇÃO ===`);
+    console.log(`🔍 [MODAL] Dados para validar:`, formData);
+    
     if (formData.quantity <= 0) {
       setValidationError('Quantidade deve ser maior que zero');
+      console.log('❌ [MODAL] Validação falhou: quantidade <= 0');
       return false;
     }
 
@@ -53,33 +57,64 @@ export const StockMovementModal: React.FC<StockMovementModalProps> = ({
       } else {
         setValidationError('Fornecedor é obrigatório para saídas de estoque');
       }
+      console.log('❌ [MODAL] Validação falhou: fornecedor obrigatório');
       return false;
     }
 
     if (formData.type === 'out' && formData.quantity > currentStock) {
       setValidationError(`Quantidade não pode exceder o estoque atual (${currentStock})`);
+      console.log('❌ [MODAL] Validação falhou: quantidade > estoque');
       return false;
     }
 
     setValidationError(null);
+    console.log('✅ [MODAL] Validação passou');
+    console.log(`🔍 [MODAL] === FIM VALIDAÇÃO ===`);
     return true;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!validateForm() || isSubmitting) return;
+    console.log(`🚀 [MODAL] === INÍCIO SUBMIT ===`);
+    console.log(`🚀 [MODAL] Dados do formulário:`, formData);
+    console.log(`🚀 [MODAL] isSubmitting atual:`, isSubmitting);
+    console.log(`🚀 [MODAL] Estoque atual:`, currentStock);
+    console.log(`🚀 [MODAL] Timestamp:`, new Date().toISOString());
+    
+    if (!validateForm() || isSubmitting) {
+      console.log('🚫 [MODAL] Submit bloqueado - validação falhou ou já em andamento');
+      return;
+    }
 
+    console.log('🚀 [MODAL] Iniciando submissão...');
     setIsSubmitting(true);
 
     try {
+      // BUSCAR ESTOQUE ANTES DA MOVIMENTAÇÃO
+      console.log(`📊 [MODAL] Buscando estoque antes da movimentação...`);
+      const { data: productBefore, error: productError } = await supabase
+        .from('products')
+        .select('quantity, name')
+        .eq('id', productId)
+        .single();
+
+      if (productError) {
+        console.error('❌ [MODAL] Erro ao buscar produto:', productError);
+        throw productError;
+      }
+
+      console.log(`📊 [MODAL] Estoque ANTES: ${productBefore.quantity} para produto "${productBefore.name}"`);
+
       // Validação adicional para fornecedor obrigatório
       if (!formData.supplierId) {
         setValidationError('Fornecedor é obrigatório para todas as movimentações');
+        console.log('❌ [MODAL] Erro: fornecedor obrigatório');
         return;
       }
 
       // Usar a função existente validate_stock_movement para validar
+      console.log(`🔍 [MODAL] Validando movimentação via RPC...`);
       const { data: validation, error: validationErr } = await supabase.rpc(
         'validate_stock_movement',
         {
@@ -90,31 +125,73 @@ export const StockMovementModal: React.FC<StockMovementModalProps> = ({
       );
 
       if (validationErr) {
+        console.error('❌ [MODAL] Erro na validação RPC:', validationErr);
         throw validationErr;
       }
 
       // Cast do resultado para o tipo esperado
       const validationResult = validation as any;
+      console.log(`🔍 [MODAL] Resultado da validação:`, validationResult);
       
       if (!validationResult.isValid) {
         setValidationError(validationResult.message);
+        console.log('❌ [MODAL] Validação RPC falhou:', validationResult.message);
         return;
       }
 
       // Inserir movimentação com fornecedor obrigatório
-      const { error: insertError } = await supabase
+      console.log(`💾 [MODAL] Inserindo movimentação no banco...`);
+      const movementData = {
+        product_id: productId,
+        quantity: formData.quantity,
+        type: formData.type,
+        notes: formData.notes.trim() || null,
+        supplier_id: formData.supplierId, // Sempre obrigatório agora
+        date: new Date().toISOString()
+      };
+      
+      console.log(`💾 [MODAL] Dados da movimentação:`, movementData);
+      
+      const { data: insertedMovement, error: insertError } = await supabase
         .from('stock_movements')
-        .insert({
-          product_id: productId,
-          quantity: formData.quantity,
-          type: formData.type,
-          notes: formData.notes.trim() || null,
-          supplier_id: formData.supplierId, // Sempre obrigatório agora
-          date: new Date().toISOString()
-        });
+        .insert(movementData)
+        .select()
+        .single();
 
       if (insertError) {
+        console.error('❌ [MODAL] Erro ao inserir movimentação:', insertError);
         throw insertError;
+      }
+
+      console.log('✅ [MODAL] Movimentação inserida:', insertedMovement);
+
+      // BUSCAR ESTOQUE DEPOIS DA MOVIMENTAÇÃO
+      console.log(`📊 [MODAL] Buscando estoque depois da movimentação...`);
+      const { data: productAfter, error: productAfterError } = await supabase
+        .from('products')
+        .select('quantity, name')
+        .eq('id', productId)
+        .single();
+
+      if (productAfterError) {
+        console.error('❌ [MODAL] Erro ao buscar produto após movimentação:', productAfterError);
+      } else {
+        console.log(`📊 [MODAL] Estoque DEPOIS: ${productAfter.quantity} para produto "${productAfter.name}"`);
+        
+        const expectedChange = formData.type === 'in' ? formData.quantity : -formData.quantity;
+        const actualChange = productAfter.quantity - productBefore.quantity;
+        
+        console.log(`🔍 [MODAL] ANÁLISE:`);
+        console.log(`   - Mudança esperada: ${expectedChange}`);
+        console.log(`   - Mudança real: ${actualChange}`);
+        console.log(`   - Status: ${actualChange === expectedChange ? '✅ CORRETO' : '❌ INCORRETO'}`);
+        
+        if (actualChange !== expectedChange) {
+          console.error(`🚨 [MODAL] DUPLICAÇÃO DETECTADA!`);
+          console.error(`   - Movimentação: ${formData.type} ${formData.quantity}`);
+          console.error(`   - Esperado: ${expectedChange}`);
+          console.error(`   - Real: ${actualChange}`);
+        }
       }
 
       toast({
@@ -130,11 +207,13 @@ export const StockMovementModal: React.FC<StockMovementModalProps> = ({
         supplierId: ''
       });
       
+      console.log('🚀 [MODAL] === FIM SUBMIT (SUCESSO) ===');
       onSuccess();
       onClose();
 
     } catch (error: any) {
-      console.error('Erro ao registrar movimentação:', error);
+      console.error('❌ [MODAL] Erro na submissão:', error);
+      console.log('🚀 [MODAL] === FIM SUBMIT (ERRO) ===');
       toast({
         title: "Erro",
         description: error.message || "Erro ao registrar movimentação",
