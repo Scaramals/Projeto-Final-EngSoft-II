@@ -22,7 +22,7 @@ const supplierSchema = z.object({
   name: z.string().min(2, 'O nome deve ter pelo menos 2 caracteres'),
   cnpj: z.string()
     .optional()
-    .refine((val) => !val || cnpjRegex.test(val), {
+    .refine((val) => !val || val.trim() === '' || cnpjRegex.test(val), {
       message: 'CNPJ deve estar no formato 00.000.000/0000-00'
     }),
   contactName: z.string().optional(),
@@ -69,9 +69,20 @@ const SupplierForm: React.FC<SupplierFormProps> = ({
     return value;
   };
 
+  const handleFormSubmit = (data: SupplierFormData) => {
+    // Limpar CNPJ vazio para evitar conflitos de unique constraint
+    const cleanedData = {
+      ...data,
+      cnpj: data.cnpj && data.cnpj.trim() !== '' ? data.cnpj : undefined
+    };
+    
+    console.log('📝 [SUPPLIER_FORM] Dados enviados:', cleanedData);
+    onSubmit(cleanedData);
+  };
+
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 sm:space-y-6">
+      <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 sm:space-y-6">
         <FormField
           control={form.control}
           name="name"
@@ -99,7 +110,7 @@ const SupplierForm: React.FC<SupplierFormProps> = ({
                 <FormLabel className="text-sm sm:text-base">CNPJ</FormLabel>
                 <FormControl>
                   <Input 
-                    placeholder="00.000.000/0000-00" 
+                    placeholder="00.000.000/0000-00 (opcional)" 
                     className="text-sm sm:text-base" 
                     {...field}
                     onChange={(e) => {

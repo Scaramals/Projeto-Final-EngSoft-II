@@ -148,7 +148,20 @@ export function useSuppliers() {
         try {
           SecureLogger.info('Criando novo fornecedor');
           
-          const dbSupplier = mapSupplierToDbSupplier(supplier, user?.id);
+          // Limpar campos vazios antes de enviar
+          const cleanedSupplier = {
+            ...supplier,
+            cnpj: supplier.cnpj && supplier.cnpj.trim() !== '' ? supplier.cnpj.trim() : null,
+            contactName: supplier.contactName && supplier.contactName.trim() !== '' ? supplier.contactName.trim() : null,
+            email: supplier.email && supplier.email.trim() !== '' ? supplier.email.trim() : null,
+            phone: supplier.phone && supplier.phone.trim() !== '' ? supplier.phone.trim() : null,
+            address: supplier.address && supplier.address.trim() !== '' ? supplier.address.trim() : null,
+            notes: supplier.notes && supplier.notes.trim() !== '' ? supplier.notes.trim() : null
+          };
+          
+          console.log('📝 [SUPPLIER_HOOK] Dados limpos para inserção:', cleanedSupplier);
+          
+          const dbSupplier = mapSupplierToDbSupplier(cleanedSupplier, user?.id);
           
           const { data, error } = await supabase
             .from('suppliers')
@@ -157,6 +170,12 @@ export function useSuppliers() {
             .single();
             
           if (error) {
+            console.error('❌ [SUPPLIER_HOOK] Erro detalhado:', error);
+            
+            if (error.code === '23505' && error.message.includes('suppliers_cnpj_key')) {
+              throw new Error('Este CNPJ já está cadastrado para outro fornecedor');
+            }
+            
             SecureLogger.error('Erro ao criar fornecedor', error);
             throw new Error(`Erro ao criar fornecedor: ${error.message}`);
           }
@@ -170,8 +189,9 @@ export function useSuppliers() {
           
           return mapDbSupplierToSupplier(data);
         } catch (error: any) {
+          console.error('❌ [SUPPLIER_HOOK] Erro na criação do fornecedor:', error);
           SecureLogger.error('Erro na criação do fornecedor', error);
-          toast.error(`Erro ao criar fornecedor: ${error.message}`);
+          toast.error(error.message || 'Erro ao criar fornecedor');
           throw error;
         } finally {
           setIsCreating(false);

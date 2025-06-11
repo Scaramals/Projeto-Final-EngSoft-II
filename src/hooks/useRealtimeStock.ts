@@ -8,24 +8,38 @@ export const useRealtimeStock = (productId?: string) => {
   const [isLoading, setIsLoading] = useState(true);
 
   const refreshStock = useCallback(async () => {
-    if (!productId) return;
+    if (!productId || productId === 'new') {
+      console.log('⚠️ [REALTIME_STOCK] ID inválido:', productId);
+      setCurrentStock(0);
+      setIsLoading(false);
+      return;
+    }
     
     try {
+      console.log('📊 [REALTIME_STOCK] Buscando estoque para produto:', productId);
       const stock = await StockService.getCurrentStock(productId);
+      console.log('📊 [REALTIME_STOCK] Estoque atual:', stock);
       setCurrentStock(stock);
     } catch (error) {
-      console.error('Erro ao atualizar estoque:', error);
+      console.error('❌ [REALTIME_STOCK] Erro ao atualizar estoque:', error);
+      setCurrentStock(0);
+    } finally {
+      setIsLoading(false);
     }
   }, [productId]);
 
   useEffect(() => {
-    if (!productId) return;
+    if (!productId || productId === 'new') {
+      console.log('⚠️ [REALTIME_STOCK] Ignorando produto com ID inválido:', productId);
+      setCurrentStock(0);
+      setIsLoading(false);
+      return;
+    }
 
     // Carregar estoque inicial
     const loadInitialStock = async () => {
       setIsLoading(true);
       await refreshStock();
-      setIsLoading(false);
     };
 
     loadInitialStock();
@@ -42,13 +56,14 @@ export const useRealtimeStock = (productId?: string) => {
           filter: `id=eq.${productId}`
         },
         () => {
-          console.log('📡 Produto atualizado via Realtime');
+          console.log('📡 [REALTIME_STOCK] Produto atualizado via Realtime');
           refreshStock();
         }
       )
       .subscribe();
 
     return () => {
+      console.log('🔌 [REALTIME_STOCK] Removendo canal realtime para produto:', productId);
       supabase.removeChannel(channel);
     };
   }, [productId, refreshStock]);
