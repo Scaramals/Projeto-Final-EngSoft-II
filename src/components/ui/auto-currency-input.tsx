@@ -6,21 +6,21 @@ import { cn } from "@/lib/utils";
 interface AutoCurrencyInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange' | 'value'> {
   value: number;
   onChange: (value: number) => void;
-  className?: string;
+  placeholder?: string;
 }
 
 export const AutoCurrencyInput: React.FC<AutoCurrencyInputProps> = ({
   value,
   onChange,
+  placeholder = "R$ 0,00",
   className,
   ...props
 }) => {
   const [displayValue, setDisplayValue] = useState("");
   const [isFocused, setIsFocused] = useState(false);
 
-  // Formatar valor como moeda
+  // Formatação de moeda
   const formatCurrency = (amount: number): string => {
-    if (amount === 0) return "";
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL',
@@ -29,47 +29,51 @@ export const AutoCurrencyInput: React.FC<AutoCurrencyInputProps> = ({
     }).format(amount);
   };
 
-  // Atualizar display quando value mudar
+  // Conversão de string para número
+  const parseCurrency = (str: string): number => {
+    const numericString = str.replace(/[^\d,]/g, '').replace(',', '.');
+    const numericValue = parseFloat(numericString) || 0;
+    return numericValue;
+  };
+
   useEffect(() => {
     if (!isFocused) {
       setDisplayValue(formatCurrency(value));
     }
   }, [value, isFocused]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let inputValue = e.target.value;
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const inputValue = e.target.value;
     
-    // Remove tudo que não é dígito
-    const numbers = inputValue.replace(/\D/g, '');
-    
-    if (numbers === '') {
-      onChange(0);
-      setDisplayValue('');
-      return;
+    if (isFocused) {
+      // Durante a digitação, permite entrada mais flexível
+      setDisplayValue(inputValue);
+      
+      // Converte para número e chama onChange
+      const numericValue = parseCurrency(inputValue);
+      onChange(numericValue);
     }
-    
-    // Converte para centavos (shift decimal)
-    const cents = parseInt(numbers, 10);
-    const reais = cents / 100;
-    
-    onChange(reais);
-    
-    // Durante a digitação, mostra apenas os números formatados
-    setDisplayValue(formatCurrency(reais));
   };
 
   const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
     setIsFocused(true);
-    if (value === 0) {
-      setDisplayValue('');
-    }
-    e.target.select();
+    // Converte para formato de edição (sem símbolos, apenas números e vírgula)
+    const editableValue = value > 0 ? value.toFixed(2).replace('.', ',') : '';
+    setDisplayValue(editableValue);
+    
+    // Seleciona todo o texto
+    setTimeout(() => {
+      e.target.select();
+    }, 0);
+    
     if (props.onFocus) props.onFocus(e);
   };
 
   const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
     setIsFocused(false);
+    // Volta para o formato de exibição
     setDisplayValue(formatCurrency(value));
+    
     if (props.onBlur) props.onBlur(e);
   };
 
@@ -78,10 +82,10 @@ export const AutoCurrencyInput: React.FC<AutoCurrencyInputProps> = ({
       {...props}
       type="text"
       value={displayValue}
-      onChange={handleChange}
+      onChange={handleInputChange}
       onFocus={handleFocus}
       onBlur={handleBlur}
-      placeholder="R$ 0,00"
+      placeholder={placeholder}
       className={cn(className)}
     />
   );

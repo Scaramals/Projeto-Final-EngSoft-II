@@ -38,7 +38,7 @@ export const TopBar: React.FC = () => {
             <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             <Input
               type="text"
-              placeholder="Pesquisar produtos..."
+              placeholder="Buscar produtos, categorias, fornecedores..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-8 pr-4 py-2 w-full rounded-md border border-border focus:outline-none focus:ring-2 focus:ring-primary text-sm"

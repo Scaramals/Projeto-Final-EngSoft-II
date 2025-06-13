@@ -23,6 +23,7 @@ export const QuantityField: React.FC<QuantityFieldProps> = ({
         value={value}
         onChange={(e) => onChange(parseInt(e.target.value) || 0)}
         disabled={disabled}
+        placeholder="Ex: 25 unidades"
       />
     </div>
   );

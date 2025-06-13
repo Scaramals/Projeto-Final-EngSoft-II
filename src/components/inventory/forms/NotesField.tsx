@@ -20,8 +20,8 @@ export const NotesField: React.FC<NotesFieldProps> = ({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
-        placeholder="Observações opcionais..."
-        className="min-h-[60px]"
+        placeholder="Ex: Produto danificado, devolução ao fornecedor, ajuste de inventário"
+        className="min-h-[60px] resize-none"
       />
     </div>
   );

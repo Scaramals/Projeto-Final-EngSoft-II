@@ -103,7 +103,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
           <div className="space-y-2">
             <label className="text-sm font-medium">Nome do produto*</label>
             <Input
-              placeholder="Digite o nome do produto"
+              placeholder="Ex: Notebook Dell Inspiron 15"
               value={formData.name}
               onChange={(e) => handleChange('name', e.target.value)}
             />
@@ -115,7 +115,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
           <div className="space-y-2">
             <label className="text-sm font-medium">Descrição</label>
             <Textarea
-              placeholder="Descreva o produto"
+              placeholder="Descreva as características, especificações e detalhes importantes do produto"
               value={formData.description}
               onChange={(e) => handleChange('description', e.target.value)}
               className="min-h-[100px] resize-none"
@@ -130,7 +130,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                 type="number"
                 min="0"
                 step="1"
-                placeholder="Ex: 10"
+                placeholder="50"
                 value={formData.quantity}
                 onChange={(e) => handleChange('quantity', parseInt(e.target.value) || 0)}
               />
@@ -145,7 +145,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                 type="number"
                 min="0"
                 step="1"
-                placeholder="Ex: 5"
+                placeholder="10"
                 value={formData.minimumStock}
                 onChange={(e) => handleChange('minimumStock', parseInt(e.target.value) || 0)}
               />
@@ -160,6 +160,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
             <AutoCurrencyInput
               value={formData.price}
               onChange={(value) => handleChange('price', value)}
+              placeholder="R$ 0,00"
             />
             {errors.price && (
               <p className="text-sm font-medium text-destructive">{errors.price}</p>
