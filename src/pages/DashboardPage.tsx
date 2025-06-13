@@ -1,6 +1,5 @@
 
 import React, { useState, useEffect } from "react";
-import { AppLayout } from "@/components/layout/AppLayout";
 import { useOptimizedDashboard } from "@/hooks/useOptimizedDashboard";
 import { useDashboard } from "@/hooks/useDashboard";
 import { OptimizedApiService } from "@/services/optimizedApi";
@@ -154,25 +153,23 @@ const DashboardPage: React.FC = () => {
   }, []);
 
   return (
-    <AppLayout>
-      <div className="space-y-4 md:space-y-6 p-2 md:p-0 max-w-full overflow-hidden">
-        <WelcomeMessage />
-        
-        <DashboardHeader onRefresh={handleRefresh} isLoading={isLoading} />
+    <div className="space-y-4 md:space-y-6 p-2 md:p-0 max-w-full overflow-hidden">
+      <WelcomeMessage />
+      
+      <DashboardHeader onRefresh={handleRefresh} isLoading={isLoading} />
 
-        <DashboardMetrics
-          isLoading={isLoading}
-          dashboardStats={dashboardStats}
-          monthlyComparison={monthlyComparison}
-          lowStockCount={lowStockCount}
-          productsLength={products.length}
-        />
+      <DashboardMetrics
+        isLoading={isLoading}
+        dashboardStats={dashboardStats}
+        monthlyComparison={monthlyComparison}
+        lowStockCount={lowStockCount}
+        productsLength={products.length}
+      />
 
-        <RealTimePerformanceSummary />
-        
-        <EnhancedDashboard />
-      </div>
-    </AppLayout>
+      <RealTimePerformanceSummary />
+      
+      <EnhancedDashboard />
+    </div>
   );
 };
 
