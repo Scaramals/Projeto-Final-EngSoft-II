@@ -7,7 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { SupplierForm } from './SupplierForm';
+import SupplierForm from './SupplierForm';
 import { useSuppliers } from '@/hooks/useSuppliers';
 import { Supplier, SupplierFormData } from '@/types';
 

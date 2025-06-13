@@ -1,26 +1,10 @@
 
-import React from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { 
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { 
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import React, { useState } from 'react';
+import { useCategories } from '@/hooks/useCategories';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Dialog,
   DialogContent,
@@ -29,15 +13,24 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
-import { Skeleton } from "@/components/ui/skeleton";
-import { useCategories } from "@/hooks/useCategories";
-import { EditCategoryModal } from "@/components/categories/EditCategoryModal";
-import { Plus, Edit, Trash2, MoreVertical, Tag } from "lucide-react";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Category } from "@/services/categories.service";
+} from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { EditCategoryModal } from '@/components/categories/EditCategoryModal';
+import { Plus, Edit, Trash2, Search } from 'lucide-react';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Category } from '@/services/categories.service';
 
 const categorySchema = z.object({
   name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
@@ -47,14 +40,14 @@ const categorySchema = z.object({
 type CategoryFormData = z.infer<typeof categorySchema>;
 
 const CategoriesPage: React.FC = () => {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  
   const { useAllCategories, useCreateCategory, useDeleteCategory } = useCategories();
-  const { data: categories, isLoading, error } = useAllCategories();
+  const { data: categories = [], isLoading, refetch } = useAllCategories();
   const createCategory = useCreateCategory();
   const deleteCategory = useDeleteCategory();
-  
-  const [editingCategory, setEditingCategory] = React.useState<Category | null>(null);
-  const [deletingCategory, setDeletingCategory] = React.useState<Category | null>(null);
-  const [isCreateModalOpen, setIsCreateModalOpen] = React.useState(false);
 
   const form = useForm<CategoryFormData>({
     resolver: zodResolver(categorySchema),
@@ -64,74 +57,58 @@ const CategoriesPage: React.FC = () => {
     },
   });
 
-  const handleCreate = async (data: CategoryFormData) => {
+  const filteredCategories = categories.filter(category =>
+    category.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (category.description && category.description.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
+
+  const onSubmit = async (data: CategoryFormData) => {
     try {
-      await createCategory.mutateAsync(data);
+      await createCategory.mutateAsync({
+        name: data.name,
+        description: data.description || undefined,
+      });
       form.reset();
-      setIsCreateModalOpen(false);
+      setIsCreateDialogOpen(false);
+      refetch();
     } catch (error) {
       console.error('Erro ao criar categoria:', error);
     }
   };
 
-  const handleDelete = async () => {
-    if (!deletingCategory) return;
-
+  const handleDelete = async (categoryId: string) => {
     try {
-      await deleteCategory.mutateAsync(deletingCategory.id);
-      setDeletingCategory(null);
+      await deleteCategory.mutateAsync(categoryId);
+      refetch();
     } catch (error) {
       console.error('Erro ao excluir categoria:', error);
     }
   };
 
+  const handleEditClose = () => {
+    setEditingCategory(null);
+    refetch();
+  };
+
   if (isLoading) {
     return (
-      <div className="container mx-auto py-8">
-        <div className="flex justify-between items-center mb-8">
-          <Skeleton className="h-8 w-32" />
-          <Skeleton className="h-10 w-40" />
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[...Array(6)].map((_, i) => (
-            <Card key={i}>
-              <CardHeader>
-                <Skeleton className="h-6 w-3/4" />
-                <Skeleton className="h-4 w-1/2" />
-              </CardHeader>
-              <CardContent>
-                <Skeleton className="h-16 w-full" />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="container mx-auto py-8">
-        <div className="text-center">
-          <p className="text-destructive">Erro ao carregar categorias: {error.message}</p>
+      <div className="p-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-lg">Carregando categorias...</div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto py-8">
-      <div className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Categorias</h1>
-          <p className="text-muted-foreground">
-            Gerencie as categorias dos seus produtos
-          </p>
-        </div>
-        <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
+    <div className="p-6 space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold">Categorias</h1>
+        
+        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
             <Button>
-              <Plus className="h-4 w-4 mr-2" />
+              <Plus className="w-4 h-4 mr-2" />
               Nova Categoria
             </Button>
           </DialogTrigger>
@@ -142,7 +119,7 @@ const CategoriesPage: React.FC = () => {
                 Adicione uma nova categoria para organizar seus produtos.
               </DialogDescription>
             </DialogHeader>
-            <form onSubmit={form.handleSubmit(handleCreate)} className="space-y-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Nome*</Label>
                 <Input
@@ -165,7 +142,7 @@ const CategoriesPage: React.FC = () => {
                 />
               </div>
               <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setIsCreateModalOpen(false)}>
+                <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
                   Cancelar
                 </Button>
                 <Button type="submit" disabled={createCategory.isPending}>
@@ -177,100 +154,80 @@ const CategoriesPage: React.FC = () => {
         </Dialog>
       </div>
 
-      {categories && categories.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-16">
-            <Tag className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">Nenhuma categoria cadastrada</h3>
-            <p className="text-muted-foreground text-center mb-4">
-              Comece criando categorias para organizar melhor seus produtos.
-            </p>
-            <Button onClick={() => setIsCreateModalOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Criar Categoria
-            </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {categories?.map((category) => (
-            <Card key={category.id} className="hover:shadow-md transition-shadow">
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <CardTitle className="text-lg mb-1">{category.name}</CardTitle>
-                    <Badge variant="outline" className="text-xs">
-                      {category.productCount || 0} produtos
-                    </Badge>
-                  </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="h-8 w-8 p-0">
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => setEditingCategory(category)}>
-                        <Edit className="h-4 w-4 mr-2" />
-                        Editar
-                      </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        onClick={() => setDeletingCategory(category)}
-                        className="text-destructive"
+      <div className="flex items-center space-x-2">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+          <Input
+            placeholder="Buscar categorias..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {filteredCategories.map((category) => (
+          <Card key={category.id}>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-lg font-medium">{category.name}</CardTitle>
+              <div className="flex space-x-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setEditingCategory(category)}
+                >
+                  <Edit className="w-4 h-4" />
+                </Button>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="ghost" size="sm">
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Tem certeza que deseja excluir a categoria "{category.name}"? 
+                        Esta ação não pode ser desfeita.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction 
+                        onClick={() => handleDelete(category.id)}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                       >
-                        <Trash2 className="h-4 w-4 mr-2" />
                         Excluir
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {category.description && (
-                  <p className="text-sm text-muted-foreground line-clamp-3">
-                    {category.description}
-                  </p>
-                )}
-                {!category.description && (
-                  <p className="text-sm text-muted-foreground italic">
-                    Nenhuma descrição
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-          ))}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                {category.description || 'Sem descrição'}
+              </p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {filteredCategories.length === 0 && (
+        <div className="text-center py-12">
+          <p className="text-muted-foreground">
+            {searchTerm ? 'Nenhuma categoria encontrada.' : 'Nenhuma categoria cadastrada ainda.'}
+          </p>
         </div>
       )}
 
-      {/* Edit Category Modal */}
       <EditCategoryModal
         category={editingCategory}
         isOpen={!!editingCategory}
-        onClose={() => setEditingCategory(null)}
+        onClose={handleEditClose}
       />
-
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={!!deletingCategory} onOpenChange={() => setDeletingCategory(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tem certeza que deseja excluir a categoria "{deletingCategory?.name}"? 
-              Esta ação não pode ser desfeita e pode afetar produtos que usam esta categoria.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              disabled={deleteCategory.isPending}
-            >
-              {deleteCategory.isPending ? 'Excluindo...' : 'Excluir'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 };

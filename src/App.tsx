@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { DataProvider } from "@/contexts/DataContext";
@@ -23,8 +24,9 @@ import ResetPasswordPage from "@/pages/ResetPasswordPage";
 import NotFound from "@/pages/NotFound";
 import ErrorPage from "@/pages/ErrorPage";
 import "./App.css";
-import { TooltipProvider, Sonner } from "@/components/ui/tooltip";
-import AppLayout from "@/components/layout/AppLayout";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { Toaster as Sonner } from "@/components/ui/sonner";
+import { AppLayout } from "@/components/layout/AppLayout";
 import CategoriesPage from "@/pages/CategoriesPage";
 
 // Create a client
