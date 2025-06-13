@@ -10,7 +10,6 @@ import { AlertTriangle, CheckCircle, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { StockService } from "@/services/stockService";
 import { useSuppliers } from "@/hooks/useSuppliers";
-import { AutoCurrencyInput } from "@/components/ui/auto-currency-input";
 
 interface SimplifiedStockFormProps {
   productId: string;
@@ -30,8 +29,7 @@ export const SimplifiedStockForm: React.FC<SimplifiedStockFormProps> = ({
   // Estados do formulário
   const [formData, setFormData] = useState({
     type: 'in' as 'in' | 'out',
-    quantity: '',
-    price: 0,
+    quantity: 0,
     notes: '',
     supplierId: ''
   });
@@ -61,9 +59,8 @@ export const SimplifiedStockForm: React.FC<SimplifiedStockFormProps> = ({
 
   // Validação em tempo real para saídas
   useEffect(() => {
-    const quantityValue = parseInt(formData.quantity) || 0;
-    if (formData.type === 'out' && quantityValue > 0 && quantityValue > currentStock) {
-      setValidationMessage(`Estoque insuficiente. Disponível: ${currentStock}, Solicitado: ${quantityValue}`);
+    if (formData.type === 'out' && formData.quantity > 0 && formData.quantity > currentStock) {
+      setValidationMessage(`Estoque insuficiente. Disponível: ${currentStock}, Solicitado: ${formData.quantity}`);
     } else {
       setValidationMessage(null);
     }
@@ -79,28 +76,28 @@ export const SimplifiedStockForm: React.FC<SimplifiedStockFormProps> = ({
     }
   };
 
-  // Manipulador de quantidade melhorado
+  // Manipulador de quantidade
   const handleQuantityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    // Permite apenas números ou string vazia
-    if (value === '' || /^\d+$/.test(value)) {
-      updateField('quantity', value);
+    const inputValue = e.target.value;
+    
+    if (inputValue === '') {
+      updateField('quantity', 0);
+      return;
+    }
+    
+    const numericValue = parseInt(inputValue, 10);
+    if (!isNaN(numericValue) && numericValue >= 0) {
+      updateField('quantity', numericValue);
     }
   };
 
   // Validar formulário
   const validateForm = (): boolean => {
     const newErrors: {[key: string]: string} = {};
-    const quantityValue = parseInt(formData.quantity) || 0;
 
     // Validar quantidade
-    if (!formData.quantity || quantityValue <= 0) {
+    if (!formData.quantity || formData.quantity <= 0) {
       newErrors.quantity = 'Quantidade deve ser maior que zero';
-    }
-
-    // Validar preço
-    if (!formData.price || formData.price <= 0) {
-      newErrors.price = 'Preço deve ser maior que zero';
     }
 
     // NOVA VALIDAÇÃO: Fornecedor obrigatório para TODAS as movimentações
@@ -109,7 +106,7 @@ export const SimplifiedStockForm: React.FC<SimplifiedStockFormProps> = ({
     }
 
     // Validar estoque para saídas
-    if (formData.type === 'out' && quantityValue > currentStock) {
+    if (formData.type === 'out' && formData.quantity > currentStock) {
       newErrors.quantity = `Quantidade não pode exceder o estoque (${currentStock})`;
     }
 
@@ -156,15 +153,13 @@ export const SimplifiedStockForm: React.FC<SimplifiedStockFormProps> = ({
     setIsLoading(true);
 
     try {
-      const quantityValue = parseInt(formData.quantity) || 0;
-      
       // APENAS CRIAR A MOVIMENTAÇÃO - O TRIGGER CUIDA DO RESTO
       const result = await StockService.createMovement({
         productId,
-        quantity: quantityValue,
+        quantity: formData.quantity,
         type: formData.type,
         notes: formData.notes.trim() || undefined,
-        supplierId: formData.supplierId
+        supplierId: formData.supplierId // Agora sempre obrigatório
       });
 
       console.log('📊 [FORM] Resultado da criação:', result);
@@ -179,8 +174,7 @@ export const SimplifiedStockForm: React.FC<SimplifiedStockFormProps> = ({
         // Reset form
         setFormData({
           type: 'in',
-          quantity: '',
-          price: 0,
+          quantity: 0,
           notes: '',
           supplierId: ''
         });
@@ -208,7 +202,6 @@ export const SimplifiedStockForm: React.FC<SimplifiedStockFormProps> = ({
     }
   };
 
-  const quantityValue = parseInt(formData.quantity) || 0;
   const canSubmit = !isLoading && !isLoadingStock && !validationMessage;
 
   return (
@@ -258,39 +251,22 @@ export const SimplifiedStockForm: React.FC<SimplifiedStockFormProps> = ({
             </Select>
           </div>
 
-          {/* Quantidade melhorada */}
+          {/* Quantidade */}
           <div className="space-y-2">
             <label className="text-sm font-medium">Quantidade</label>
             <Input
-              type="text"
-              value={formData.quantity}
+              type="number"
+              min="0"
+              step="1"
+              value={formData.quantity === 0 ? '' : formData.quantity.toString()}
               onChange={handleQuantityChange}
               disabled={isLoading}
               className={errors.quantity ? "border-destructive" : ""}
-              placeholder="Digite a quantidade..."
+              placeholder="Digite a quantidade"
             />
             {errors.quantity && (
               <p className="text-sm text-destructive">{errors.quantity}</p>
             )}
-          </div>
-
-          {/* Preço elegante */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">
-              Preço unitário <span className="text-red-500">*</span>
-            </label>
-            <AutoCurrencyInput
-              value={formData.price}
-              onChange={(value) => updateField('price', value)}
-              placeholder="R$ 0,00"
-              disabled={isLoading}
-            />
-            {errors.price && (
-              <p className="text-sm text-destructive">{errors.price}</p>
-            )}
-            <p className="text-xs text-muted-foreground">
-              Preço por unidade para esta movimentação
-            </p>
           </div>
 
           {/* Fornecedor (SEMPRE obrigatório agora) */}

@@ -6,11 +6,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { StockStatusDisplay } from "./forms/StockStatusDisplay";
 import { ErrorAlert } from "./forms/ErrorAlert";
 import { MovementTypeField } from "./forms/MovementTypeField";
-import { QuantityInput } from "./forms/QuantityInput";
+import { QuantityField } from "./forms/QuantityField";
 import { SupplierField } from "./forms/SupplierField";
 import { NotesField } from "./forms/NotesField";
 import { FormActions } from "./forms/FormActions";
-import { AutoCurrencyInput } from "@/components/ui/auto-currency-input";
 
 interface StockMovementModalProps {
   isOpen: boolean;
@@ -33,8 +32,7 @@ export const StockMovementModal: React.FC<StockMovementModalProps> = ({
 
   const [formData, setFormData] = useState({
     type: 'in' as 'in' | 'out',
-    quantity: '',
-    price: 0,
+    quantity: 1,
     notes: '',
     supplierId: ''
   });
@@ -46,14 +44,13 @@ export const StockMovementModal: React.FC<StockMovementModalProps> = ({
     console.log(`🔍 [MODAL] === INÍCIO VALIDAÇÃO ===`);
     console.log(`🔍 [MODAL] Dados para validar:`, formData);
     
-    const quantityValue = parseInt(formData.quantity) || 0;
-    
-    if (quantityValue <= 0) {
+    if (formData.quantity <= 0) {
       setValidationError('Quantidade deve ser maior que zero');
       console.log('❌ [MODAL] Validação falhou: quantidade <= 0');
       return false;
     }
 
+    // NOVA VALIDAÇÃO: Fornecedor obrigatório para TODAS as movimentações (entrada e saída)
     if (!formData.supplierId) {
       if (formData.type === 'in') {
         setValidationError('Fornecedor é obrigatório para entradas de estoque');
@@ -64,15 +61,9 @@ export const StockMovementModal: React.FC<StockMovementModalProps> = ({
       return false;
     }
 
-    if (formData.type === 'out' && quantityValue > currentStock) {
+    if (formData.type === 'out' && formData.quantity > currentStock) {
       setValidationError(`Quantidade não pode exceder o estoque atual (${currentStock})`);
       console.log('❌ [MODAL] Validação falhou: quantidade > estoque');
-      return false;
-    }
-
-    if (formData.price <= 0) {
-      setValidationError('Preço deve ser maior que zero');
-      console.log('❌ [MODAL] Validação falhou: preço <= 0');
       return false;
     }
 
@@ -100,8 +91,6 @@ export const StockMovementModal: React.FC<StockMovementModalProps> = ({
     setIsSubmitting(true);
 
     try {
-      const quantityValue = parseInt(formData.quantity) || 0;
-
       // BUSCAR ESTOQUE ANTES DA MOVIMENTAÇÃO
       console.log(`📊 [MODAL] Buscando estoque antes da movimentação...`);
       const { data: productBefore, error: productError } = await supabase
@@ -117,13 +106,20 @@ export const StockMovementModal: React.FC<StockMovementModalProps> = ({
 
       console.log(`📊 [MODAL] Estoque ANTES: ${productBefore.quantity} para produto "${productBefore.name}"`);
 
+      // Validação adicional para fornecedor obrigatório
+      if (!formData.supplierId) {
+        setValidationError('Fornecedor é obrigatório para todas as movimentações');
+        console.log('❌ [MODAL] Erro: fornecedor obrigatório');
+        return;
+      }
+
       // Usar a função existente validate_stock_movement para validar
       console.log(`🔍 [MODAL] Validando movimentação via RPC...`);
       const { data: validation, error: validationErr } = await supabase.rpc(
         'validate_stock_movement',
         {
           product_id_param: productId,
-          quantity_param: quantityValue,
+          quantity_param: formData.quantity,
           type_param: formData.type
         }
       );
@@ -133,6 +129,7 @@ export const StockMovementModal: React.FC<StockMovementModalProps> = ({
         throw validationErr;
       }
 
+      // Cast do resultado para o tipo esperado
       const validationResult = validation as any;
       console.log(`🔍 [MODAL] Resultado da validação:`, validationResult);
       
@@ -146,10 +143,10 @@ export const StockMovementModal: React.FC<StockMovementModalProps> = ({
       console.log(`💾 [MODAL] Inserindo movimentação no banco...`);
       const movementData = {
         product_id: productId,
-        quantity: quantityValue,
+        quantity: formData.quantity,
         type: formData.type,
         notes: formData.notes.trim() || null,
-        supplier_id: formData.supplierId,
+        supplier_id: formData.supplierId, // Sempre obrigatório agora
         date: new Date().toISOString()
       };
       
@@ -168,16 +165,44 @@ export const StockMovementModal: React.FC<StockMovementModalProps> = ({
 
       console.log('✅ [MODAL] Movimentação inserida:', insertedMovement);
 
+      // BUSCAR ESTOQUE DEPOIS DA MOVIMENTAÇÃO
+      console.log(`📊 [MODAL] Buscando estoque depois da movimentação...`);
+      const { data: productAfter, error: productAfterError } = await supabase
+        .from('products')
+        .select('quantity, name')
+        .eq('id', productId)
+        .single();
+
+      if (productAfterError) {
+        console.error('❌ [MODAL] Erro ao buscar produto após movimentação:', productAfterError);
+      } else {
+        console.log(`📊 [MODAL] Estoque DEPOIS: ${productAfter.quantity} para produto "${productAfter.name}"`);
+        
+        const expectedChange = formData.type === 'in' ? formData.quantity : -formData.quantity;
+        const actualChange = productAfter.quantity - productBefore.quantity;
+        
+        console.log(`🔍 [MODAL] ANÁLISE:`);
+        console.log(`   - Mudança esperada: ${expectedChange}`);
+        console.log(`   - Mudança real: ${actualChange}`);
+        console.log(`   - Status: ${actualChange === expectedChange ? '✅ CORRETO' : '❌ INCORRETO'}`);
+        
+        if (actualChange !== expectedChange) {
+          console.error(`🚨 [MODAL] DUPLICAÇÃO DETECTADA!`);
+          console.error(`   - Movimentação: ${formData.type} ${formData.quantity}`);
+          console.error(`   - Esperado: ${expectedChange}`);
+          console.error(`   - Real: ${actualChange}`);
+        }
+      }
+
       toast({
         title: "Movimentação registrada",
-        description: `${formData.type === 'in' ? 'Entrada' : 'Saída'} de ${quantityValue} unidades registrada com sucesso.`,
+        description: `${formData.type === 'in' ? 'Entrada' : 'Saída'} de ${formData.quantity} unidades registrada com sucesso.`,
       });
 
       // Reset form
       setFormData({
         type: 'in',
-        quantity: '',
-        price: 0,
+        quantity: 1,
         notes: '',
         supplierId: ''
       });
@@ -204,13 +229,8 @@ export const StockMovementModal: React.FC<StockMovementModalProps> = ({
     setValidationError(null);
   };
 
-  const handleQuantityChange = (value: string) => {
+  const handleQuantityChange = (value: number) => {
     setFormData(prev => ({ ...prev, quantity: value }));
-    setValidationError(null);
-  };
-
-  const handlePriceChange = (value: number) => {
-    setFormData(prev => ({ ...prev, price: value }));
     setValidationError(null);
   };
 
@@ -222,9 +242,6 @@ export const StockMovementModal: React.FC<StockMovementModalProps> = ({
   const handleNotesChange = (value: string) => {
     setFormData(prev => ({ ...prev, notes: value }));
   };
-
-  const quantityValue = parseInt(formData.quantity) || 0;
-  const hasInsufficientStock = formData.type === 'out' && quantityValue > currentStock;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -247,58 +264,19 @@ export const StockMovementModal: React.FC<StockMovementModalProps> = ({
             disabled={isSubmitting}
           />
 
-          {/* Campo de quantidade melhorado */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Quantidade*</label>
-            <input
-              type="text"
-              value={formData.quantity}
-              onChange={(e) => {
-                const value = e.target.value;
-                // Permite apenas números
-                if (value === '' || /^\d+$/.test(value)) {
-                  handleQuantityChange(value);
-                }
-              }}
-              disabled={isSubmitting}
-              className={`flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
-                hasInsufficientStock ? "border-yellow-500" : ""
-              }`}
-              placeholder="Digite a quantidade..."
-            />
-            {formData.type === "out" && (
-              <p className={`text-sm ${hasInsufficientStock ? "text-yellow-600" : "text-muted-foreground"}`}>
-                Estoque disponível: {currentStock} unidades
-                {hasInsufficientStock && " - ATENÇÃO: Quantidade maior que estoque!"}
-              </p>
-            )}
-            {formData.quantity !== '' && quantityValue === 0 && (
-              <p className="text-sm font-medium text-destructive">
-                Quantidade deve ser maior que zero
-              </p>
-            )}
-          </div>
+          <QuantityField
+            value={formData.quantity}
+            onChange={handleQuantityChange}
+            disabled={isSubmitting}
+          />
 
-          {/* Campo de preço elegante */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Preço unitário*</label>
-            <AutoCurrencyInput
-              value={formData.price}
-              onChange={handlePriceChange}
-              placeholder="R$ 0,00"
-              disabled={isSubmitting}
-            />
-            <p className="text-xs text-muted-foreground">
-              Preço por unidade para esta movimentação
-            </p>
-          </div>
-
+          {/* Fornecedor agora é obrigatório para TODAS as movimentações */}
           <SupplierField
             value={formData.supplierId}
             onChange={handleSupplierChange}
             disabled={isSubmitting}
-            show={true}
-            required={true}
+            show={true} // Sempre mostrar
+            required={true} // Sempre obrigatório
           />
 
           <NotesField
