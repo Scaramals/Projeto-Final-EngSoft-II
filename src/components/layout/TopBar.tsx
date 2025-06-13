@@ -1,6 +1,6 @@
 
 import React, { useState } from "react";
-import { Menu, Search } from "lucide-react";
+import { Menu, Search, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MobileSidebar } from "./MobileSidebar";
@@ -31,6 +31,17 @@ export const TopBar: React.FC = () => {
           >
             <Menu className="h-6 w-6" />
           </Button>
+          
+          {/* Logo Vdev.0 */}
+          <div className="hidden md:flex items-center ml-2">
+            <div className="bg-primary/10 rounded-full p-2 mr-3">
+              <Package className="h-6 w-6 text-primary" />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-lg font-bold text-foreground">StockControl</span>
+              <span className="text-xs text-muted-foreground">by Vdev.0</span>
+            </div>
+          </div>
         </div>
 
         <div className="flex-1 max-w-md px-4 hidden md:flex">
@@ -52,8 +63,8 @@ export const TopBar: React.FC = () => {
             <span className="text-sm font-medium mr-2 hidden md:inline">
               Admin
             </span>
-            <div className="h-8 w-8 rounded-full bg-inventory-purple text-white flex items-center justify-center">
-              A
+            <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
+              <Package className="h-4 w-4" />
             </div>
           </div>
         </div>
