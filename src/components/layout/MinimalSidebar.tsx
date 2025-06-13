@@ -79,7 +79,7 @@ export const MinimalSidebar: React.FC = () => {
 
   return (
     <TooltipProvider>
-      <div className="h-full bg-sidebar border-r border-border flex flex-col items-center py-4 px-2 relative">
+      <div className={`h-full bg-sidebar border-r border-border flex flex-col items-center py-4 px-2 relative transition-all duration-300 ${isCollapsed ? 'w-16' : 'w-16'}`}>
         {/* Profile Avatar */}
         <div className="mb-6">
           <Tooltip>
@@ -154,17 +154,17 @@ export const MinimalSidebar: React.FC = () => {
           />
         </nav>
 
-        {/* Collapse Button */}
-        <div className="my-4">
+        {/* Collapse Button - Centro da sidebar */}
+        <div className="absolute right-0 top-1/2 transform -translate-y-1/2 translate-x-1/2">
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
-                variant="ghost"
+                variant="outline"
                 size="icon"
-                className="w-8 h-8"
+                className="w-6 h-6 rounded-full bg-background border shadow-sm hover:bg-accent"
                 onClick={() => setIsCollapsed(!isCollapsed)}
               >
-                {isCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+                {isCollapsed ? <ChevronRight size={12} /> : <ChevronLeft size={12} />}
               </Button>
             </TooltipTrigger>
             <TooltipContent side="right">
@@ -174,7 +174,7 @@ export const MinimalSidebar: React.FC = () => {
         </div>
 
         {/* Logout Button */}
-        <div className="mt-auto">
+        <div className="mt-4">
           <Tooltip>
             <TooltipTrigger asChild>
               <button 

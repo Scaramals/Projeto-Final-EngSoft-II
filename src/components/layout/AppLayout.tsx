@@ -13,8 +13,10 @@ export const AppLayout: React.FC = () => {
       {isMobile ? (
         <>
           <MobileSidebar />
-          <main className="flex-1 p-4">
-            <Outlet />
+          <main className="flex-1 min-w-0 overflow-auto">
+            <div className="p-4 pt-16">
+              <Outlet />
+            </div>
           </main>
         </>
       ) : (
@@ -22,8 +24,10 @@ export const AppLayout: React.FC = () => {
           <div className="w-16 flex-shrink-0">
             <MinimalSidebar />
           </div>
-          <main className="flex-1 p-6 overflow-auto">
-            <Outlet />
+          <main className="flex-1 min-w-0 overflow-auto">
+            <div className="p-2 md:p-4 lg:p-6">
+              <Outlet />
+            </div>
           </main>
         </>
       )}
