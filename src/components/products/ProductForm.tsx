@@ -29,7 +29,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     quantity: defaultValues?.quantity || 0,
     price: defaultValues?.price || 0,
     categoryId: defaultValues?.categoryId || "",
-    minimumStock: defaultValues?.minimumStock || 5,
+    minimumStock: defaultValues?.minimumStock || 0,
     imageUrl: defaultValues?.imageUrl || "",
   });
 
@@ -130,8 +130,8 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                 type="number"
                 min="0"
                 step="1"
-                placeholder="50"
-                value={formData.quantity}
+                placeholder="Ex: 50 unidades"
+                value={formData.quantity === 0 ? '' : formData.quantity.toString()}
                 onChange={(e) => handleChange('quantity', parseInt(e.target.value) || 0)}
               />
               {errors.quantity && (
@@ -145,8 +145,8 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                 type="number"
                 min="0"
                 step="1"
-                placeholder="10"
-                value={formData.minimumStock}
+                placeholder="Ex: 10 unidades"
+                value={formData.minimumStock === 0 ? '' : formData.minimumStock.toString()}
                 onChange={(e) => handleChange('minimumStock', parseInt(e.target.value) || 0)}
               />
               {errors.minimumStock && (
