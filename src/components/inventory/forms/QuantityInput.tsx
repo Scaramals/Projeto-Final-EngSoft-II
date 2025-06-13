@@ -38,9 +38,9 @@ export const QuantityInput: React.FC<QuantityInputProps> = ({
 
   const getPlaceholder = () => {
     if (type === 'in') {
-      return "Ex: 50 unidades";
+      return "Digite a quantidade de entrada";
     }
-    return `Ex: máximo ${currentStock} unidades`;
+    return "Digite a quantidade de saída";
   };
 
   return (

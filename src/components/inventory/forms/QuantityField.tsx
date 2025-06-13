@@ -20,10 +20,10 @@ export const QuantityField: React.FC<QuantityFieldProps> = ({
         type="number"
         min="1"
         step="1"
-        value={value}
+        value={value === 0 ? '' : value}
         onChange={(e) => onChange(parseInt(e.target.value) || 0)}
         disabled={disabled}
-        placeholder="Ex: 25 unidades"
+        placeholder="Digite a quantidade"
       />
     </div>
   );
