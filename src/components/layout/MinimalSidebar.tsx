@@ -31,22 +31,30 @@ interface NavIconProps {
   icon: React.ReactNode;
   label: string;
   active: boolean;
+  expanded: boolean;
 }
 
-const NavIcon: React.FC<NavIconProps> = ({ to, icon, label, active }) => {
-  return (
+const NavIcon: React.FC<NavIconProps> = ({ to, icon, label, active, expanded }) => {
+  const content = (
+    <Link
+      to={to}
+      className={`flex items-center h-12 rounded-lg transition-colors ${
+        expanded ? 'px-3 justify-start gap-3' : 'justify-center w-12'
+      } ${
+        active
+          ? "bg-primary text-primary-foreground"
+          : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+      }`}
+    >
+      {icon}
+      {expanded && <span className="text-sm font-medium">{label}</span>}
+    </Link>
+  );
+
+  return expanded ? content : (
     <Tooltip>
       <TooltipTrigger asChild>
-        <Link
-          to={to}
-          className={`flex items-center justify-center w-12 h-12 rounded-lg transition-colors ${
-            active
-              ? "bg-primary text-primary-foreground"
-              : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-          }`}
-        >
-          {icon}
-        </Link>
+        {content}
       </TooltipTrigger>
       <TooltipContent side="right">
         <p>{label}</p>
@@ -56,7 +64,7 @@ const NavIcon: React.FC<NavIconProps> = ({ to, icon, label, active }) => {
 };
 
 export const MinimalSidebar: React.FC = () => {
-  const [isCollapsed, setIsCollapsed] = React.useState(false);
+  const [isExpanded, setIsExpanded] = React.useState(false);
   const location = useLocation();
   const currentPath = location.pathname;
   const { signOut, profile, user } = useAuth();
@@ -79,23 +87,41 @@ export const MinimalSidebar: React.FC = () => {
 
   return (
     <TooltipProvider>
-      <div className={`h-full bg-sidebar border-r border-border flex flex-col items-center py-4 px-2 relative transition-all duration-300 ${isCollapsed ? 'w-16' : 'w-16'}`}>
+      <div className={`h-full bg-sidebar border-r border-border flex flex-col py-4 px-2 relative transition-all duration-300 ${isExpanded ? 'w-64' : 'w-16'}`}>
         {/* Profile Avatar */}
         <div className="mb-6">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center cursor-pointer">
-                <Avatar className="w-10 h-10">
-                  <AvatarFallback className="bg-primary text-primary-foreground text-sm">
-                    {profile?.full_name ? getInitials(profile.full_name) : <User size={18} />}
-                  </AvatarFallback>
-                </Avatar>
+          {isExpanded ? (
+            <div className="flex items-center gap-3 px-3 py-2">
+              <Avatar className="w-10 h-10">
+                <AvatarFallback className="bg-primary text-primary-foreground text-sm">
+                  {profile?.full_name ? getInitials(profile.full_name) : <User size={18} />}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">
+                  {profile?.full_name || 'Usuário'}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {profile?.role || 'user'}
+                </p>
               </div>
-            </TooltipTrigger>
-            <TooltipContent side="right">
-              <p>{profile?.full_name || 'Usuário'}</p>
-            </TooltipContent>
-          </Tooltip>
+            </div>
+          ) : (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center cursor-pointer">
+                  <Avatar className="w-10 h-10">
+                    <AvatarFallback className="bg-primary text-primary-foreground text-sm">
+                      {profile?.full_name ? getInitials(profile.full_name) : <User size={18} />}
+                    </AvatarFallback>
+                  </Avatar>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="right">
+                <p>{profile?.full_name || 'Usuário'}</p>
+              </TooltipContent>
+            </Tooltip>
+          )}
         </div>
 
         {/* Navigation Icons */}
@@ -105,30 +131,35 @@ export const MinimalSidebar: React.FC = () => {
             icon={<Home size={20} />}
             label="Dashboard"
             active={currentPath === "/dashboard"}
+            expanded={isExpanded}
           />
           <NavIcon
             to="/products"
             icon={<Package size={20} />}
             label="Produtos"
             active={currentPath.startsWith("/products")}
+            expanded={isExpanded}
           />
           <NavIcon
             to="/inventory"
             icon={<Box size={20} />}
             label="Estoque"
             active={currentPath.startsWith("/inventory")}
+            expanded={isExpanded}
           />
           <NavIcon
             to="/suppliers"
             icon={<Truck size={20} />}
             label="Fornecedores"
             active={currentPath.startsWith("/suppliers")}
+            expanded={isExpanded}
           />
           <NavIcon
             to="/reports"
             icon={<BarChart size={20} />}
             label="Relatórios"
             active={currentPath.startsWith("/reports")}
+            expanded={isExpanded}
           />
           {canAccessAdmin && (
             <NavIcon
@@ -136,6 +167,7 @@ export const MinimalSidebar: React.FC = () => {
               icon={<ShieldCheck size={20} />}
               label="Administração"
               active={currentPath.startsWith("/admin")}
+              expanded={isExpanded}
             />
           )}
           {isDeveloper() && (
@@ -144,6 +176,7 @@ export const MinimalSidebar: React.FC = () => {
               icon={<Code size={20} />}
               label="Desenvolvedor"
               active={currentPath.startsWith("/developer")}
+              expanded={isExpanded}
             />
           )}
           <NavIcon
@@ -151,10 +184,11 @@ export const MinimalSidebar: React.FC = () => {
             icon={<Settings size={20} />}
             label="Configurações"
             active={currentPath === "/settings"}
+            expanded={isExpanded}
           />
         </nav>
 
-        {/* Collapse Button - Centro da sidebar */}
+        {/* Collapse Button */}
         <div className="absolute right-0 top-1/2 transform -translate-y-1/2 translate-x-1/2">
           <Tooltip>
             <TooltipTrigger asChild>
@@ -162,32 +196,42 @@ export const MinimalSidebar: React.FC = () => {
                 variant="outline"
                 size="icon"
                 className="w-6 h-6 rounded-full bg-background border shadow-sm hover:bg-accent"
-                onClick={() => setIsCollapsed(!isCollapsed)}
+                onClick={() => setIsExpanded(!isExpanded)}
               >
-                {isCollapsed ? <ChevronRight size={12} /> : <ChevronLeft size={12} />}
+                {isExpanded ? <ChevronLeft size={12} /> : <ChevronRight size={12} />}
               </Button>
             </TooltipTrigger>
             <TooltipContent side="right">
-              <p>{isCollapsed ? 'Expandir' : 'Recolher'}</p>
+              <p>{isExpanded ? 'Recolher' : 'Expandir'}</p>
             </TooltipContent>
           </Tooltip>
         </div>
 
         {/* Logout Button */}
         <div className="mt-4">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button 
-                className="flex items-center justify-center w-12 h-12 rounded-lg text-muted-foreground hover:bg-destructive hover:text-destructive-foreground transition-colors"
-                onClick={handleLogout}
-              >
-                <LogOut size={20} />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="right">
-              <p>Sair</p>
-            </TooltipContent>
-          </Tooltip>
+          {isExpanded ? (
+            <button 
+              className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-muted-foreground hover:bg-destructive hover:text-destructive-foreground transition-colors"
+              onClick={handleLogout}
+            >
+              <LogOut size={20} />
+              <span className="text-sm font-medium">Sair</span>
+            </button>
+          ) : (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button 
+                  className="flex items-center justify-center w-12 h-12 rounded-lg text-muted-foreground hover:bg-destructive hover:text-destructive-foreground transition-colors"
+                  onClick={handleLogout}
+                >
+                  <LogOut size={20} />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="right">
+                <p>Sair</p>
+              </TooltipContent>
+            </Tooltip>
+          )}
         </div>
       </div>
     </TooltipProvider>

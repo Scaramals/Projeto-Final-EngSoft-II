@@ -21,7 +21,7 @@ export const AppLayout: React.FC = () => {
         </>
       ) : (
         <>
-          <div className="w-16 flex-shrink-0">
+          <div className="flex-shrink-0">
             <MinimalSidebar />
           </div>
           <main className="flex-1 min-w-0 overflow-auto">

@@ -29,11 +29,17 @@ const ProductDetailPage: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [showMovementModal, setShowMovementModal] = useState(false);
   
+  console.log('ProductDetailPage - productId:', productId);
+  
   const { useProduct, useUpdateProduct, useDeleteProduct } = useProducts();
   const { data: product, isLoading, error, refetch } = useProduct(productId);
   const { currentStock, refreshStock } = useRealtimeStock(productId);
   const updateProduct = useUpdateProduct();
   const deleteProduct = useDeleteProduct();
+
+  console.log('ProductDetailPage - product data:', product);
+  console.log('ProductDetailPage - isLoading:', isLoading);
+  console.log('ProductDetailPage - error:', error);
 
   const handleEditProduct = async (updatedProduct: any) => {
     if (!product) return;
@@ -65,6 +71,23 @@ const ProductDetailPage: React.FC = () => {
     refreshStock();
   };
 
+  // Validar se o productId é válido
+  if (!productId) {
+    console.error('ProductDetailPage - No productId provided');
+    return (
+      <div className="text-center py-12">
+        <h1 className="text-2xl font-bold text-destructive">ID do produto inválido</h1>
+        <p className="text-muted-foreground mt-2">
+          O ID do produto não foi fornecido corretamente.
+        </p>
+        <Button className="mt-6" onClick={() => navigate("/products")}>
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Voltar para Produtos
+        </Button>
+      </div>
+    );
+  }
+
   if (isLoading) {
     return (
       <div className="space-y-6 p-4 sm:p-6">
@@ -82,16 +105,30 @@ const ProductDetailPage: React.FC = () => {
   }
 
   if (error || !product) {
+    console.error('ProductDetailPage - Product not found or error:', { error, product, productId });
     return (
       <div className="text-center py-12">
         <h1 className="text-2xl font-bold text-destructive">Produto não encontrado</h1>
         <p className="text-muted-foreground mt-2">
           O produto que você está procurando não existe ou foi removido.
         </p>
-        <Button className="mt-6" onClick={() => navigate("/products")}>
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Voltar para Produtos
-        </Button>
+        <p className="text-sm text-muted-foreground mt-1">
+          ID: {productId}
+        </p>
+        {error && (
+          <p className="text-sm text-destructive mt-1">
+            Erro: {error.message || 'Erro desconhecido'}
+          </p>
+        )}
+        <div className="flex gap-2 justify-center mt-6">
+          <Button variant="outline" onClick={() => refetch()}>
+            Tentar novamente
+          </Button>
+          <Button onClick={() => navigate("/products")}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Voltar para Produtos
+          </Button>
+        </div>
       </div>
     );
   }
@@ -247,7 +284,7 @@ const ProductDetailPage: React.FC = () => {
       <StockMovementModal
         isOpen={showMovementModal}
         onClose={() => setShowMovementModal(false)}
-        productId={productId!}
+        productId={productId}
         productName={product.name}
         currentStock={displayStock}
         onSuccess={handleMovementSuccess}
