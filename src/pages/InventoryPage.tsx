@@ -1,10 +1,11 @@
+
 import React, { useState, useMemo, useRef } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { MobileOptimizedLayout, MobileContainer, MobileCard } from "@/components/layout/MobileOptimizedLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Plus } from "lucide-react";
-import { formatCurrency, getStockStatus } from "@/lib/utils";
+import { formatCurrency, getStockStatus, cn } from "@/lib/utils";
 import { Link } from "react-router-dom";
 import { useProducts } from "@/hooks/useProducts";
 import { useCategories } from "@/hooks/useCategories";

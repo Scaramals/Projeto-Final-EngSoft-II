@@ -17,7 +17,7 @@ export const AppLayout: React.FC<{ children?: React.ReactNode }> = ({ children }
           flex-1 overflow-y-auto w-full
           ${isMobile ? 'pb-safe-area-inset-bottom' : ''}
         `}>
-          <div className="w-full h-full">
+          <div className="w-full h-full min-h-0">
             {children || <Outlet />}
           </div>
         </main>
