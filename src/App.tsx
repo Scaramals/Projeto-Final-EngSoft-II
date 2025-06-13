@@ -47,100 +47,102 @@ function App() {
       <TooltipProvider>
         <Router>
           <AuthProvider>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/register" element={<RegisterPage />} />
-              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-              <Route path="/reset-password" element={<ResetPasswordPage />} />
-              <Route
-                path="/dashboard"
-                element={
-                  <ProtectedRoute>
-                    <AppLayout />
-                  </ProtectedRoute>
-                }
-              >
-                <Route index element={<DashboardPage />} />
-              </Route>
-              <Route
-                path="/products"
-                element={
-                  <ProtectedRoute>
-                    <AppLayout />
-                  </ProtectedRoute>
-                }
-              >
-                <Route index element={<ProductsPage />} />
-                <Route path="add" element={<AddProductPage />} />
-                <Route path=":id" element={<ProductDetailPage />} />
-              </Route>
-              <Route
-                path="/inventory"
-                element={
-                  <ProtectedRoute>
-                    <AppLayout />
-                  </ProtectedRoute>
-                }
-              >
-                <Route index element={<InventoryPage />} />
-              </Route>
-              <Route
-                path="/suppliers"
-                element={
-                  <ProtectedRoute>
-                    <AppLayout />
-                  </ProtectedRoute>
-                }
-              >
-                <Route index element={<SuppliersPage />} />
-                <Route path="add" element={<AddSupplierPage />} />
-                <Route path=":id" element={<SupplierDetailPage />} />
-              </Route>
-              <Route
-                path="/categories"
-                element={
-                  <ProtectedRoute>
-                    <AppLayout />
-                  </ProtectedRoute>
-                }
-              >
-                <Route index element={<CategoriesPage />} />
-              </Route>
-              <Route
-                path="/reports"
-                element={
-                  <ProtectedRoute>
-                    <AppLayout />
-                  </ProtectedRoute>
-                }
-              >
-                <Route index element={<ReportsPage />} />
-              </Route>
-              <Route
-                path="/settings"
-                element={
-                  <ProtectedRoute>
-                    <AppLayout />
-                  </ProtectedRoute>
-                }
-              >
-                <Route index element={<SettingsPage />} />
-              </Route>
-              <Route
-                path="/admin"
-                element={
-                  <ProtectedRoute>
-                    <AppLayout />
-                  </ProtectedRoute>
-                }
-              >
-                <Route index element={<AdminPage />} />
-              </Route>
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-            <Toaster />
-            <Sonner />
+            <DataProvider>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/register" element={<RegisterPage />} />
+                <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+                <Route path="/reset-password" element={<ResetPasswordPage />} />
+                <Route
+                  path="/dashboard"
+                  element={
+                    <ProtectedRoute>
+                      <AppLayout />
+                    </ProtectedRoute>
+                  }
+                >
+                  <Route index element={<DashboardPage />} />
+                </Route>
+                <Route
+                  path="/products"
+                  element={
+                    <ProtectedRoute>
+                      <AppLayout />
+                    </ProtectedRoute>
+                  }
+                >
+                  <Route index element={<ProductsPage />} />
+                  <Route path="add" element={<AddProductPage />} />
+                  <Route path=":id" element={<ProductDetailPage />} />
+                </Route>
+                <Route
+                  path="/inventory"
+                  element={
+                    <ProtectedRoute>
+                      <AppLayout />
+                    </ProtectedRoute>
+                  }
+                >
+                  <Route index element={<InventoryPage />} />
+                </Route>
+                <Route
+                  path="/suppliers"
+                  element={
+                    <ProtectedRoute>
+                      <AppLayout />
+                    </ProtectedRoute>
+                  }
+                >
+                  <Route index element={<SuppliersPage />} />
+                  <Route path="add" element={<AddSupplierPage />} />
+                  <Route path=":id" element={<SupplierDetailPage />} />
+                </Route>
+                <Route
+                  path="/categories"
+                  element={
+                    <ProtectedRoute>
+                      <AppLayout />
+                    </ProtectedRoute>
+                  }
+                >
+                  <Route index element={<CategoriesPage />} />
+                </Route>
+                <Route
+                  path="/reports"
+                  element={
+                    <ProtectedRoute>
+                      <AppLayout />
+                    </ProtectedRoute>
+                  }
+                >
+                  <Route index element={<ReportsPage />} />
+                </Route>
+                <Route
+                  path="/settings"
+                  element={
+                    <ProtectedRoute>
+                      <AppLayout />
+                    </ProtectedRoute>
+                  }
+                >
+                  <Route index element={<SettingsPage />} />
+                </Route>
+                <Route
+                  path="/admin"
+                  element={
+                    <ProtectedRoute>
+                      <AppLayout />
+                    </ProtectedRoute>
+                  }
+                >
+                  <Route index element={<AdminPage />} />
+                </Route>
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+              <Toaster />
+              <Sonner />
+            </DataProvider>
           </AuthProvider>
         </Router>
       </TooltipProvider>
