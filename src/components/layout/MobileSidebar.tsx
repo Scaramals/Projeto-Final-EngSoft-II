@@ -8,20 +8,21 @@ import {
   Package,
   Home,
   LogOut,
-  Users,
   ShieldCheck,
   Code,
   Truck,
-  X
+  Menu,
+  User,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAuthorization } from "@/hooks/useAuthorization";
+import {
+  Sheet,
+  SheetContent,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-
-interface MobileSidebarProps {
-  isOpen: boolean;
-  onClose: () => void;
-}
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 interface NavItemProps {
   to: string;
@@ -38,8 +39,8 @@ const NavItem: React.FC<NavItemProps> = ({ to, icon, label, active, onClick }) =
       onClick={onClick}
       className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
         active
-          ? "bg-inventory-blue text-white"
-          : "text-gray-300 hover:bg-sidebar-accent hover:text-white"
+          ? "bg-primary text-primary-foreground"
+          : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
       }`}
     >
       {icon}
@@ -48,128 +49,137 @@ const NavItem: React.FC<NavItemProps> = ({ to, icon, label, active, onClick }) =
   );
 };
 
-export const MobileSidebar: React.FC<MobileSidebarProps> = ({ isOpen, onClose }) => {
+export const MobileSidebar: React.FC = () => {
+  const [isOpen, setIsOpen] = React.useState(false);
   const location = useLocation();
   const currentPath = location.pathname;
-  const { signOut, profile, user } = useAuth();
+  const { signOut, profile } = useAuth();
   const { isAdmin, isDeveloper, hasPermanentAdminRights, isMaster } = useAuthorization();
   
   const canAccessAdmin = isAdmin() || isDeveloper() || hasPermanentAdminRights() || isMaster();
 
   const handleLogout = async () => {
     await signOut();
-    onClose();
+    setIsOpen(false);
   };
 
-  if (!isOpen) return null;
+  const closeSheet = () => setIsOpen(false);
+
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(n => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
 
   return (
     <>
-      {/* Overlay */}
-      <div 
-        className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
-        onClick={onClose}
-      />
-      
-      {/* Sidebar */}
-      <div className="fixed left-0 top-0 w-64 bg-sidebar h-full flex flex-col py-6 px-3 border-r border-border z-50 md:hidden transform transition-transform duration-300 ease-in-out">
-        {/* Header com botão de fechar */}
-        <div className="flex items-center justify-between px-4 mb-8">
-          <h1 className="text-2xl font-bold text-white flex items-center">
-            <Box className="mr-2" />
-            StockControl
-          </h1>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onClose}
-            className="text-white hover:bg-sidebar-accent"
-          >
-            <X size={20} />
-          </Button>
-        </div>
+      {/* Mobile Menu Button */}
+      <div className="fixed top-4 left-4 z-50 md:hidden">
+        <Sheet open={isOpen} onOpenChange={setIsOpen}>
+          <SheetTrigger asChild>
+            <Button variant="outline" size="icon">
+              <Menu size={20} />
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="left" className="w-64 p-0">
+            <div className="h-full bg-sidebar flex flex-col py-6 px-3">
+              {/* Profile Section */}
+              <div className="px-4 mb-8 flex items-center space-x-3">
+                <Avatar className="w-10 h-10">
+                  <AvatarFallback className="bg-primary text-primary-foreground text-sm">
+                    {profile?.full_name ? getInitials(profile.full_name) : <User size={18} />}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <p className="text-sm font-medium text-white truncate">
+                    {profile?.full_name || 'Usuário'}
+                  </p>
+                  <p className="text-xs text-gray-300 capitalize">
+                    {profile?.role || 'user'}
+                  </p>
+                </div>
+              </div>
 
-        <nav className="space-y-1 flex-1">
-          <NavItem
-            to="/dashboard"
-            icon={<Home size={20} />}
-            label="Dashboard"
-            active={currentPath === "/dashboard"}
-            onClick={onClose}
-          />
-          <NavItem
-            to="/products"
-            icon={<Package size={20} />}
-            label="Produtos"
-            active={currentPath.startsWith("/products")}
-            onClick={onClose}
-          />
-          <NavItem
-            to="/inventory"
-            icon={<Box size={20} />}
-            label="Estoque"
-            active={currentPath.startsWith("/inventory")}
-            onClick={onClose}
-          />
-          <NavItem
-            to="/suppliers"
-            icon={<Truck size={20} />}
-            label="Fornecedores"
-            active={currentPath.startsWith("/suppliers")}
-            onClick={onClose}
-          />
-          <NavItem
-            to="/reports"
-            icon={<BarChart size={20} />}
-            label="Relatórios"
-            active={currentPath.startsWith("/reports")}
-            onClick={onClose}
-          />
-          {canAccessAdmin && (
-            <>
-              <NavItem
-                to="/users"
-                icon={<Users size={20} />}
-                label="Usuários"
-                active={currentPath.startsWith("/users")}
-                onClick={onClose}
-              />
-              <NavItem
-                to="/admin"
-                icon={<ShieldCheck size={20} />}
-                label="Administração"
-                active={currentPath.startsWith("/admin")}
-                onClick={onClose}
-              />
-            </>
-          )}
-          {isDeveloper() && (
-            <NavItem
-              to="/developer"
-              icon={<Code size={20} />}
-              label="Desenvolvedor"
-              active={currentPath.startsWith("/developer")}
-              onClick={onClose}
-            />
-          )}
-          <NavItem
-            to="/settings"
-            icon={<Settings size={20} />}
-            label="Configurações"
-            active={currentPath === "/settings"}
-            onClick={onClose}
-          />
-        </nav>
+              {/* Navigation */}
+              <nav className="space-y-1 flex-1">
+                <NavItem
+                  to="/dashboard"
+                  icon={<Home size={20} />}
+                  label="Dashboard"
+                  active={currentPath === "/dashboard"}
+                  onClick={closeSheet}
+                />
+                <NavItem
+                  to="/products"
+                  icon={<Package size={20} />}
+                  label="Produtos"
+                  active={currentPath.startsWith("/products")}
+                  onClick={closeSheet}
+                />
+                <NavItem
+                  to="/inventory"
+                  icon={<Box size={20} />}
+                  label="Estoque"
+                  active={currentPath.startsWith("/inventory")}
+                  onClick={closeSheet}
+                />
+                <NavItem
+                  to="/suppliers"
+                  icon={<Truck size={20} />}
+                  label="Fornecedores"
+                  active={currentPath.startsWith("/suppliers")}
+                  onClick={closeSheet}
+                />
+                <NavItem
+                  to="/reports"
+                  icon={<BarChart size={20} />}
+                  label="Relatórios"
+                  active={currentPath.startsWith("/reports")}
+                  onClick={closeSheet}
+                />
+                {canAccessAdmin && (
+                  <NavItem
+                    to="/admin"
+                    icon={<ShieldCheck size={20} />}
+                    label="Administração"
+                    active={currentPath.startsWith("/admin")}
+                    onClick={closeSheet}
+                  />
+                )}
+                {isDeveloper() && (
+                  <NavItem
+                    to="/developer"
+                    icon={<Code size={20} />}
+                    label="Desenvolvedor"
+                    active={currentPath.startsWith("/developer")}
+                    onClick={closeSheet}
+                  />
+                )}
+                <NavItem
+                  to="/settings"
+                  icon={<Settings size={20} />}
+                  label="Configurações"
+                  active={currentPath === "/settings"}
+                  onClick={closeSheet}
+                />
+              </nav>
 
-        <div className="px-4 mt-auto pt-4 border-t border-sidebar-border">
-          <button 
-            className="flex items-center space-x-3 text-gray-300 hover:text-white w-full px-4 py-3 rounded-lg transition-colors"
-            onClick={handleLogout}
-          >
-            <LogOut size={20} />
-            <span className="font-medium">Sair</span>
-          </button>
-        </div>
+              {/* Logout */}
+              <div className="px-4 mt-auto pt-4 border-t border-sidebar-border">
+                <button 
+                  className="flex items-center space-x-3 text-gray-300 hover:text-white w-full px-4 py-3 rounded-lg transition-colors"
+                  onClick={handleLogout}
+                >
+                  <LogOut size={20} />
+                  <span className="font-medium">Sair</span>
+                </button>
+              </div>
+            </div>
+          </SheetContent>
+        </Sheet>
       </div>
     </>
   );

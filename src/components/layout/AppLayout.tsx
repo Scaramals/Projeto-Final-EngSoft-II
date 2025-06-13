@@ -1,22 +1,32 @@
 
 import React from "react";
 import { Outlet } from "react-router-dom";
-import { Sidebar } from "./Sidebar";
-import { TopBar } from "./TopBar";
+import { MinimalSidebar } from "./MinimalSidebar";
+import { MobileSidebar } from "./MobileSidebar";
+import { useIsMobile } from "@/hooks/use-mobile";
 
-export const AppLayout: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
+export const AppLayout: React.FC = () => {
+  const isMobile = useIsMobile();
+
   return (
-    <div className="flex h-screen w-full bg-background overflow-hidden">
-      <Sidebar />
-      <div className="flex flex-col flex-1 w-full min-w-0">
-        <TopBar />
-        <main className="flex-1 overflow-y-auto w-full">
-          <div className="w-full mx-auto">
-            {children || <Outlet />}
+    <div className="min-h-screen flex w-full bg-background">
+      {isMobile ? (
+        <>
+          <MobileSidebar />
+          <main className="flex-1 p-4">
+            <Outlet />
+          </main>
+        </>
+      ) : (
+        <>
+          <div className="w-16 flex-shrink-0">
+            <MinimalSidebar />
           </div>
-        </main>
-      </div>
+          <main className="flex-1 p-6 overflow-auto">
+            <Outlet />
+          </main>
+        </>
+      )}
     </div>
   );
 };
-

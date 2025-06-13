@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { DataProvider } from "@/contexts/DataContext";
@@ -24,6 +23,9 @@ import ResetPasswordPage from "@/pages/ResetPasswordPage";
 import NotFound from "@/pages/NotFound";
 import ErrorPage from "@/pages/ErrorPage";
 import "./App.css";
+import { TooltipProvider, Sonner } from "@/components/ui/tooltip";
+import AppLayout from "@/components/layout/AppLayout";
+import CategoriesPage from "@/pages/CategoriesPage";
 
 // Create a client
 const queryClient = new QueryClient({
@@ -40,91 +42,106 @@ const queryClient = new QueryClient({
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <Router>
-        <AuthProvider>
-          <DataProvider>
-            <div className="min-h-screen bg-background">
-              <Routes>
-                <Route path="/" element={<Index />} />
-                <Route path="/login" element={<LoginPage />} />
-                <Route path="/register" element={<RegisterPage />} />
-                <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-                <Route path="/reset-password" element={<ResetPasswordPage />} />
-                <Route path="/error" element={<ErrorPage />} />
-                
-                <Route path="/dashboard" element={
+      <AuthProvider>
+        <TooltipProvider>
+          <Router>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/register" element={<RegisterPage />} />
+              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+              <Route path="/reset-password" element={<ResetPasswordPage />} />
+              <Route
+                path="/dashboard"
+                element={
                   <ProtectedRoute>
-                    <DashboardPage />
+                    <AppLayout />
                   </ProtectedRoute>
-                } />
-                
-                <Route path="/products" element={
+                }
+              >
+                <Route index element={<DashboardPage />} />
+              </Route>
+              <Route
+                path="/products"
+                element={
                   <ProtectedRoute>
-                    <ProductsPage />
+                    <AppLayout />
                   </ProtectedRoute>
-                } />
-                
-                <Route path="/products/add" element={
+                }
+              >
+                <Route index element={<ProductsPage />} />
+                <Route path="add" element={<AddProductPage />} />
+                <Route path=":id" element={<ProductDetailPage />} />
+              </Route>
+              <Route
+                path="/inventory"
+                element={
                   <ProtectedRoute>
-                    <AddProductPage />
+                    <AppLayout />
                   </ProtectedRoute>
-                } />
-                
-                <Route path="/products/:productId" element={
+                }
+              >
+                <Route index element={<InventoryPage />} />
+              </Route>
+              <Route
+                path="/suppliers"
+                element={
                   <ProtectedRoute>
-                    <ProductDetailPage />
+                    <AppLayout />
                   </ProtectedRoute>
-                } />
-                
-                <Route path="/inventory" element={
+                }
+              >
+                <Route index element={<SuppliersPage />} />
+                <Route path="add" element={<AddSupplierPage />} />
+                <Route path=":id" element={<SupplierDetailPage />} />
+              </Route>
+              <Route
+                path="/categories"
+                element={
                   <ProtectedRoute>
-                    <InventoryPage />
+                    <AppLayout />
                   </ProtectedRoute>
-                } />
-                
-                <Route path="/suppliers" element={
+                }
+              >
+                <Route index element={<CategoriesPage />} />
+              </Route>
+              <Route
+                path="/reports"
+                element={
                   <ProtectedRoute>
-                    <SuppliersPage />
+                    <AppLayout />
                   </ProtectedRoute>
-                } />
-                
-                <Route path="/suppliers/add" element={
+                }
+              >
+                <Route index element={<ReportsPage />} />
+              </Route>
+              <Route
+                path="/settings"
+                element={
                   <ProtectedRoute>
-                    <AddSupplierPage />
+                    <AppLayout />
                   </ProtectedRoute>
-                } />
-                
-                <Route path="/suppliers/:supplierId" element={
+                }
+              >
+                <Route index element={<SettingsPage />} />
+              </Route>
+              <Route
+                path="/admin"
+                element={
                   <ProtectedRoute>
-                    <SupplierDetailPage />
+                    <AppLayout />
                   </ProtectedRoute>
-                } />
-                
-                <Route path="/reports" element={
-                  <ProtectedRoute>
-                    <ReportsPage />
-                  </ProtectedRoute>
-                } />
-                
-                <Route path="/admin" element={
-                  <ProtectedRoute adminOnly>
-                    <AdminPage />
-                  </ProtectedRoute>
-                } />
-                
-                <Route path="/settings" element={
-                  <ProtectedRoute>
-                    <SettingsPage />
-                  </ProtectedRoute>
-                } />
-                
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </div>
-            <Toaster />
-          </DataProvider>
-        </AuthProvider>
-      </Router>
+                }
+              >
+                <Route index element={<AdminPage />} />
+              </Route>
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Router>
+          <Toaster />
+          <Sonner />
+        </TooltipProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }
