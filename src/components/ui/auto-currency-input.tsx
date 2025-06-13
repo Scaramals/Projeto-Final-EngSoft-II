@@ -31,35 +31,37 @@ export const AutoCurrencyInput: React.FC<AutoCurrencyInputProps> = ({
 
   // Conversão de string para número - mais robusta
   const parseCurrency = (str: string): number => {
-    // Remove tudo exceto dígitos e vírgula/ponto
-    const cleaned = str.replace(/[^\d,.-]/g, '');
+    // Remove tudo exceto dígitos
+    const cleaned = str.replace(/[^\d]/g, '');
     
     // Se está vazio, retorna 0
     if (!cleaned) return 0;
     
-    // Se tem vírgula, substitui por ponto para parseFloat
-    const normalized = cleaned.replace(',', '.');
-    
-    // Converte para número
-    const parsed = parseFloat(normalized);
-    return isNaN(parsed) ? 0 : parsed;
+    // Converte centavos para reais
+    const value = parseInt(cleaned, 10) / 100;
+    return isNaN(value) ? 0 : value;
   };
 
   // Formatação em tempo real durante a digitação
   const formatRealTime = (str: string): string => {
-    const numericValue = parseCurrency(str);
+    // Remove tudo exceto números
+    const cleaned = str.replace(/[^\d]/g, '');
     
-    if (numericValue === 0 && str === '') {
+    if (!cleaned) {
       return '';
     }
     
-    // Para valores pequenos, mostra como centavos
-    if (numericValue < 1 && numericValue > 0) {
-      return `R$ 0,${(numericValue * 100).toFixed(0).padStart(2, '0')}`;
-    }
+    // Converte para centavos
+    const cents = parseInt(cleaned, 10);
+    const reais = cents / 100;
     
-    // Para valores maiores, formata normalmente
-    return formatCurrency(numericValue);
+    // Formata como moeda
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(reais);
   };
 
   useEffect(() => {
@@ -72,7 +74,9 @@ export const AutoCurrencyInput: React.FC<AutoCurrencyInputProps> = ({
     const inputValue = e.target.value;
     
     if (isFocused) {
-      setDisplayValue(inputValue);
+      // Formata em tempo real
+      const formatted = formatRealTime(inputValue);
+      setDisplayValue(formatted);
       
       // Converte e atualiza o valor
       const numericValue = parseCurrency(inputValue);
@@ -83,10 +87,9 @@ export const AutoCurrencyInput: React.FC<AutoCurrencyInputProps> = ({
   const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
     setIsFocused(true);
     
-    // Mostra valor editável (apenas números e vírgula)
+    // Mostra valor formatado ou vazio
     if (value > 0) {
-      const editableValue = value.toFixed(2).replace('.', ',');
-      setDisplayValue(editableValue);
+      setDisplayValue(formatCurrency(value));
     } else {
       setDisplayValue('');
     }
@@ -109,16 +112,15 @@ export const AutoCurrencyInput: React.FC<AutoCurrencyInputProps> = ({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    // Permite números, vírgula, ponto, backspace, delete, tab, escape, enter
+    // Permite apenas números e teclas de controle
     const allowedKeys = [
       'Backspace', 'Delete', 'Tab', 'Escape', 'Enter',
       'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'
     ];
     
     const isNumber = /^[0-9]$/.test(e.key);
-    const isCommaOrDot = e.key === ',' || e.key === '.';
     
-    if (!allowedKeys.includes(e.key) && !isNumber && !isCommaOrDot) {
+    if (!allowedKeys.includes(e.key) && !isNumber) {
       e.preventDefault();
     }
     
@@ -129,13 +131,14 @@ export const AutoCurrencyInput: React.FC<AutoCurrencyInputProps> = ({
     <Input
       {...props}
       type="text"
+      inputMode="numeric"
       value={displayValue}
       onChange={handleInputChange}
       onFocus={handleFocus}
       onBlur={handleBlur}
       onKeyDown={handleKeyDown}
       placeholder={placeholder}
-      className={cn(className)}
+      className={cn("text-base sm:text-sm", className)}
     />
   );
 };

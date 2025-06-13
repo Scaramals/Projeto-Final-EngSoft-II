@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { MobileOptimizedLayout, MobileContainer } from "@/components/layout/MobileOptimizedLayout";
 import { useOptimizedDashboard } from "@/hooks/useOptimizedDashboard";
 import { useDashboard } from "@/hooks/useDashboard";
 import { OptimizedApiService } from "@/services/optimizedApi";
@@ -15,9 +16,11 @@ import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { DashboardMetrics } from "@/components/dashboard/DashboardMetrics";
 import { useRealTimeNotifications } from "@/hooks/useRealTimeNotifications";
 import { useData } from "@/contexts/DataContext";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const DashboardPage: React.FC = () => {
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   const { refreshAll: refreshOptimized } = useOptimizedDashboard();
   const { products, fetchProducts, loadingProducts } = useData();
   const { recentMovements, refreshAll: refreshDashboard } = useDashboard();
@@ -155,23 +158,25 @@ const DashboardPage: React.FC = () => {
 
   return (
     <AppLayout>
-      <div className="space-y-4 md:space-y-6 p-2 md:p-0 max-w-full overflow-hidden">
-        <WelcomeMessage />
-        
-        <DashboardHeader onRefresh={handleRefresh} isLoading={isLoading} />
+      <MobileContainer>
+        <div className="space-y-3 sm:space-y-4 md:space-y-6 max-w-full overflow-hidden">
+          <WelcomeMessage />
+          
+          <DashboardHeader onRefresh={handleRefresh} isLoading={isLoading} />
 
-        <DashboardMetrics
-          isLoading={isLoading}
-          dashboardStats={dashboardStats}
-          monthlyComparison={monthlyComparison}
-          lowStockCount={lowStockCount}
-          productsLength={products.length}
-        />
+          <DashboardMetrics
+            isLoading={isLoading}
+            dashboardStats={dashboardStats}
+            monthlyComparison={monthlyComparison}
+            lowStockCount={lowStockCount}
+            productsLength={products.length}
+          />
 
-        <RealTimePerformanceSummary />
-        
-        <EnhancedDashboard />
-      </div>
+          <RealTimePerformanceSummary />
+          
+          <EnhancedDashboard />
+        </div>
+      </MobileContainer>
     </AppLayout>
   );
 };
