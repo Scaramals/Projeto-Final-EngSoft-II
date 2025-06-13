@@ -59,9 +59,10 @@ export const TopBar: React.FC = () => {
         </div>
       </header>
 
-      {showMobileSidebar && (
-        <MobileSidebar />
-      )}
+      <MobileSidebar 
+        isOpen={showMobileSidebar} 
+        onClose={() => setShowMobileSidebar(false)} 
+      />
     </>
   );
 };
