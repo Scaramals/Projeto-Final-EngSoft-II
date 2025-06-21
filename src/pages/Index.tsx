@@ -1,13 +1,14 @@
-
 import React from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Package, ArrowRight, BarChart3, Users, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-
 const Index = () => {
-  const { user, loading } = useAuth();
+  const {
+    user,
+    loading
+  } = useAuth();
 
   // Redirect authenticated users to dashboard
   if (user && !loading) {
@@ -16,15 +17,11 @@ const Index = () => {
 
   // Show loading state
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+    return <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
-      </div>
-    );
+      </div>;
   }
-
-  return (
-    <div className="min-h-screen bg-background">
+  return <div className="min-h-screen bg-background">
       {/* Hero Section */}
       <section className="relative overflow-hidden bg-gradient-to-br from-primary via-primary/90 to-primary/80">
         {/* Background decoration */}
@@ -51,21 +48,12 @@ const Index = () => {
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
-              <Button 
-                size="lg" 
-                className="bg-white text-primary hover:bg-white/90 font-semibold px-8 py-3"
-                onClick={() => window.location.href = '/login'}
-              >
+              <Button size="lg" className="bg-white text-primary hover:bg-white/90 font-semibold px-8 py-3" onClick={() => window.location.href = '/login'}>
                 Começar Agora
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
               
-              <Button 
-                size="lg" 
-                variant="outline" 
-                className="border-white/20 text-white hover:bg-white/10 font-semibold px-8 py-3"
-                onClick={() => window.location.href = '/register'}
-              >
+              <Button size="lg" variant="outline" onClick={() => window.location.href = '/register'} className="border-white/20 hover:bg-white/10 font-semibold px-8 py-3 text-sky-700">
                 Criar Conta Grátis
               </Button>
             </div>
@@ -141,22 +129,12 @@ const Index = () => {
             </p>
             
             <div className="flex justify-center gap-6">
-              <a 
-                href="https://github.com/Vdev-0" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors"
-              >
+              <a href="https://github.com/Vdev-0" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors">
                 <Package size={20} />
                 <span>GitHub</span>
               </a>
               
-              <a 
-                href="http://linkedin.com/in/victor-pereira-v2005/" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors"
-              >
+              <a href="http://linkedin.com/in/victor-pereira-v2005/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors">
                 <Users size={20} />
                 <span>LinkedIn</span>
               </a>
@@ -175,18 +153,12 @@ const Index = () => {
             Comece gratuitamente e veja a diferença em poucos minutos
           </p>
           
-          <Button 
-            size="lg" 
-            className="bg-white text-primary hover:bg-white/90 font-semibold px-8 py-3"
-            onClick={() => window.location.href = '/register'}
-          >
+          <Button size="lg" className="bg-white text-primary hover:bg-white/90 font-semibold px-8 py-3" onClick={() => window.location.href = '/register'}>
             Criar Conta Grátis
             <ArrowRight className="ml-2 h-5 w-5" />
           </Button>
         </div>
       </section>
-    </div>
-  );
+    </div>;
 };
-
 export default Index;
