@@ -83,6 +83,32 @@ export const currencySchema = z.coerce.number()
   .min(0, "Valor não pode ser negativo")
   .max(999999.99, "Valor muito alto");
 
+// Função de validação de email
+export const validateEmail = (email: string): boolean => {
+  if (!email || email.trim() === '') return false;
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+};
+
+// Função de validação de senha
+export const validatePassword = (password: string): boolean => {
+  if (!password || password.length < 6) return false;
+  // Deve conter pelo menos uma maiúscula, uma minúscula e um número
+  const hasUpperCase = /[A-Z]/.test(password);
+  const hasLowerCase = /[a-z]/.test(password);
+  const hasNumbers = /\d/.test(password);
+  return hasUpperCase && hasLowerCase && hasNumbers;
+};
+
+// Função de validação de campo obrigatório
+export const validateRequired = (value: any): boolean => {
+  if (value === null || value === undefined) return false;
+  if (typeof value === 'string') {
+    return value.trim().length > 0;
+  }
+  return true;
+};
+
 // Validador para quantidade
 export const quantitySchema = z.coerce.number()
   .int("Quantidade deve ser um número inteiro")
