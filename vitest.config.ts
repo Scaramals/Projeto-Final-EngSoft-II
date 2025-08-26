@@ -11,7 +11,8 @@ export default defineConfig({
     setupFiles: ['./src/test/setup.ts'],
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'json', 'html'],
+      reporter: ['text', 'json', 'html', 'lcov'],
+      reportsDirectory: './coverage',
       exclude: [
         'node_modules/',
         'src/test/',
@@ -19,6 +20,16 @@ export default defineConfig({
         '**/*.config.*',
         '**/vite-env.d.ts',
         'src/integrations/supabase/types.ts',
+        'build.js',
+        'src/main.tsx',
+        'src/App.tsx',
+        'src/vite-env.d.ts'
+      ],
+      include: [
+        'src/**/*.{ts,tsx}',
+        '!src/**/*.test.{ts,tsx}',
+        '!src/**/__tests__/**',
+        '!src/test/**'
       ],
       thresholds: {
         global: {
@@ -28,6 +39,7 @@ export default defineConfig({
           statements: 80,
         },
       },
+      all: true,
     },
   },
   resolve: {
