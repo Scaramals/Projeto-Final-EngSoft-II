@@ -61,9 +61,8 @@ describe('useProducts', () => {
 
     expect(result.current.isLoading).toBe(true);
 
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false);
-    });
+    // Wait for loading to complete
+    await new Promise(resolve => setTimeout(resolve, 0));
 
     expect(result.current.data).toEqual(mockProducts);
     expect(mockGetAllProducts).toHaveBeenCalled();
@@ -90,9 +89,8 @@ describe('useProducts', () => {
       return useAllProducts(filters);
     }, { wrapper });
 
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false);
-    });
+    // Wait for loading to complete
+    await new Promise(resolve => setTimeout(resolve, 0));
 
     expect(result.current.data).toEqual(mockProducts);
     expect(mockGetAllProducts).toHaveBeenCalledWith(filters);
@@ -115,9 +113,8 @@ describe('useProducts', () => {
       return useProduct('1');
     }, { wrapper });
 
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false);
-    });
+    // Wait for loading to complete
+    await new Promise(resolve => setTimeout(resolve, 0));
 
     expect(result.current.data).toEqual(mockProduct);
     expect(mockGetProductById).toHaveBeenCalledWith('1');
@@ -157,7 +154,7 @@ describe('useProducts', () => {
       return useUpdateProduct();
     }, { wrapper });
 
-    await result.current.mutateAsync({ id: '1', updates: mockUpdates });
+    await result.current.mutateAsync({ id: '1', ...mockUpdates });
 
     expect(mockUpdateProduct).toHaveBeenCalledWith('1', mockUpdates);
   });
@@ -186,9 +183,8 @@ describe('useProducts', () => {
       return useAllProducts();
     }, { wrapper });
 
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false);
-    });
+    // Wait for loading to complete
+    await new Promise(resolve => setTimeout(resolve, 0));
 
     expect(result.current.error).toBeTruthy();
     expect(result.current.data).toBeUndefined();

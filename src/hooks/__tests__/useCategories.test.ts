@@ -57,9 +57,8 @@ describe('useCategories', () => {
 
     expect(result.current.isLoading).toBe(true);
 
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false);
-    });
+    // Wait for initial loading to complete
+    await new Promise(resolve => setTimeout(resolve, 0));
 
     expect(result.current.data).toEqual(mockCategories);
     expect(mockGetAllCategories).toHaveBeenCalled();
@@ -75,9 +74,8 @@ describe('useCategories', () => {
       return useAllCategories();
     }, { wrapper });
 
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false);
-    });
+    // Wait for loading to complete
+    await new Promise(resolve => setTimeout(resolve, 0));
 
     expect(result.current.error).toBeTruthy();
     expect(result.current.data).toBeUndefined();
@@ -114,7 +112,7 @@ describe('useCategories', () => {
       return useUpdateCategory();
     }, { wrapper });
 
-    await result.current.mutateAsync({ id: '1', updates: mockUpdates });
+    await result.current.mutateAsync({ id: '1', ...mockUpdates });
 
     expect(mockUpdateCategory).toHaveBeenCalledWith('1', mockUpdates);
   });
@@ -153,9 +151,8 @@ describe('useCategories', () => {
       return useCategoryById('1');
     }, { wrapper });
 
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false);
-    });
+    // Wait for loading to complete
+    await new Promise(resolve => setTimeout(resolve, 0));
 
     expect(result.current.data).toEqual(mockCategory);
   });

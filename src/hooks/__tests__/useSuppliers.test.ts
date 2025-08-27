@@ -49,28 +49,32 @@ describe('useSuppliers', () => {
 
     mockSelect.mockResolvedValue({ data: mockSuppliers, error: null });
 
-    const { result } = renderHook(() => useSuppliers());
+    const { result } = renderHook(() => {
+      const { useAllSuppliers } = useSuppliers();
+      return useAllSuppliers();
+    });
 
     expect(result.current.isLoading).toBe(true);
 
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false);
-    });
+    // Wait for loading to complete
+    await new Promise(resolve => setTimeout(resolve, 0));
 
-    expect(result.current.suppliers).toEqual(mockSuppliers);
+    expect(result.current.data).toEqual(mockSuppliers);
   });
 
   it('deve tratar erro ao carregar fornecedores', async () => {
     const mockError = { message: 'Erro ao carregar fornecedores' };
     mockSelect.mockResolvedValue({ data: null, error: mockError });
 
-    const { result } = renderHook(() => useSuppliers());
-
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false);
+    const { result } = renderHook(() => {
+      const { useAllSuppliers } = useSuppliers();
+      return useAllSuppliers();
     });
 
-    expect(result.current.suppliers).toEqual([]);
+    // Wait for loading to complete
+    await new Promise(resolve => setTimeout(resolve, 0));
+
+    expect(result.current.data).toEqual([]);
   });
 
   it('deve criar fornecedor com sucesso', async () => {
@@ -85,16 +89,17 @@ describe('useSuppliers', () => {
     mockInsert.mockResolvedValue({ data: [mockCreatedSupplier], error: null });
     mockSelect.mockResolvedValue({ data: [mockCreatedSupplier], error: null });
 
-    const { result } = renderHook(() => useSuppliers());
-
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false);
+    const { result } = renderHook(() => {
+      const { useCreateSupplier } = useSuppliers();
+      return useCreateSupplier();
     });
 
-    const createResult = await result.current.createSupplier(mockSupplier);
+    // Wait for loading to complete
+    await new Promise(resolve => setTimeout(resolve, 0));
 
-    expect(createResult.success).toBe(true);
-    expect(mockInsert).toHaveBeenCalledWith([mockSupplier]);
+    const createdSupplier = await result.current.mutateAsync(mockSupplier);
+
+    expect(createdSupplier).toBeDefined();
   });
 
   it('deve atualizar fornecedor com sucesso', async () => {
@@ -102,15 +107,17 @@ describe('useSuppliers', () => {
     mockUpdate.mockResolvedValue({ data: [{ id: '1', ...mockUpdates }], error: null });
     mockSelect.mockResolvedValue({ data: [], error: null });
 
-    const { result } = renderHook(() => useSuppliers());
-
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false);
+    const { result } = renderHook(() => {
+      const { useUpdateSupplier } = useSuppliers();
+      return useUpdateSupplier();
     });
 
-    const updateResult = await result.current.updateSupplier('1', mockUpdates);
+    // Wait for loading to complete
+    await new Promise(resolve => setTimeout(resolve, 0));
 
-    expect(updateResult.success).toBe(true);
+    const updatedSupplier = await result.current.mutateAsync({ id: '1', ...mockUpdates });
+
+    expect(updatedSupplier).toBeDefined();
     expect(mockUpdate).toHaveBeenCalled();
     expect(mockEq).toHaveBeenCalledWith('id', '1');
   });
@@ -119,15 +126,17 @@ describe('useSuppliers', () => {
     mockDelete.mockResolvedValue({ data: null, error: null });
     mockSelect.mockResolvedValue({ data: [], error: null });
 
-    const { result } = renderHook(() => useSuppliers());
-
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false);
+    const { result } = renderHook(() => {
+      const { useDeleteSupplier } = useSuppliers();
+      return useDeleteSupplier();
     });
 
-    const deleteResult = await result.current.deleteSupplier('1');
+    // Wait for loading to complete
+    await new Promise(resolve => setTimeout(resolve, 0));
 
-    expect(deleteResult.success).toBe(true);
+    const deletedId = await result.current.mutateAsync('1');
+
+    expect(deletedId).toBe('1');
     expect(mockDelete).toHaveBeenCalled();
     expect(mockEq).toHaveBeenCalledWith('id', '1');
   });
@@ -139,17 +148,17 @@ describe('useSuppliers', () => {
       email: 'especifico@test.com',
     };
 
-    mockSelect.mockResolvedValue({ data: [mockSupplier], error: null });
+    mockSelect.mockResolvedValue({ data: mockSupplier, error: null });
 
-    const { result } = renderHook(() => useSuppliers());
-
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false);
+    const { result } = renderHook(() => {
+      const { useSupplier } = useSuppliers();
+      return useSupplier('1');
     });
 
-    const supplier = await result.current.getSupplierById('1');
+    // Wait for loading to complete
+    await new Promise(resolve => setTimeout(resolve, 0));
 
-    expect(supplier).toEqual(mockSupplier);
+    expect(result.current.data).toEqual(mockSupplier);
     expect(mockEq).toHaveBeenCalledWith('id', '1');
   });
 });

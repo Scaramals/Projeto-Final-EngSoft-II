@@ -52,10 +52,8 @@ describe('useDashboard', () => {
 
     const { result } = renderHook(() => useDashboard());
 
-    // Trigger initial load by calling fetchDashboardStats
-    expect(typeof result.current.fetchDashboardStats).toBe('function');
-    expect(typeof result.current.fetchLowStockProducts).toBe('function');
-    expect(typeof result.current.fetchRecentMovements).toBe('function');
+    // Check that data is loaded
+    expect(typeof result.current.refreshAll).toBe('function');
   });
 
   it('deve carregar produtos com estoque baixo', async () => {
@@ -82,7 +80,7 @@ describe('useDashboard', () => {
 
     const { result } = renderHook(() => useDashboard());
 
-    expect(typeof result.current.fetchLowStockProducts).toBe('function');
+    expect(typeof result.current.refreshAll).toBe('function');
   });
 
   it('deve carregar movimentações recentes', async () => {
@@ -109,7 +107,7 @@ describe('useDashboard', () => {
 
     const { result } = renderHook(() => useDashboard());
 
-    expect(typeof result.current.fetchRecentMovements).toBe('function');
+    expect(typeof result.current.refreshAll).toBe('function');
   });
 
   it('deve tratar erro ao carregar dados', async () => {
@@ -125,7 +123,7 @@ describe('useDashboard', () => {
   it('deve ter função de refresh disponível', () => {
     const { result } = renderHook(() => useDashboard());
 
-    expect(typeof result.current.refreshDashboard).toBe('function');
+    expect(typeof result.current.refreshAll).toBe('function');
   });
 
   it('deve controlar estado de loading', async () => {
@@ -148,10 +146,7 @@ describe('useDashboard', () => {
     expect(result.current.recentMovements).toBeDefined();
     expect(result.current.isLoading).toBeDefined();
     expect(result.current.hasErrors).toBeDefined();
-    expect(result.current.fetchDashboardStats).toBeDefined();
-    expect(result.current.fetchLowStockProducts).toBeDefined();
-    expect(result.current.fetchRecentMovements).toBeDefined();
-    expect(result.current.refreshDashboard).toBeDefined();
+    expect(result.current.refreshAll).toBeDefined();
   });
 
   it('deve resetar erros ao recarregar dados', async () => {
@@ -175,6 +170,6 @@ describe('useDashboard', () => {
     const { result } = renderHook(() => useDashboard());
 
     // Hook deve processar os dados corretamente
-    expect(typeof result.current.fetchDashboardStats).toBe('function');
+    expect(typeof result.current.refreshAll).toBe('function');
   });
 });
