@@ -2,8 +2,17 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { useRealtimeStock } from '@/hooks/useRealtimeStock';
 import { StockService } from '@/services/stockService';
+import { createHookWrapper } from '@/test/utils';
 
-vi.mock('@/services/stockService');
+const mockStockService = vi.hoisted(() => ({
+  StockService: {
+    getCurrentStock: vi.fn().mockResolvedValue(0),
+    createMovement: vi.fn().mockResolvedValue({ success: true }),
+    getMovementsWithDetails: vi.fn().mockResolvedValue([]),
+  },
+}));
+
+vi.mock('@/services/stockService', () => mockStockService);
 
 describe('useRealtimeStock', () => {
   beforeEach(() => {
@@ -11,7 +20,9 @@ describe('useRealtimeStock', () => {
   });
 
   it('deve retornar estoque 0 e loading false para ID inválido', async () => {
-    const { result } = renderHook(() => useRealtimeStock('new'));
+    const { result } = renderHook(() => useRealtimeStock('new'), {
+      wrapper: createHookWrapper(),
+    });
 
     // Aguardar a resolução async
     await new Promise(resolve => setTimeout(resolve, 100));
@@ -24,7 +35,9 @@ describe('useRealtimeStock', () => {
     const mockStock = 25;
     (StockService.getCurrentStock as any).mockResolvedValue(mockStock);
 
-    const { result } = renderHook(() => useRealtimeStock('product-123'));
+    const { result } = renderHook(() => useRealtimeStock('product-123'), {
+      wrapper: createHookWrapper(),
+    });
 
     expect(result.current.isLoading).toBe(true);
 
@@ -39,7 +52,9 @@ describe('useRealtimeStock', () => {
     const mockError = new Error('Service error');
     (StockService.getCurrentStock as any).mockRejectedValue(mockError);
 
-    const { result } = renderHook(() => useRealtimeStock('product-123'));
+    const { result } = renderHook(() => useRealtimeStock('product-123'), {
+      wrapper: createHookWrapper(),
+    });
 
     // Aguardar a resolução async
     await new Promise(resolve => setTimeout(resolve, 100));
@@ -49,7 +64,9 @@ describe('useRealtimeStock', () => {
   });
 
   it('deve ter função refreshStock disponível', () => {
-    const { result } = renderHook(() => useRealtimeStock('product-123'));
+    const { result } = renderHook(() => useRealtimeStock('product-123'), {
+      wrapper: createHookWrapper(),
+    });
 
     expect(typeof result.current.refreshStock).toBe('function');
   });
@@ -62,7 +79,9 @@ describe('useRealtimeStock', () => {
       .mockResolvedValueOnce(initialStock)
       .mockResolvedValueOnce(updatedStock);
 
-    const { result } = renderHook(() => useRealtimeStock('product-123'));
+    const { result } = renderHook(() => useRealtimeStock('product-123'), {
+      wrapper: createHookWrapper(),
+    });
 
     // Aguardar primeira carga
     await new Promise(resolve => setTimeout(resolve, 100));

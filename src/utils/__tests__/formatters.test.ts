@@ -4,23 +4,23 @@ import { formatCurrency, formatDate } from '@/utils/formatters';
 describe('formatters', () => {
   describe('formatCurrency', () => {
     it('deve formatar valor como moeda brasileira', () => {
-      expect(formatCurrency(1234.56)).toBe('R$ 1.234,56');
+      expect(formatCurrency(1234.56)).toMatch(/R\$\s*1\.234,56/);
     });
 
     it('deve formatar zero corretamente', () => {
-      expect(formatCurrency(0)).toBe('R$ 0,00');
+      expect(formatCurrency(0)).toMatch(/R\$\s*0,00/);
     });
 
     it('deve formatar valores negativos', () => {
-      expect(formatCurrency(-500)).toBe('-R$ 500,00');
+      expect(formatCurrency(-500)).toMatch(/-R\$\s*500,00/);
     });
 
     it('deve tratar valores undefined', () => {
-      expect(formatCurrency(undefined)).toBe('R$ 0,00');
+      expect(formatCurrency(undefined as any)).toMatch(/R\$\s*0,00/);
     });
 
     it('deve tratar valores null', () => {
-      expect(formatCurrency(null)).toBe('R$ 0,00');
+      expect(formatCurrency(null as any)).toMatch(/R\$\s*0,00/);
     });
   });
 
@@ -36,7 +36,7 @@ describe('formatters', () => {
 
     it('deve retornar string vazia para data inválida', () => {
       expect(formatDate('')).toBe('');
-      expect(formatDate(null)).toBe('');
+      expect(formatDate(null as any)).toBe('');
     });
   });
 });

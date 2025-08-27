@@ -8,12 +8,12 @@
  * @param value Valor a ser formatado
  * @returns String formatada como moeda
  */
-export function formatCurrency(value: number | string): string {
+export function formatCurrency(value: number | string | null | undefined): string {
   // Converte para número se for string
-  const numValue = typeof value === 'string' ? parseFloat(value) : value;
+  const numValue = typeof value === 'string' ? parseFloat(value) : (value ?? 0);
   
   // Retorna zero formatado se não for um número válido
-  if (isNaN(numValue)) return 'R$ 0,00';
+  if (isNaN(numValue) || value === null || value === undefined) return 'R$ 0,00';
   
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
@@ -67,8 +67,12 @@ export function useCurrencyInput(
  * @param date Data a ser formatada
  * @returns String formatada como data
  */
-export function formatDate(date: Date | string): string {
+export function formatDate(date: Date | string | null | undefined): string {
+  if (!date) return '';
+  
   const dateObj = typeof date === 'string' ? new Date(date) : date;
+  
+  if (isNaN(dateObj.getTime())) return '';
   
   return dateObj.toLocaleDateString('pt-BR', {
     day: '2-digit',
@@ -82,8 +86,12 @@ export function formatDate(date: Date | string): string {
  * @param date Data e hora a ser formatada
  * @returns String formatada como data e hora
  */
-export function formatDateTime(date: Date | string): string {
+export function formatDateTime(date: Date | string | null | undefined): string {
+  if (!date) return '';
+  
   const dateObj = typeof date === 'string' ? new Date(date) : date;
+  
+  if (isNaN(dateObj.getTime())) return '';
   
   return dateObj.toLocaleDateString('pt-BR', {
     day: '2-digit',

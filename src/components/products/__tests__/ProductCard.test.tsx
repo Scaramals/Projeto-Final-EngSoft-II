@@ -1,8 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { render } from '@testing-library/react';
 import { ProductCard } from '@/components/products/ProductCard';
-import { BrowserRouter } from 'react-router-dom';
 import { Product } from '@/types';
+import { renderWithProviders } from '@/test/utils';
 
 const mockProduct: Product = {
   id: '1',
@@ -17,38 +16,22 @@ const mockProduct: Product = {
   updatedAt: '2024-01-01T00:00:00Z'
 };
 
-const ProductCardWrapper = ({ children }: { children: React.ReactNode }) => (
-  <BrowserRouter>{children}</BrowserRouter>
-);
-
 describe('ProductCard', () => {
   it('deve renderizar informações básicas do produto', () => {
-    const { getByText } = render(
-      <ProductCardWrapper>
-        <ProductCard product={mockProduct} />
-      </ProductCardWrapper>
-    );
+    const { getByText } = renderWithProviders(<ProductCard product={mockProduct} />);
 
     expect(getByText('Produto Teste')).toBeInTheDocument();
     expect(getByText('Descrição do produto teste')).toBeInTheDocument();
   });
 
   it('deve mostrar informações de preço', () => {
-    const { container } = render(
-      <ProductCardWrapper>
-        <ProductCard product={mockProduct} />
-      </ProductCardWrapper>
-    );
+    const { container } = renderWithProviders(<ProductCard product={mockProduct} />);
 
     expect(container.textContent).toContain('99.99');
   });
 
   it('deve mostrar informações de quantidade', () => {
-    const { container } = render(
-      <ProductCardWrapper>
-        <ProductCard product={mockProduct} />
-      </ProductCardWrapper>
-    );
+    const { container } = renderWithProviders(<ProductCard product={mockProduct} />);
 
     expect(container.textContent).toContain('10');
   });
@@ -59,11 +42,7 @@ describe('ProductCard', () => {
       quantity: 3, // menor que minimumStock (5)
     };
 
-    const { container } = render(
-      <ProductCardWrapper>
-        <ProductCard product={lowStockProduct} />
-      </ProductCardWrapper>
-    );
+    const { container } = renderWithProviders(<ProductCard product={lowStockProduct} />);
 
     expect(container.textContent).toContain('3');
   });
@@ -74,21 +53,13 @@ describe('ProductCard', () => {
       quantity: 0,
     };
 
-    const { container } = render(
-      <ProductCardWrapper>
-        <ProductCard product={outOfStockProduct} />
-      </ProductCardWrapper>
-    );
+    const { container } = renderWithProviders(<ProductCard product={outOfStockProduct} />);
 
     expect(container.textContent).toContain('0');
   });
 
   it('deve renderizar imagem quando não há URL', () => {
-    const { getByRole } = render(
-      <ProductCardWrapper>
-        <ProductCard product={mockProduct} />
-      </ProductCardWrapper>
-    );
+    const { getByRole } = renderWithProviders(<ProductCard product={mockProduct} />);
 
     const image = getByRole('img');
     expect(image).toHaveAttribute('alt', 'Produto Teste');
@@ -100,11 +71,7 @@ describe('ProductCard', () => {
       description: 'Esta é uma descrição muito longa que deveria ser truncada quando exceder o limite de caracteres permitido no card do produto'
     };
 
-    const { getByText } = render(
-      <ProductCardWrapper>
-        <ProductCard product={longDescriptionProduct} />
-      </ProductCardWrapper>
-    );
+    const { getByText } = renderWithProviders(<ProductCard product={longDescriptionProduct} />);
 
     expect(getByText(/Esta é uma descrição muito longa/)).toBeInTheDocument();
   });
@@ -115,11 +82,7 @@ describe('ProductCard', () => {
       categoryId: undefined,
     };
 
-    const { getByText } = render(
-      <ProductCardWrapper>
-        <ProductCard product={productWithoutCategory} />
-      </ProductCardWrapper>
-    );
+    const { getByText } = renderWithProviders(<ProductCard product={productWithoutCategory} />);
 
     expect(getByText('Produto Teste')).toBeInTheDocument();
   });
