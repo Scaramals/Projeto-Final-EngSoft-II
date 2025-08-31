@@ -24,30 +24,33 @@ describe('ProductCard', () => {
     expect(await findByText('Descrição do produto teste')).toBeInTheDocument();
   });
 
-  it('deve mostrar informações de preço', () => {
+  it('deve mostrar informações de preço', async () => {
     const { container } = renderWithProviders(<ProductCard product={mockProduct} />);
 
+    await new Promise(resolve => setTimeout(resolve, 100));
     expect(container.textContent).toContain('99.99');
   });
 
-  it('deve mostrar informações de quantidade', () => {
+  it('deve mostrar informações de quantidade', async () => {
     const { container } = renderWithProviders(<ProductCard product={mockProduct} />);
 
+    await new Promise(resolve => setTimeout(resolve, 100));  
     expect(container.textContent).toContain('10');
   });
 
-  it('deve renderizar produto com estoque baixo', () => {
+  it('deve renderizar produto com estoque baixo', async () => {
     const lowStockProduct = {
       ...mockProduct,
-      quantity: 3, // menor que minimumStock (5)
+      quantity: 3,
     };
 
     const { container } = renderWithProviders(<ProductCard product={lowStockProduct} />);
 
+    await new Promise(resolve => setTimeout(resolve, 100));
     expect(container.textContent).toContain('3');
   });
 
-  it('deve renderizar produto sem estoque', () => {
+  it('deve renderizar produto sem estoque', async () => {
     const outOfStockProduct = {
       ...mockProduct,
       quantity: 0,
@@ -55,6 +58,7 @@ describe('ProductCard', () => {
 
     const { container } = renderWithProviders(<ProductCard product={outOfStockProduct} />);
 
+    await new Promise(resolve => setTimeout(resolve, 100));
     expect(container.textContent).toContain('0');
   });
 

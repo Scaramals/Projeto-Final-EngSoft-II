@@ -1,20 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { useStockMovements } from '@/hooks/useStockMovements';
+import { createHookWrapper } from '@/test/utils';
+import { supabase } from '@/integrations/supabase/client';
 
-const mockSupabase = vi.hoisted(() => ({
-  from: vi.fn().mockReturnValue({
-    select: vi.fn().mockReturnThis(),
-    insert: vi.fn().mockReturnThis(),
-    eq: vi.fn().mockReturnThis(),
-    order: vi.fn().mockReturnThis(),
-    limit: vi.fn().mockReturnThis(),
-  }),
-}));
-
-vi.mock('@/integrations/supabase/client', () => ({
-  supabase: mockSupabase,
-}));
+// Tipo para o mock do Supabase
+const mockSupabase = vi.mocked(supabase);
 
 describe('useStockMovements', () => {
   beforeEach(() => {
@@ -33,26 +24,41 @@ describe('useStockMovements', () => {
       },
     ];
 
-    mockSupabase.from().select.mockResolvedValue({ data: mockMovements, error: null });
+    const mockChain = {
+      select: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      then: vi.fn().mockResolvedValue({ data: mockMovements, error: null })
+    };
 
-    const { result } = renderHook(() => useStockMovements());
+    mockSupabase.from.mockReturnValue(mockChain as any);
+
+    const { result } = renderHook(() => useStockMovements(), {
+      wrapper: createHookWrapper(),
+    });
 
     expect(result.current.isLoading).toBe(true);
 
-    // Wait for loading to complete
-    await new Promise(resolve => setTimeout(resolve, 0));
+    await new Promise(resolve => setTimeout(resolve, 100));
 
     expect(result.current.movements).toEqual(mockMovements);
   });
 
   it('deve tratar erro ao carregar movimentações', async () => {
     const mockError = { message: 'Erro ao carregar movimentações' };
-    mockSupabase.from().select.mockResolvedValue({ data: null, error: mockError });
+    
+    const mockChain = {
+      select: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      then: vi.fn().mockResolvedValue({ data: null, error: mockError })
+    };
 
-    const { result } = renderHook(() => useStockMovements());
+    mockSupabase.from.mockReturnValue(mockChain as any);
 
-    // Wait for loading to complete
-    await new Promise(resolve => setTimeout(resolve, 0));
+    const { result } = renderHook(() => useStockMovements(), {
+      wrapper: createHookWrapper(),
+    });
+
+    await new Promise(resolve => setTimeout(resolve, 100));
 
     expect(result.current.movements).toEqual([]);
   });
@@ -66,24 +72,36 @@ describe('useStockMovements', () => {
     };
 
     const mockCreatedMovement = { id: '2', ...mockMovement, created_at: '2024-01-01T11:00:00Z' };
-    mockSupabase.from().insert.mockResolvedValue({ data: [mockCreatedMovement], error: null });
-    mockSupabase.from().select.mockResolvedValue({ data: [mockCreatedMovement], error: null });
+    
+    const mockChain = {
+      insert: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: mockCreatedMovement, error: null }),
+      then: vi.fn().mockResolvedValue({ data: [mockCreatedMovement], error: null })
+    };
 
-    const { result } = renderHook(() => useStockMovements());
+    mockSupabase.from.mockReturnValue(mockChain as any);
 
-    // Wait for loading to complete
-    await new Promise(resolve => setTimeout(resolve, 0));
+    const { result } = renderHook(() => useStockMovements(), {
+      wrapper: createHookWrapper(),
+    });
+
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    expect(result.current.createMovement).toBeDefined();
 
     const createResult = await result.current.createMovement(mockMovement);
-
     expect(createResult.success).toBe(true);
   });
 
   it('deve validar dados obrigatórios ao criar movimentação', async () => {
-    const { result } = renderHook(() => useStockMovements());
+    const { result } = renderHook(() => useStockMovements(), {
+      wrapper: createHookWrapper(),
+    });
 
-    // Wait for loading to complete
-    await new Promise(resolve => setTimeout(resolve, 0));
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    expect(result.current.createMovement).toBeDefined();
 
     const createResult = await result.current.createMovement({
       productId: '',
@@ -116,27 +134,36 @@ describe('useStockMovements', () => {
       },
     ];
 
-    mockSupabase.from().select.mockResolvedValue({ data: mockMovements, error: null });
+    const mockChain = {
+      select: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      then: vi.fn().mockResolvedValue({ data: mockMovements, error: null })
+    };
 
-    const { result } = renderHook(() => useStockMovements());
+    mockSupabase.from.mockReturnValue(mockChain as any);
 
-    // Wait for loading to complete
-    await new Promise(resolve => setTimeout(resolve, 0));
+    const { result } = renderHook(() => useStockMovements(), {
+      wrapper: createHookWrapper(),
+    });
 
-    // Filter functionality is handled internally
+    await new Promise(resolve => setTimeout(resolve, 100));
+
     expect(result.current.fetchMovements).toBeDefined();
   });
 
   it('deve ordenar movimentações por data', async () => {
-    const { result } = renderHook(() => useStockMovements());
+    const { result } = renderHook(() => useStockMovements(), {
+      wrapper: createHookWrapper(),
+    });
 
-    // Check that the hook provides the expected interface
     expect(typeof result.current.fetchMovements).toBe('function');
     expect(typeof result.current.createMovement).toBe('function');
   });
 
   it('deve ter função de refresh disponível', () => {
-    const { result } = renderHook(() => useStockMovements());
+    const { result } = renderHook(() => useStockMovements(), {
+      wrapper: createHookWrapper(),
+    });
 
     expect(typeof result.current.fetchMovements).toBe('function');
   });

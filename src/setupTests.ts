@@ -1,5 +1,14 @@
 import '@testing-library/jest-dom';
-import { vi } from 'vitest';
+import { vi, afterEach } from 'vitest';
+import { cleanup } from '@testing-library/react';
+
+// Limpa automaticamente o DOM após cada teste
+afterEach(() => {
+  cleanup();
+  vi.clearAllMocks();
+  vi.clearAllTimers();
+  vi.restoreAllMocks();
+});
 
 // Mock do Supabase com vi.hoisted
 const mockSupabase = vi.hoisted(() => ({
