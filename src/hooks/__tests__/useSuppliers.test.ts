@@ -2,38 +2,24 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { useSuppliers } from '@/hooks/useSuppliers';
 
-const mockFrom = vi.fn();
-const mockSelect = vi.fn().mockReturnThis();
-const mockInsert = vi.fn().mockReturnThis();
-const mockUpdate = vi.fn().mockReturnThis();
-const mockDelete = vi.fn().mockReturnThis();
-const mockEq = vi.fn().mockReturnThis();
-const mockOrder = vi.fn().mockReturnThis();
+const mockSupabase = vi.hoisted(() => ({
+  from: vi.fn().mockReturnValue({
+    select: vi.fn().mockReturnThis(),
+    insert: vi.fn().mockReturnThis(),
+    update: vi.fn().mockReturnThis(),
+    delete: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+    order: vi.fn().mockReturnThis(),
+  }),
+}));
 
 vi.mock('@/integrations/supabase/client', () => ({
-  supabase: {
-    from: mockFrom.mockReturnValue({
-      select: mockSelect,
-      insert: mockInsert,
-      update: mockUpdate,
-      delete: mockDelete,
-      eq: mockEq,
-      order: mockOrder,
-    }),
-  },
+  supabase: mockSupabase,
 }));
 
 describe('useSuppliers', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockFrom.mockReturnValue({
-      select: mockSelect,
-      insert: mockInsert,
-      update: mockUpdate,
-      delete: mockDelete,
-      eq: mockEq,
-      order: mockOrder,
-    });
   });
 
   it('deve carregar fornecedores inicialmente', async () => {
@@ -47,7 +33,7 @@ describe('useSuppliers', () => {
       },
     ];
 
-    mockSelect.mockResolvedValue({ data: mockSuppliers, error: null });
+    mockSupabase.from().select.mockResolvedValue({ data: mockSuppliers, error: null });
 
     const { result } = renderHook(() => {
       const { useAllSuppliers } = useSuppliers();
@@ -64,7 +50,7 @@ describe('useSuppliers', () => {
 
   it('deve tratar erro ao carregar fornecedores', async () => {
     const mockError = { message: 'Erro ao carregar fornecedores' };
-    mockSelect.mockResolvedValue({ data: null, error: mockError });
+    mockSupabase.from().select.mockResolvedValue({ data: null, error: mockError });
 
     const { result } = renderHook(() => {
       const { useAllSuppliers } = useSuppliers();
@@ -86,8 +72,8 @@ describe('useSuppliers', () => {
     };
 
     const mockCreatedSupplier = { id: '2', ...mockSupplier };
-    mockInsert.mockResolvedValue({ data: [mockCreatedSupplier], error: null });
-    mockSelect.mockResolvedValue({ data: [mockCreatedSupplier], error: null });
+    mockSupabase.from().insert.mockResolvedValue({ data: [mockCreatedSupplier], error: null });
+    mockSupabase.from().select.mockResolvedValue({ data: [mockCreatedSupplier], error: null });
 
     const { result } = renderHook(() => {
       const { useCreateSupplier } = useSuppliers();
@@ -104,8 +90,8 @@ describe('useSuppliers', () => {
 
   it('deve atualizar fornecedor com sucesso', async () => {
     const mockUpdates = { name: 'Fornecedor Atualizado', email: 'atualizado@test.com' };
-    mockUpdate.mockResolvedValue({ data: [{ id: '1', ...mockUpdates }], error: null });
-    mockSelect.mockResolvedValue({ data: [], error: null });
+    mockSupabase.from().update.mockResolvedValue({ data: [{ id: '1', ...mockUpdates }], error: null });
+    mockSupabase.from().select.mockResolvedValue({ data: [], error: null });
 
     const { result } = renderHook(() => {
       const { useUpdateSupplier } = useSuppliers();
@@ -118,13 +104,13 @@ describe('useSuppliers', () => {
     const updatedSupplier = await result.current.mutateAsync({ id: '1', ...mockUpdates });
 
     expect(updatedSupplier).toBeDefined();
-    expect(mockUpdate).toHaveBeenCalled();
-    expect(mockEq).toHaveBeenCalledWith('id', '1');
+    expect(mockSupabase.from().update).toHaveBeenCalled();
+    expect(mockSupabase.from().eq).toHaveBeenCalledWith('id', '1');
   });
 
   it('deve deletar fornecedor com sucesso', async () => {
-    mockDelete.mockResolvedValue({ data: null, error: null });
-    mockSelect.mockResolvedValue({ data: [], error: null });
+    mockSupabase.from().delete.mockResolvedValue({ data: null, error: null });
+    mockSupabase.from().select.mockResolvedValue({ data: [], error: null });
 
     const { result } = renderHook(() => {
       const { useDeleteSupplier } = useSuppliers();
@@ -137,8 +123,8 @@ describe('useSuppliers', () => {
     const deletedId = await result.current.mutateAsync('1');
 
     expect(deletedId).toBe('1');
-    expect(mockDelete).toHaveBeenCalled();
-    expect(mockEq).toHaveBeenCalledWith('id', '1');
+    expect(mockSupabase.from().delete).toHaveBeenCalled();
+    expect(mockSupabase.from().eq).toHaveBeenCalledWith('id', '1');
   });
 
   it('deve buscar fornecedor por ID', async () => {
@@ -148,7 +134,7 @@ describe('useSuppliers', () => {
       email: 'especifico@test.com',
     };
 
-    mockSelect.mockResolvedValue({ data: mockSupplier, error: null });
+    mockSupabase.from().select.mockResolvedValue({ data: mockSupplier, error: null });
 
     const { result } = renderHook(() => {
       const { useSupplier } = useSuppliers();
@@ -159,6 +145,6 @@ describe('useSuppliers', () => {
     await new Promise(resolve => setTimeout(resolve, 0));
 
     expect(result.current.data).toEqual(mockSupplier);
-    expect(mockEq).toHaveBeenCalledWith('id', '1');
+    expect(mockSupabase.from().eq).toHaveBeenCalledWith('id', '1');
   });
 });

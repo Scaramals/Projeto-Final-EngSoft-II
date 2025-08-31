@@ -17,11 +17,11 @@ const mockProduct: Product = {
 };
 
 describe('ProductCard', () => {
-  it('deve renderizar informações básicas do produto', () => {
-    const { getByText } = renderWithProviders(<ProductCard product={mockProduct} />);
+  it('deve renderizar informações básicas do produto', async () => {
+    const { findByText } = renderWithProviders(<ProductCard product={mockProduct} />);
 
-    expect(getByText('Produto Teste')).toBeInTheDocument();
-    expect(getByText('Descrição do produto teste')).toBeInTheDocument();
+    expect(await findByText('Produto Teste')).toBeInTheDocument();
+    expect(await findByText('Descrição do produto teste')).toBeInTheDocument();
   });
 
   it('deve mostrar informações de preço', () => {
@@ -58,32 +58,32 @@ describe('ProductCard', () => {
     expect(container.textContent).toContain('0');
   });
 
-  it('deve renderizar imagem quando não há URL', () => {
-    const { getByRole } = renderWithProviders(<ProductCard product={mockProduct} />);
+  it('deve renderizar imagem quando não há URL', async () => {
+    const { findByRole } = renderWithProviders(<ProductCard product={mockProduct} />);
 
-    const image = getByRole('img');
+    const image = await findByRole('img');
     expect(image).toHaveAttribute('alt', 'Produto Teste');
   });
 
-  it('deve renderizar com descrição longa', () => {
+  it('deve renderizar com descrição longa', async () => {
     const longDescriptionProduct = {
       ...mockProduct,
       description: 'Esta é uma descrição muito longa que deveria ser truncada quando exceder o limite de caracteres permitido no card do produto'
     };
 
-    const { getByText } = renderWithProviders(<ProductCard product={longDescriptionProduct} />);
+    const { findByText } = renderWithProviders(<ProductCard product={longDescriptionProduct} />);
 
-    expect(getByText(/Esta é uma descrição muito longa/)).toBeInTheDocument();
+    expect(await findByText(/Esta é uma descrição muito longa/)).toBeInTheDocument();
   });
 
-  it('deve renderizar sem categoryId', () => {
+  it('deve renderizar sem categoryId', async () => {
     const productWithoutCategory = {
       ...mockProduct,
       categoryId: undefined,
     };
 
-    const { getByText } = renderWithProviders(<ProductCard product={productWithoutCategory} />);
+    const { findByText } = renderWithProviders(<ProductCard product={productWithoutCategory} />);
 
-    expect(getByText('Produto Teste')).toBeInTheDocument();
+    expect(await findByText('Produto Teste')).toBeInTheDocument();
   });
 });

@@ -2,35 +2,23 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { useStockMovements } from '@/hooks/useStockMovements';
 
-const mockFrom = vi.fn();
-const mockSelect = vi.fn().mockReturnThis();
-const mockInsert = vi.fn().mockReturnThis();
-const mockEq = vi.fn().mockReturnThis();
-const mockOrder = vi.fn().mockReturnThis();
-const mockLimit = vi.fn().mockReturnThis();
+const mockSupabase = vi.hoisted(() => ({
+  from: vi.fn().mockReturnValue({
+    select: vi.fn().mockReturnThis(),
+    insert: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+    order: vi.fn().mockReturnThis(),
+    limit: vi.fn().mockReturnThis(),
+  }),
+}));
 
 vi.mock('@/integrations/supabase/client', () => ({
-  supabase: {
-    from: mockFrom.mockReturnValue({
-      select: mockSelect,
-      insert: mockInsert,
-      eq: mockEq,
-      order: mockOrder,
-      limit: mockLimit,
-    }),
-  },
+  supabase: mockSupabase,
 }));
 
 describe('useStockMovements', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockFrom.mockReturnValue({
-      select: mockSelect,
-      insert: mockInsert,
-      eq: mockEq,
-      order: mockOrder,
-      limit: mockLimit,
-    });
   });
 
   it('deve carregar movimentações de estoque inicialmente', async () => {
@@ -45,7 +33,7 @@ describe('useStockMovements', () => {
       },
     ];
 
-    mockSelect.mockResolvedValue({ data: mockMovements, error: null });
+    mockSupabase.from().select.mockResolvedValue({ data: mockMovements, error: null });
 
     const { result } = renderHook(() => useStockMovements());
 
@@ -59,7 +47,7 @@ describe('useStockMovements', () => {
 
   it('deve tratar erro ao carregar movimentações', async () => {
     const mockError = { message: 'Erro ao carregar movimentações' };
-    mockSelect.mockResolvedValue({ data: null, error: mockError });
+    mockSupabase.from().select.mockResolvedValue({ data: null, error: mockError });
 
     const { result } = renderHook(() => useStockMovements());
 
@@ -78,8 +66,8 @@ describe('useStockMovements', () => {
     };
 
     const mockCreatedMovement = { id: '2', ...mockMovement, created_at: '2024-01-01T11:00:00Z' };
-    mockInsert.mockResolvedValue({ data: [mockCreatedMovement], error: null });
-    mockSelect.mockResolvedValue({ data: [mockCreatedMovement], error: null });
+    mockSupabase.from().insert.mockResolvedValue({ data: [mockCreatedMovement], error: null });
+    mockSupabase.from().select.mockResolvedValue({ data: [mockCreatedMovement], error: null });
 
     const { result } = renderHook(() => useStockMovements());
 
@@ -128,7 +116,7 @@ describe('useStockMovements', () => {
       },
     ];
 
-    mockSelect.mockResolvedValue({ data: mockMovements, error: null });
+    mockSupabase.from().select.mockResolvedValue({ data: mockMovements, error: null });
 
     const { result } = renderHook(() => useStockMovements());
 

@@ -24,5 +24,5 @@ export const validateStockMovementForm = (
 };
 
 export const hasValidationErrors = (errors: ValidationError): boolean => {
-  return Object.keys(errors).length > 0;
+  return Object.values(errors).some(error => Boolean(error));
 };

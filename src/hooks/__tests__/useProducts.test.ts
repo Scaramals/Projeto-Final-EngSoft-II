@@ -4,22 +4,17 @@ import { useProducts } from '@/hooks/useProducts';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
 
-// Mock do serviço de produtos
-const mockGetAllProducts = vi.fn();
-const mockGetProductById = vi.fn();
-const mockCreateProduct = vi.fn();
-const mockUpdateProduct = vi.fn();
-const mockDeleteProduct = vi.fn();
-
-vi.mock('@/services/products.service', () => ({
+const mockProductsService = vi.hoisted(() => ({
   ProductsService: {
-    getAllProducts: mockGetAllProducts,
-    getProductById: mockGetProductById,
-    createProduct: mockCreateProduct,
-    updateProduct: mockUpdateProduct,
-    deleteProduct: mockDeleteProduct,
+    getAllProducts: vi.fn(),
+    getProductById: vi.fn(),
+    createProduct: vi.fn(),
+    updateProduct: vi.fn(),
+    deleteProduct: vi.fn(),
   },
 }));
+
+vi.mock('@/services/products.service', () => mockProductsService);
 
 const createWrapper = () => {
   const queryClient = new QueryClient({
@@ -51,7 +46,7 @@ describe('useProducts', () => {
       },
     ];
 
-    mockGetAllProducts.mockResolvedValue(mockProducts);
+    mockProductsService.ProductsService.getAllProducts.mockResolvedValue(mockProducts);
 
     const wrapper = createWrapper();
     const { result } = renderHook(() => {
@@ -65,7 +60,7 @@ describe('useProducts', () => {
     await new Promise(resolve => setTimeout(resolve, 0));
 
     expect(result.current.data).toEqual(mockProducts);
-    expect(mockGetAllProducts).toHaveBeenCalled();
+    expect(mockProductsService.ProductsService.getAllProducts).toHaveBeenCalled();
   });
 
   it('deve carregar produtos com filtros', async () => {
@@ -81,7 +76,7 @@ describe('useProducts', () => {
     ];
 
     const filters = { categoryId: 'cat1', search: 'filtrado' };
-    mockGetAllProducts.mockResolvedValue(mockProducts);
+    mockProductsService.ProductsService.getAllProducts.mockResolvedValue(mockProducts);
 
     const wrapper = createWrapper();
     const { result } = renderHook(() => {
@@ -93,7 +88,7 @@ describe('useProducts', () => {
     await new Promise(resolve => setTimeout(resolve, 0));
 
     expect(result.current.data).toEqual(mockProducts);
-    expect(mockGetAllProducts).toHaveBeenCalledWith(filters);
+    expect(mockProductsService.ProductsService.getAllProducts).toHaveBeenCalledWith(filters);
   });
 
   it('deve buscar produto por ID com useProduct', async () => {
@@ -105,7 +100,7 @@ describe('useProducts', () => {
       quantity: 10,
     };
 
-    mockGetProductById.mockResolvedValue(mockProduct);
+    mockProductsService.ProductsService.getProductById.mockResolvedValue(mockProduct);
 
     const wrapper = createWrapper();
     const { result } = renderHook(() => {
@@ -117,7 +112,7 @@ describe('useProducts', () => {
     await new Promise(resolve => setTimeout(resolve, 0));
 
     expect(result.current.data).toEqual(mockProduct);
-    expect(mockGetProductById).toHaveBeenCalledWith('1');
+    expect(mockProductsService.ProductsService.getProductById).toHaveBeenCalledWith('1');
   });
 
   it('deve criar produto com useCreateProduct', async () => {
@@ -130,7 +125,7 @@ describe('useProducts', () => {
     };
 
     const mockCreatedProduct = { id: '2', ...mockProductData };
-    mockCreateProduct.mockResolvedValue(mockCreatedProduct);
+    mockProductsService.ProductsService.createProduct.mockResolvedValue(mockCreatedProduct);
 
     const wrapper = createWrapper();
     const { result } = renderHook(() => {
@@ -140,13 +135,13 @@ describe('useProducts', () => {
 
     await result.current.mutateAsync(mockProductData);
 
-    expect(mockCreateProduct).toHaveBeenCalledWith(mockProductData);
+    expect(mockProductsService.ProductsService.createProduct).toHaveBeenCalledWith(mockProductData);
   });
 
   it('deve atualizar produto com useUpdateProduct', async () => {
     const mockUpdates = { name: 'Produto Atualizado', price: 20.99 };
     const mockUpdatedProduct = { id: '1', ...mockUpdates };
-    mockUpdateProduct.mockResolvedValue(mockUpdatedProduct);
+    mockProductsService.ProductsService.updateProduct.mockResolvedValue(mockUpdatedProduct);
 
     const wrapper = createWrapper();
     const { result } = renderHook(() => {
@@ -156,11 +151,11 @@ describe('useProducts', () => {
 
     await result.current.mutateAsync({ id: '1', ...mockUpdates });
 
-    expect(mockUpdateProduct).toHaveBeenCalledWith('1', mockUpdates);
+    expect(mockProductsService.ProductsService.updateProduct).toHaveBeenCalledWith('1', mockUpdates);
   });
 
   it('deve deletar produto com useDeleteProduct', async () => {
-    mockDeleteProduct.mockResolvedValue(true);
+    mockProductsService.ProductsService.deleteProduct.mockResolvedValue(true);
 
     const wrapper = createWrapper();
     const { result } = renderHook(() => {
@@ -170,12 +165,12 @@ describe('useProducts', () => {
 
     await result.current.mutateAsync('1');
 
-    expect(mockDeleteProduct).toHaveBeenCalledWith('1');
+    expect(mockProductsService.ProductsService.deleteProduct).toHaveBeenCalledWith('1');
   });
 
   it('deve tratar erro ao carregar produtos', async () => {
     const mockError = new Error('Erro ao carregar produtos');
-    mockGetAllProducts.mockRejectedValue(mockError);
+    mockProductsService.ProductsService.getAllProducts.mockRejectedValue(mockError);
 
     const wrapper = createWrapper();
     const { result } = renderHook(() => {
@@ -202,7 +197,7 @@ describe('useProducts', () => {
 
   it('deve invalidar cache após criar produto', async () => {
     const mockProductData = { name: 'Produto', description: 'Desc', price: 10, quantity: 5 };
-    mockCreateProduct.mockResolvedValue({ id: '1', ...mockProductData });
+    mockProductsService.ProductsService.createProduct.mockResolvedValue({ id: '1', ...mockProductData });
 
     const wrapper = createWrapper();
     const { result } = renderHook(() => {

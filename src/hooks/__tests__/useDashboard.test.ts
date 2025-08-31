@@ -2,24 +2,22 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { useDashboard } from '@/hooks/useDashboard';
 
-// Mock dos serviços
-const mockGetDashboardStats = vi.fn();
-const mockGetLowStockProducts = vi.fn();
-const mockGetRecentMovements = vi.fn();
-
-vi.mock('@/services/optimizedApi', () => ({
+const mockOptimizedApi = vi.hoisted(() => ({
   OptimizedApiService: {
-    getDashboardStats: mockGetDashboardStats,
-    getLowStockProducts: mockGetLowStockProducts,
-    getRecentMovements: mockGetRecentMovements,
+    getDashboardStats: vi.fn(),
+    getLowStockProducts: vi.fn(),
+    getRecentMovements: vi.fn(),
   },
 }));
 
-vi.mock('@/services/api', () => ({
+const mockApi = vi.hoisted(() => ({
   ApiService: {
-    getDashboardStats: mockGetDashboardStats,
+    getDashboardStats: vi.fn(),
   },
 }));
+
+vi.mock('@/services/optimizedApi', () => mockOptimizedApi);
+vi.mock('@/services/api', () => mockApi);
 
 describe('useDashboard', () => {
   beforeEach(() => {
@@ -46,9 +44,9 @@ describe('useDashboard', () => {
       outOfStockCount: 2,
     };
 
-    mockGetDashboardStats.mockResolvedValue(mockStats);
-    mockGetLowStockProducts.mockResolvedValue([]);
-    mockGetRecentMovements.mockResolvedValue([]);
+    mockOptimizedApi.OptimizedApiService.getDashboardStats.mockResolvedValue(mockStats);
+    mockOptimizedApi.OptimizedApiService.getLowStockProducts.mockResolvedValue([]);
+    mockOptimizedApi.OptimizedApiService.getRecentMovements.mockResolvedValue([]);
 
     const { result } = renderHook(() => useDashboard());
 
@@ -74,9 +72,9 @@ describe('useDashboard', () => {
       },
     ];
 
-    mockGetLowStockProducts.mockResolvedValue(mockLowStockProducts);
-    mockGetDashboardStats.mockResolvedValue({});
-    mockGetRecentMovements.mockResolvedValue([]);
+    mockOptimizedApi.OptimizedApiService.getLowStockProducts.mockResolvedValue(mockLowStockProducts);
+    mockOptimizedApi.OptimizedApiService.getDashboardStats.mockResolvedValue({});
+    mockOptimizedApi.OptimizedApiService.getRecentMovements.mockResolvedValue([]);
 
     const { result } = renderHook(() => useDashboard());
 
@@ -101,9 +99,9 @@ describe('useDashboard', () => {
       },
     ];
 
-    mockGetRecentMovements.mockResolvedValue(mockRecentMovements);
-    mockGetDashboardStats.mockResolvedValue({});
-    mockGetLowStockProducts.mockResolvedValue([]);
+    mockOptimizedApi.OptimizedApiService.getRecentMovements.mockResolvedValue(mockRecentMovements);
+    mockOptimizedApi.OptimizedApiService.getDashboardStats.mockResolvedValue({});
+    mockOptimizedApi.OptimizedApiService.getLowStockProducts.mockResolvedValue([]);
 
     const { result } = renderHook(() => useDashboard());
 
@@ -112,7 +110,7 @@ describe('useDashboard', () => {
 
   it('deve tratar erro ao carregar dados', async () => {
     const mockError = new Error('Erro ao carregar dados do dashboard');
-    mockGetDashboardStats.mockRejectedValue(mockError);
+    mockOptimizedApi.OptimizedApiService.getDashboardStats.mockRejectedValue(mockError);
 
     const { result } = renderHook(() => useDashboard());
 
@@ -127,11 +125,11 @@ describe('useDashboard', () => {
   });
 
   it('deve controlar estado de loading', async () => {
-    mockGetDashboardStats.mockImplementation(() => 
+    mockOptimizedApi.OptimizedApiService.getDashboardStats.mockImplementation(() => 
       new Promise(resolve => setTimeout(() => resolve({}), 100))
     );
-    mockGetLowStockProducts.mockResolvedValue([]);
-    mockGetRecentMovements.mockResolvedValue([]);
+    mockOptimizedApi.OptimizedApiService.getLowStockProducts.mockResolvedValue([]);
+    mockOptimizedApi.OptimizedApiService.getRecentMovements.mockResolvedValue([]);
 
     const { result } = renderHook(() => useDashboard());
 
@@ -165,7 +163,7 @@ describe('useDashboard', () => {
       totalStockValue: 75000.50,
     };
 
-    mockGetDashboardStats.mockResolvedValue(mockStats);
+    mockOptimizedApi.OptimizedApiService.getDashboardStats.mockResolvedValue(mockStats);
 
     const { result } = renderHook(() => useDashboard());
 
