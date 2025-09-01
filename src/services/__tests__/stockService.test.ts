@@ -1,8 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { StockService } from '@/services/stockService';
-import { supabase } from '@/integrations/supabase/client';
 
-vi.mock('@/integrations/supabase/client');
+// Mock com vi.hoisted
+const mockSupabase = vi.hoisted(() => ({
+  from: vi.fn(),
+  rpc: vi.fn()
+}));
+
+vi.mock('@/integrations/supabase/client', () => ({
+  supabase: mockSupabase
+}));
 
 describe('StockService', () => {
   beforeEach(() => {
@@ -14,13 +21,10 @@ describe('StockService', () => {
       const mockStock = 50;
       const mockResponse = { data: { current_stock: mockStock }, error: null };
       
-      (supabase.from as any).mockReturnValue({
-        select: vi.fn().mockReturnValue({
-          eq: vi.fn().mockReturnValue({
-            single: vi.fn().mockResolvedValue(mockResponse)
-          })
-        })
-      });
+      const mockSingle = vi.fn().mockResolvedValueOnce(mockResponse);
+      const mockEq = vi.fn().mockReturnValue({ single: mockSingle });
+      const mockSelect = vi.fn().mockReturnValue({ eq: mockEq });
+      mockSupabase.from.mockReturnValueOnce({ select: mockSelect });
 
       const result = await StockService.getCurrentStock('product-123');
       expect(result).toBe(mockStock);
@@ -29,13 +33,10 @@ describe('StockService', () => {
     it('deve retornar 0 quando produto não encontrado', async () => {
       const mockResponse = { data: null, error: null };
       
-      (supabase.from as any).mockReturnValue({
-        select: vi.fn().mockReturnValue({
-          eq: vi.fn().mockReturnValue({
-            single: vi.fn().mockResolvedValue(mockResponse)
-          })
-        })
-      });
+      const mockSingle = vi.fn().mockResolvedValueOnce(mockResponse);
+      const mockEq = vi.fn().mockReturnValue({ single: mockSingle });
+      const mockSelect = vi.fn().mockReturnValue({ eq: mockEq });
+      mockSupabase.from.mockReturnValueOnce({ select: mockSelect });
 
       const result = await StockService.getCurrentStock('invalid-id');
       expect(result).toBe(0);
@@ -45,13 +46,10 @@ describe('StockService', () => {
       const mockError = new Error('Database error');
       const mockResponse = { data: null, error: mockError };
       
-      (supabase.from as any).mockReturnValue({
-        select: vi.fn().mockReturnValue({
-          eq: vi.fn().mockReturnValue({
-            single: vi.fn().mockResolvedValue(mockResponse)
-          })
-        })
-      });
+      const mockSingle = vi.fn().mockResolvedValueOnce(mockResponse);
+      const mockEq = vi.fn().mockReturnValue({ single: mockSingle });
+      const mockSelect = vi.fn().mockReturnValue({ eq: mockEq });
+      mockSupabase.from.mockReturnValueOnce({ select: mockSelect });
 
       await expect(StockService.getCurrentStock('product-123')).rejects.toThrow('Database error');
     });
@@ -68,11 +66,9 @@ describe('StockService', () => {
 
       const mockResponse = { data: { id: 'movement-123' }, error: null };
       
-      (supabase.from as any).mockReturnValue({
-        insert: vi.fn().mockReturnValue({
-          select: vi.fn().mockResolvedValue(mockResponse)
-        })
-      });
+      const mockSelect = vi.fn().mockResolvedValueOnce(mockResponse);
+      const mockInsert = vi.fn().mockReturnValue({ select: mockSelect });
+      mockSupabase.from.mockReturnValueOnce({ insert: mockInsert });
 
       const result = await StockService.createMovement(mockMovement);
       expect(result.success).toBe(true);

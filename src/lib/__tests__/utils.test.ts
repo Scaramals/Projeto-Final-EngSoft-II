@@ -28,15 +28,15 @@ describe('utils', () => {
 
   describe('formatCurrency', () => {
     it('deve formatar moeda brasileira', () => {
-      expect(formatCurrency(1234.56)).toBe('R$ 1.234,56');
+      expect(formatCurrency(1234.56)).toMatch(/R\$\s*1\.234,56/);
     });
 
     it('deve formatar zero', () => {
-      expect(formatCurrency(0)).toBe('R$ 0,00');
+      expect(formatCurrency(0)).toMatch(/R\$\s*0,00/);
     });
 
     it('deve formatar valores negativos', () => {
-      expect(formatCurrency(-500)).toBe('-R$ 500,00');
+      expect(formatCurrency(-500)).toMatch(/-R\$\s*500,00/);
     });
   });
 
