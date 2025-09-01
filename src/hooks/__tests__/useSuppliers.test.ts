@@ -33,7 +33,7 @@ describe('useSuppliers', () => {
       },
     ];
 
-    mockSupabase.from().select.mockResolvedValue({ data: mockSuppliers, error: null });
+    mockSupabase.from().select.mockResolvedValueOnce({ data: mockSuppliers, error: null });
 
     const { result } = renderHook(() => {
       const { useAllSuppliers } = useSuppliers();
@@ -50,7 +50,7 @@ describe('useSuppliers', () => {
 
   it('deve tratar erro ao carregar fornecedores', async () => {
     const mockError = { message: 'Erro ao carregar fornecedores' };
-    mockSupabase.from().select.mockResolvedValue({ data: null, error: mockError });
+    mockSupabase.from().select.mockResolvedValueOnce({ data: null, error: mockError });
 
     const { result } = renderHook(() => {
       const { useAllSuppliers } = useSuppliers();
@@ -72,8 +72,8 @@ describe('useSuppliers', () => {
     };
 
     const mockCreatedSupplier = { id: '2', ...mockSupplier };
-    mockSupabase.from().insert.mockResolvedValue({ data: [mockCreatedSupplier], error: null });
-    mockSupabase.from().select.mockResolvedValue({ data: [mockCreatedSupplier], error: null });
+    mockSupabase.from().insert.mockResolvedValueOnce({ data: [mockCreatedSupplier], error: null });
+    mockSupabase.from().select.mockResolvedValueOnce({ data: [mockCreatedSupplier], error: null });
 
     const { result } = renderHook(() => {
       const { useCreateSupplier } = useSuppliers();
@@ -90,8 +90,8 @@ describe('useSuppliers', () => {
 
   it('deve atualizar fornecedor com sucesso', async () => {
     const mockUpdates = { name: 'Fornecedor Atualizado', email: 'atualizado@test.com' };
-    mockSupabase.from().update.mockResolvedValue({ data: [{ id: '1', ...mockUpdates }], error: null });
-    mockSupabase.from().select.mockResolvedValue({ data: [], error: null });
+    mockSupabase.from().update.mockResolvedValueOnce({ data: [{ id: '1', ...mockUpdates }], error: null });
+    mockSupabase.from().select.mockResolvedValueOnce({ data: [], error: null });
 
     const { result } = renderHook(() => {
       const { useUpdateSupplier } = useSuppliers();
@@ -109,8 +109,8 @@ describe('useSuppliers', () => {
   });
 
   it('deve deletar fornecedor com sucesso', async () => {
-    mockSupabase.from().delete.mockResolvedValue({ data: null, error: null });
-    mockSupabase.from().select.mockResolvedValue({ data: [], error: null });
+    mockSupabase.from().delete.mockResolvedValueOnce({ data: null, error: null });
+    mockSupabase.from().select.mockResolvedValueOnce({ data: [], error: null });
 
     const { result } = renderHook(() => {
       const { useDeleteSupplier } = useSuppliers();
@@ -134,7 +134,7 @@ describe('useSuppliers', () => {
       email: 'especifico@test.com',
     };
 
-    mockSupabase.from().select.mockResolvedValue({ data: mockSupplier, error: null });
+    mockSupabase.from().select.mockResolvedValueOnce({ data: mockSupplier, error: null });
 
     const { result } = renderHook(() => {
       const { useSupplier } = useSuppliers();

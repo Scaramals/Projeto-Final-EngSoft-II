@@ -44,9 +44,9 @@ describe('useDashboard', () => {
       outOfStockCount: 2,
     };
 
-    mockOptimizedApi.OptimizedApiService.getDashboardStats.mockResolvedValue(mockStats);
-    mockOptimizedApi.OptimizedApiService.getLowStockProducts.mockResolvedValue([]);
-    mockOptimizedApi.OptimizedApiService.getRecentMovements.mockResolvedValue([]);
+    mockOptimizedApi.OptimizedApiService.getDashboardStats.mockResolvedValueOnce(mockStats);
+    mockOptimizedApi.OptimizedApiService.getLowStockProducts.mockResolvedValueOnce([]);
+    mockOptimizedApi.OptimizedApiService.getRecentMovements.mockResolvedValueOnce([]);
 
     const { result } = renderHook(() => useDashboard());
 
@@ -72,9 +72,9 @@ describe('useDashboard', () => {
       },
     ];
 
-    mockOptimizedApi.OptimizedApiService.getLowStockProducts.mockResolvedValue(mockLowStockProducts);
-    mockOptimizedApi.OptimizedApiService.getDashboardStats.mockResolvedValue({});
-    mockOptimizedApi.OptimizedApiService.getRecentMovements.mockResolvedValue([]);
+    mockOptimizedApi.OptimizedApiService.getLowStockProducts.mockResolvedValueOnce(mockLowStockProducts);
+    mockOptimizedApi.OptimizedApiService.getDashboardStats.mockResolvedValueOnce({});
+    mockOptimizedApi.OptimizedApiService.getRecentMovements.mockResolvedValueOnce([]);
 
     const { result } = renderHook(() => useDashboard());
 
@@ -99,9 +99,9 @@ describe('useDashboard', () => {
       },
     ];
 
-    mockOptimizedApi.OptimizedApiService.getRecentMovements.mockResolvedValue(mockRecentMovements);
-    mockOptimizedApi.OptimizedApiService.getDashboardStats.mockResolvedValue({});
-    mockOptimizedApi.OptimizedApiService.getLowStockProducts.mockResolvedValue([]);
+    mockOptimizedApi.OptimizedApiService.getRecentMovements.mockResolvedValueOnce(mockRecentMovements);
+    mockOptimizedApi.OptimizedApiService.getDashboardStats.mockResolvedValueOnce({});
+    mockOptimizedApi.OptimizedApiService.getLowStockProducts.mockResolvedValueOnce([]);
 
     const { result } = renderHook(() => useDashboard());
 
@@ -128,8 +128,8 @@ describe('useDashboard', () => {
     mockOptimizedApi.OptimizedApiService.getDashboardStats.mockImplementation(() => 
       new Promise(resolve => setTimeout(() => resolve({}), 100))
     );
-    mockOptimizedApi.OptimizedApiService.getLowStockProducts.mockResolvedValue([]);
-    mockOptimizedApi.OptimizedApiService.getRecentMovements.mockResolvedValue([]);
+    mockOptimizedApi.OptimizedApiService.getLowStockProducts.mockResolvedValueOnce([]);
+    mockOptimizedApi.OptimizedApiService.getRecentMovements.mockResolvedValueOnce([]);
 
     const { result } = renderHook(() => useDashboard());
 
@@ -163,7 +163,7 @@ describe('useDashboard', () => {
       totalStockValue: 75000.50,
     };
 
-    mockOptimizedApi.OptimizedApiService.getDashboardStats.mockResolvedValue(mockStats);
+    mockOptimizedApi.OptimizedApiService.getDashboardStats.mockResolvedValueOnce(mockStats);
 
     const { result } = renderHook(() => useDashboard());
 

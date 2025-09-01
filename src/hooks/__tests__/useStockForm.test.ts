@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { renderHook, act, waitFor } from '@testing-library/react';
+import { describe, it, expect } from 'vitest';
+import { renderHook, act } from '@testing-library/react';
 import { useStockForm } from '@/hooks/useStockForm';
 
 describe('useStockForm', () => {
@@ -57,7 +57,7 @@ describe('useStockForm', () => {
     expect(result.current.errors.quantity).toBeUndefined();
   });
 
-  it('deve validar tipo obrigatório', async () => {
+  it('deve validar tipo obrigatório', () => {
     const { result } = renderHook(() => useStockForm());
 
     act(() => {
@@ -66,13 +66,11 @@ describe('useStockForm', () => {
 
     const isValid = result.current.validateForm(100);
 
-    await waitFor(() => {
-      expect(isValid).toBe(false);
-      expect(result.current.errors.type).toBe('Selecione o tipo de movimentação');
-    });
+    expect(isValid).toBe(false);
+    expect(result.current.errors.type).toBe('Selecione o tipo de movimentação');
   });
 
-  it('deve validar quantidade maior que zero', async () => {
+  it('deve validar quantidade maior que zero', () => {
     const { result } = renderHook(() => useStockForm());
 
     act(() => {
@@ -81,13 +79,11 @@ describe('useStockForm', () => {
 
     const isValid = result.current.validateForm(100);
 
-    await waitFor(() => {
-      expect(isValid).toBe(false);
-      expect(result.current.errors.quantity).toBe('Quantidade deve ser maior que zero');
-    });
+    expect(isValid).toBe(false);
+    expect(result.current.errors.quantity).toBe('Quantidade deve ser maior que zero');
   });
 
-  it('deve validar quantidade como número inteiro', async () => {
+  it('deve validar quantidade como número inteiro', () => {
     const { result } = renderHook(() => useStockForm());
 
     act(() => {
@@ -96,13 +92,11 @@ describe('useStockForm', () => {
 
     const isValid = result.current.validateForm(100);
 
-    await waitFor(() => {
-      expect(isValid).toBe(false);
-      expect(result.current.errors.quantity).toBe('Quantidade deve ser um número inteiro');
-    });
+    expect(isValid).toBe(false);
+    expect(result.current.errors.quantity).toBe('Quantidade deve ser um número inteiro');
   });
 
-  it('deve validar quantidade não maior que estoque para saída', async () => {
+  it('deve validar quantidade não maior que estoque para saída', () => {
     const { result } = renderHook(() => useStockForm());
 
     act(() => {
@@ -112,10 +106,8 @@ describe('useStockForm', () => {
 
     const isValid = result.current.validateForm(100);
 
-    await waitFor(() => {
-      expect(isValid).toBe(false);
-      expect(result.current.errors.quantity).toBe('Quantidade não pode ser maior que o estoque disponível (100)');
-    });
+    expect(isValid).toBe(false);
+    expect(result.current.errors.quantity).toBe('Quantidade não pode ser maior que o estoque disponível (100)');
   });
 
   it('deve permitir quantidade maior que estoque para entrada', () => {

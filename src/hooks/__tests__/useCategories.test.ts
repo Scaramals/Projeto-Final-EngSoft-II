@@ -43,7 +43,7 @@ describe('useCategories', () => {
       },
     ];
 
-    mockCategoriesService.CategoriesService.getAllCategories.mockResolvedValue(mockCategories);
+    mockCategoriesService.CategoriesService.getAllCategories.mockResolvedValueOnce(mockCategories);
 
     const wrapper = createWrapper();
     const { result } = renderHook(() => {
@@ -84,7 +84,7 @@ describe('useCategories', () => {
     };
 
     const mockCreatedCategory = { id: '3', ...mockCategory, created_at: '2024-01-01T12:00:00Z' };
-    mockCategoriesService.CategoriesService.createCategory.mockResolvedValue(mockCreatedCategory);
+    mockCategoriesService.CategoriesService.createCategory.mockResolvedValueOnce(mockCreatedCategory);
 
     const wrapper = createWrapper();
     const { result } = renderHook(() => {
@@ -100,7 +100,7 @@ describe('useCategories', () => {
   it('deve atualizar categoria com useUpdateCategory', async () => {
     const mockUpdates = { name: 'Categoria Atualizada', description: 'Nova descrição' };
     const mockUpdatedCategory = { id: '1', ...mockUpdates };
-    mockCategoriesService.CategoriesService.updateCategory.mockResolvedValue(mockUpdatedCategory);
+    mockCategoriesService.CategoriesService.updateCategory.mockResolvedValueOnce(mockUpdatedCategory);
 
     const wrapper = createWrapper();
     const { result } = renderHook(() => {
@@ -114,7 +114,7 @@ describe('useCategories', () => {
   });
 
   it('deve deletar categoria com useDeleteCategory', async () => {
-    mockCategoriesService.CategoriesService.deleteCategory.mockResolvedValue(true);
+    mockCategoriesService.CategoriesService.deleteCategory.mockResolvedValueOnce(true);
 
     const wrapper = createWrapper();
     const { result } = renderHook(() => {
@@ -134,7 +134,7 @@ describe('useCategories', () => {
       description: 'Descrição específica',
     };
 
-    const mockGetCategoryById = vi.fn().mockResolvedValue(mockCategory);
+    const mockGetCategoryById = vi.fn().mockResolvedValueOnce(mockCategory);
     vi.doMock('@/services/categories.service', () => ({
       CategoriesService: {
         getCategoryById: mockGetCategoryById,
@@ -155,7 +155,7 @@ describe('useCategories', () => {
 
   it('deve invalidar cache ao criar categoria', async () => {
     const mockCategory = { name: 'Nova Categoria', description: 'Desc' };
-    mockCategoriesService.CategoriesService.createCategory.mockResolvedValue({ id: '1', ...mockCategory });
+    mockCategoriesService.CategoriesService.createCategory.mockResolvedValueOnce({ id: '1', ...mockCategory });
 
     const wrapper = createWrapper();
     const { result } = renderHook(() => {
