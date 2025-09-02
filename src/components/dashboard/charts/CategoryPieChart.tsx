@@ -9,6 +9,7 @@ import {
   Tooltip
 } from "recharts";
 import { CategoryAnalysis } from "@/types";
+import { CategoryTooltip } from "@/components/ui/chart-tooltip";
 
 interface CategoryPieChartProps {
   categoryAnalysis: CategoryAnalysis[] | undefined;
@@ -39,20 +40,6 @@ export const CategoryPieChart: React.FC<CategoryPieChartProps> = ({ categoryAnal
     color: COLORS[index % COLORS.length]
   }));
 
-  const CustomTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload.length) {
-      const data = payload[0].payload;
-      return (
-        <div className="bg-white p-3 border rounded shadow">
-          <p className="font-medium">{data.name}</p>
-          <p className="text-blue-600">Valor: R$ {data.value.toLocaleString('pt-BR')}</p>
-          <p className="text-gray-600">{data.products} produtos</p>
-        </div>
-      );
-    }
-    return null;
-  };
-
   return (
     <Card>
       <CardHeader>
@@ -75,7 +62,7 @@ export const CategoryPieChart: React.FC<CategoryPieChartProps> = ({ categoryAnal
                    <Cell key={`cell-${entry.name}`} fill={entry.color} />
                  ))}
               </Pie>
-              <Tooltip content={<CustomTooltip />} />
+              <Tooltip content={<CategoryTooltip />} />
             </PieChart>
           </ResponsiveContainer>
         </div>

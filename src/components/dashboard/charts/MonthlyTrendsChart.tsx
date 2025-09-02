@@ -11,6 +11,7 @@ import {
   ResponsiveContainer
 } from "recharts";
 import { useSupplierMovements } from "@/hooks/useSupplierMovements";
+import { MonthlyTrendsTooltip } from "@/components/ui/chart-tooltip";
 
 export const MonthlyTrendsChart: React.FC = () => {
   const { supplierMovements, isLoading } = useSupplierMovements();
@@ -54,21 +55,6 @@ export const MonthlyTrendsChart: React.FC = () => {
     saidas: supplier.totalOut
   }));
 
-  const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      const data = payload[0].payload;
-      return (
-        <div className="bg-white p-3 border rounded shadow">
-          <p className="font-medium">{data.fullName}</p>
-          <p className="text-red-600">
-            Saídas: {data.saidas} unidades
-          </p>
-        </div>
-      );
-    }
-    return null;
-  };
-
   return (
     <Card>
       <CardHeader>
@@ -87,7 +73,7 @@ export const MonthlyTrendsChart: React.FC = () => {
                 fontSize={12}
               />
               <YAxis />
-              <Tooltip content={<CustomTooltip />} />
+              <Tooltip content={<MonthlyTrendsTooltip />} />
               <Bar 
                 dataKey="saidas" 
                 fill="#FF8042" 

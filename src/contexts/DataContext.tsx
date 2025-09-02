@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, ReactNode, useMemo } from 'react';
 import { Product, StockMovement, Supplier, Category } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
@@ -372,7 +372,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   }, [toast]);
 
-  const value: DataContextType = {
+  const value: DataContextType = useMemo(() => ({
     products,
     loadingProducts,
     fetchProducts,
@@ -393,7 +393,25 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     categories,
     loadingCategories,
     fetchCategories,
-  };
+  }), [
+    products,
+    loadingProducts,
+    fetchProducts,
+    createProduct,
+    updateProduct,
+    deleteProduct,
+    stockMovements,
+    loadingMovements,
+    fetchStockMovements,
+    createStockMovement,
+    suppliers,
+    loadingSuppliers,
+    fetchSuppliers,
+    createSupplier,
+    categories,
+    loadingCategories,
+    fetchCategories
+  ]);
 
   return (
     <DataContext.Provider value={value}>

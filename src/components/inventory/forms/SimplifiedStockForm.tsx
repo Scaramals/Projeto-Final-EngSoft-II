@@ -235,13 +235,13 @@ export const SimplifiedStockForm: React.FC<SimplifiedStockFormProps> = ({
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Tipo */}
           <div className="space-y-2">
-            <label className="text-sm font-medium">Tipo</label>
+            <label htmlFor="type-select" className="text-sm font-medium">Tipo</label>
             <Select
               value={formData.type}
               onValueChange={(value: 'in' | 'out') => updateField('type', value)}
               disabled={isLoading}
             >
-              <SelectTrigger>
+              <SelectTrigger id="type-select">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -253,8 +253,9 @@ export const SimplifiedStockForm: React.FC<SimplifiedStockFormProps> = ({
 
           {/* Quantidade */}
           <div className="space-y-2">
-            <label className="text-sm font-medium">Quantidade</label>
+            <label htmlFor="quantity-input" className="text-sm font-medium">Quantidade</label>
             <Input
+              id="quantity-input"
               type="number"
               min="0"
               step="1"
@@ -271,7 +272,7 @@ export const SimplifiedStockForm: React.FC<SimplifiedStockFormProps> = ({
 
           {/* Fornecedor (SEMPRE obrigatório agora) */}
           <div className="space-y-2">
-            <label className="text-sm font-medium">
+            <label htmlFor="supplier-select" className="text-sm font-medium">
               Fornecedor <span className="text-red-500">*</span>
             </label>
             <Select
@@ -279,7 +280,7 @@ export const SimplifiedStockForm: React.FC<SimplifiedStockFormProps> = ({
               onValueChange={(value) => updateField('supplierId', value)}
               disabled={isLoading}
             >
-              <SelectTrigger className={errors.supplierId ? "border-destructive" : ""}>
+              <SelectTrigger id="supplier-select" className={errors.supplierId ? "border-destructive" : ""}>
                 <SelectValue placeholder="Selecione o fornecedor" />
               </SelectTrigger>
               <SelectContent>
@@ -297,8 +298,9 @@ export const SimplifiedStockForm: React.FC<SimplifiedStockFormProps> = ({
 
           {/* Observações */}
           <div className="space-y-2">
-            <label className="text-sm font-medium">Observações</label>
+            <label htmlFor="notes-textarea" className="text-sm font-medium">Observações</label>
             <Textarea
+              id="notes-textarea"
               value={formData.notes}
               onChange={(e) => updateField('notes', e.target.value)}
               disabled={isLoading}

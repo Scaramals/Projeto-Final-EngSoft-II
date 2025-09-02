@@ -45,8 +45,9 @@ export const QuantityInput: React.FC<QuantityInputProps> = ({
 
   return (
     <div className="space-y-2">
-      <label className="text-sm font-medium">Quantidade*</label>
+      <label htmlFor="quantity-input" className="text-sm font-medium">Quantidade*</label>
       <Input
+        id="quantity-input"
         type="number"
         min="1"
         step="1"

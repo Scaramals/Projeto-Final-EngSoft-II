@@ -11,7 +11,6 @@ import { RecentMovementsSection } from "./sections/RecentMovementsSection";
 
 export const EnhancedDashboard: React.FC = () => {
   const { 
-    stats, 
     movementsSummary, 
     categoryAnalysis, 
     monthlyComparison,
@@ -22,7 +21,7 @@ export const EnhancedDashboard: React.FC = () => {
     return (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {Array(6).fill(0).map((_, i) => (
-          <Skeleton key={i} className="h-64" />
+          <Skeleton key={`enhanced-skeleton-${i}`} className="h-64" />
         ))}
       </div>
     );

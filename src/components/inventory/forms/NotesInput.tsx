@@ -15,8 +15,9 @@ export const NotesInput: React.FC<NotesInputProps> = ({
 }) => {
   return (
     <div className="space-y-2">
-      <label className="text-sm font-medium">Observações (opcional)</label>
+      <label htmlFor="notes-input" className="text-sm font-medium">Observações (opcional)</label>
       <Textarea
+        id="notes-input"
         placeholder="Ex: Produto recebido em perfeito estado, nota fiscal 12345, fornecedor entregou no prazo"
         value={value}
         disabled={disabled}
