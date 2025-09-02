@@ -161,7 +161,6 @@ export const StockMovementFormNew: React.FC<StockMovementFormNewProps> = ({
   };
 
   const hasInsufficientStock = validationMessage !== null && formData.type === 'out';
-  const canSubmit = !isSubmitting && !isLoadingStock && !hasInsufficientStock && !isValidating;
 
   return (
     <Card className="w-full max-w-2xl mx-auto">

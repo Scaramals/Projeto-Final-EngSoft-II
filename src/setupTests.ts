@@ -1,94 +1,93 @@
 import '@testing-library/jest-dom';
-import { vi, afterEach } from 'vitest';
 import { cleanup } from '@testing-library/react';
 
 // Limpa automaticamente o DOM após cada teste
 afterEach(() => {
   cleanup();
-  vi.clearAllMocks();
-  vi.clearAllTimers();
-  vi.restoreAllMocks();
+  jest.clearAllMocks();
+  jest.clearAllTimers();
+  jest.restoreAllMocks();
 });
 
-// Mock do Supabase com vi.hoisted
-const mockSupabase = vi.hoisted(() => ({
+// Mock do Supabase com jest
+const mockSupabase = {
   supabase: {
     auth: {
-      signUp: vi.fn().mockResolvedValue({ data: null, error: null }),
-      signInWithPassword: vi.fn().mockResolvedValue({ data: null, error: null }),
-      signOut: vi.fn().mockResolvedValue({ error: null }),
-      onAuthStateChange: vi.fn().mockReturnValue({ data: { subscription: null } }),
-      getUser: vi.fn().mockResolvedValue({ data: { user: null }, error: null }),
+      signUp: jest.fn().mockResolvedValue({ data: null, error: null }),
+      signInWithPassword: jest.fn().mockResolvedValue({ data: null, error: null }),
+      signOut: jest.fn().mockResolvedValue({ error: null }),
+      onAuthStateChange: jest.fn().mockReturnValue({ data: { subscription: null } }),
+      getUser: jest.fn().mockResolvedValue({ data: { user: null }, error: null }),
     },
-    from: vi.fn(() => ({
-      select: vi.fn().mockReturnThis(),
-      insert: vi.fn().mockReturnThis(),
-      update: vi.fn().mockReturnThis(),
-      delete: vi.fn().mockReturnThis(),
-      eq: vi.fn().mockReturnThis(),
-      gt: vi.fn().mockReturnThis(),
-      lt: vi.fn().mockReturnThis(),
-      order: vi.fn().mockReturnThis(),
-      limit: vi.fn().mockReturnThis(),
-      single: vi.fn().mockResolvedValue({ data: null, error: null }),
-      then: vi.fn().mockResolvedValue({ data: [], error: null }),
+    from: jest.fn(() => ({
+      select: jest.fn().mockReturnThis(),
+      insert: jest.fn().mockReturnThis(),
+      update: jest.fn().mockReturnThis(),
+      delete: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      gt: jest.fn().mockReturnThis(),
+      lt: jest.fn().mockReturnThis(),
+      order: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
+      single: jest.fn().mockResolvedValue({ data: null, error: null }),
+      then: jest.fn().mockResolvedValue({ data: [], error: null }),
     })),
-    channel: vi.fn(() => ({
-      on: vi.fn().mockReturnThis(),
-      subscribe: vi.fn().mockResolvedValue('OK'),
+    channel: jest.fn(() => ({
+      on: jest.fn().mockReturnThis(),
+      subscribe: jest.fn().mockResolvedValue('OK'),
     })),
-    removeChannel: vi.fn(),
+    removeChannel: jest.fn(),
   },
-}));
+};
 
-vi.mock('@/integrations/supabase/client', () => mockSupabase);
+jest.mock('@/integrations/supabase/client', () => mockSupabase);
 
-// Mock do React Router com vi.hoisted
-const mockReactRouter = vi.hoisted(() => ({
-  useNavigate: () => vi.fn(),
+// Mock do React Router
+const mockReactRouter = {
+  useNavigate: () => jest.fn(),
   useParams: () => ({}),
   useLocation: () => ({ pathname: '/' }),
   BrowserRouter: ({ children }: { children: React.ReactNode }) => children,
   Link: ({ children, to }: { children: React.ReactNode; to: string }) => children,
-}));
+};
 
-vi.mock('react-router-dom', async () => {
-  const actual = await vi.importActual('react-router-dom');
+jest.mock('react-router-dom', () => {
+  const actual = jest.requireActual('react-router-dom');
   return {
     ...actual,
     ...mockReactRouter,
   };
 });
 
-// Mock do Toast com vi.hoisted
-const mockToast = vi.hoisted(() => ({
+// Mock do Toast
+const mockToast = {
   useToast: () => ({
-    toast: vi.fn(),
+    toast: jest.fn(),
   }),
-}));
+};
 
-vi.mock('@/hooks/use-toast', () => mockToast);
+jest.mock('@/hooks/use-toast', () => mockToast);
 
-// Mock do AuthContext com vi.hoisted
-const mockAuth = vi.hoisted(() => ({
+// Mock do AuthContext
+const mockAuth = {
   useAuth: () => ({
     user: { id: 'test-user', email: 'test@test.com' },
     isLoading: false,
-    signIn: vi.fn().mockResolvedValue({ data: null, error: null }),
-    signUp: vi.fn().mockResolvedValue({ data: null, error: null }),
-    signOut: vi.fn().mockResolvedValue({ error: null }),
+    signIn: jest.fn().mockResolvedValue({ data: null, error: null }),
+    signUp: jest.fn().mockResolvedValue({ data: null, error: null }),
+    signOut: jest.fn().mockResolvedValue({ error: null }),
   }),
-}));
+};
 
-vi.mock('@/contexts/AuthContext', () => mockAuth);
+jest.mock('@/contexts/AuthContext', () => mockAuth);
 
-// Mock dos serviços com vi.hoisted
-const mockServices = vi.hoisted(() => ({
+// Mock dos serviços
+const mockServices = {
   StockService: {
-    getCurrentStock: vi.fn().mockResolvedValue(0),
-    createMovement: vi.fn().mockResolvedValue({ success: true }),
-    getMovementsWithDetails: vi.fn().mockResolvedValue([]),
+    getCurrentStock: jest.fn().mockResolvedValue(0),
+    createMovement: jest.fn().mockResolvedValue({ success: true }),
+    getMovementsWithDetails: jest.fn().mockResolvedValue([]),
   },
-}));
+};
 
-vi.mock('@/services/stockService', () => mockServices);
+jest.mock('@/services/stockService', () => mockServices);

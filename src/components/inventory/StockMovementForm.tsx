@@ -34,7 +34,6 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
   const [type, setType] = useState<'in' | 'out'>('in');
   const [quantity, setQuantity] = useState<number>(1);
   const [notes, setNotes] = useState<string>('');
-  const [supplierId, setSupplierId] = useState<string>('');
 
   // Form errors
   const [errors, setErrors] = useState(validateStockMovementForm('', 0));
@@ -126,7 +125,6 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
       type, 
       quantity: validQuantity, 
       notes, 
-      supplierId: supplierId || null,
       productId 
     });
 
@@ -163,7 +161,6 @@ export const StockMovementForm: React.FC<StockMovementFormProps> = ({
         quantity: validQuantity,
         type,
         notes: notes.trim() || "",
-        supplierId: supplierId || undefined,
       });
 
       if (result.success) {

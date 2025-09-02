@@ -6,8 +6,7 @@ import {
   Pie,
   Cell,
   ResponsiveContainer,
-  Tooltip,
-  Legend
+  Tooltip
 } from "recharts";
 import { CategoryAnalysis } from "@/types";
 
@@ -72,9 +71,9 @@ export const CategoryPieChart: React.FC<CategoryPieChartProps> = ({ categoryAnal
                 dataKey="value"
                 label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
               >
-                {categoryChartData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
-                ))}
+                 {categoryChartData.map((entry) => (
+                   <Cell key={`cell-${entry.name}`} fill={entry.color} />
+                 ))}
               </Pie>
               <Tooltip content={<CustomTooltip />} />
             </PieChart>

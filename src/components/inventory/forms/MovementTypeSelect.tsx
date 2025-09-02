@@ -15,7 +15,7 @@ export const MovementTypeSelect: React.FC<MovementTypeSelectProps> = ({
 }) => {
   return (
     <div className="space-y-2">
-      <label className="text-sm font-medium">Tipo de movimentação</label>
+      <label htmlFor="movement-type-select" className="text-sm font-medium">Tipo de movimentação</label>
       <Select
         value={value}
         onValueChange={(value: 'in' | 'out') => {
@@ -24,7 +24,7 @@ export const MovementTypeSelect: React.FC<MovementTypeSelectProps> = ({
         }}
         disabled={disabled}
       >
-        <SelectTrigger>
+        <SelectTrigger id="movement-type-select">
           <SelectValue placeholder="Selecione o tipo" />
         </SelectTrigger>
         <SelectContent>

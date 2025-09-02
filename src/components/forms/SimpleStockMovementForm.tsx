@@ -94,13 +94,13 @@ export const SimpleStockMovementForm: React.FC<SimpleStockMovementFormProps> = (
           )}
 
           <div className="space-y-2">
-            <label className="text-sm font-medium">Tipo de movimentação</label>
+            <label htmlFor="movement-type" className="text-sm font-medium">Tipo de movimentação</label>
             <Select
               value={String(values.type)}
               onValueChange={handleTypeChange}
               disabled={isSubmitting || isLoading}
             >
-              <SelectTrigger>
+              <SelectTrigger id="movement-type">
                 <SelectValue placeholder="Selecione o tipo" />
               </SelectTrigger>
               <SelectContent>
@@ -114,8 +114,9 @@ export const SimpleStockMovementForm: React.FC<SimpleStockMovementFormProps> = (
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium">Quantidade</label>
+            <label htmlFor="movement-quantity" className="text-sm font-medium">Quantidade</label>
             <Input
+              id="movement-quantity"
               type="number"
               min="1"
               step="1"
@@ -136,8 +137,9 @@ export const SimpleStockMovementForm: React.FC<SimpleStockMovementFormProps> = (
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium">Observações (opcional)</label>
+            <label htmlFor="movement-notes" className="text-sm font-medium">Observações (opcional)</label>
             <Textarea
+              id="movement-notes"
               placeholder="Adicione observações sobre esta movimentação..."
               {...getFieldProps('notes')}
               disabled={isSubmitting || isLoading}

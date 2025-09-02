@@ -15,8 +15,9 @@ export const NotesField: React.FC<NotesFieldProps> = ({
 }) => {
   return (
     <div className="space-y-2">
-      <label className="text-sm font-medium">Observações</label>
+      <label htmlFor="notes-field" className="text-sm font-medium">Observações</label>
       <Textarea
+        id="notes-field"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}

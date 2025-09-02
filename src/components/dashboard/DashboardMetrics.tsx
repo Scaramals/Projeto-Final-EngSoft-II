@@ -25,7 +25,7 @@ export const DashboardMetrics: React.FC<DashboardMetricsProps> = ({
     return (
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
         {[...Array(4)].map((_, i) => (
-          <Skeleton key={i} className="h-32" />
+          <Skeleton key={`skeleton-${i}`} className="h-32" />
         ))}
       </div>
     );

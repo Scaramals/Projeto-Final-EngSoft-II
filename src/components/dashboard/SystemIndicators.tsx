@@ -77,7 +77,7 @@ export const SystemIndicators: React.FC = () => {
         <CardContent>
           <div className="grid grid-cols-2 gap-4">
             {[...Array(4)].map((_, i) => (
-              <div key={i} className="p-3 border rounded-lg">
+              <div key={`indicator-skeleton-${i}`} className="p-3 border rounded-lg">
                 <Skeleton className="h-4 w-2/3 mb-2" />
                 <Skeleton className="h-6 w-1/2 mb-1" />
                 <Skeleton className="h-3 w-1/3" />
@@ -123,11 +123,14 @@ export const SystemIndicators: React.FC = () => {
               {indicator.trend && indicator.trend.percentage > 0 && (
                 <div className="flex items-center gap-1 text-xs">
                   {getTrendIcon(indicator.trend.direction)}
-                  <span>
-                    {indicator.trend.percentage}% 
-                    {indicator.trend.direction === 'up' ? ' ↑' : 
-                     indicator.trend.direction === 'down' ? ' ↓' : ' →'}
-                  </span>
+                   <span>
+                     {indicator.trend.percentage}% 
+                     {(() => {
+                       if (indicator.trend.direction === 'up') return ' ↑';
+                       if (indicator.trend.direction === 'down') return ' ↓';
+                       return ' →';
+                     })()}
+                   </span>
                   <span className="text-muted-foreground ml-1">
                     vs mês anterior
                   </span>

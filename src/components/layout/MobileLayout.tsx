@@ -27,8 +27,6 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({
   searchValue = "",
   onSearchChange
 }) => {
-  const isMobile = useIsMobile();
-
   return (
     <AppLayout>
       <div className={cn(
@@ -92,6 +90,13 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({
                 placeholder={searchPlaceholder}
                 value={searchValue}
                 onChange={(e) => onSearchChange?.(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                  }
+                }}
+                role="searchbox"
+                aria-label="Pesquisar"
                 className={cn(
                   "w-full rounded-lg border border-input",
                   "bg-background px-4 py-3",
@@ -130,6 +135,14 @@ export const MobileCardLayout: React.FC<{
         className
       )}
       onClick={onClick}
+      onKeyDown={(e) => {
+        if (onClick && (e.key === 'Enter' || e.key === ' ')) {
+          e.preventDefault();
+          onClick();
+        }
+      }}
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
     >
       {children}
     </div>
