@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect } from '@jest/globals';
 import { renderHook, act } from '@testing-library/react';
 import { useStockForm } from '@/hooks/useStockForm';
 
