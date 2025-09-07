@@ -42,11 +42,5 @@ module.exports = {
   testPathIgnorePatterns: ['<rootDir>/node_modules/'],
   transformIgnorePatterns: [
     'node_modules/(?!(react-dropzone|@testing-library)/)',
-  ],
-  scripts: {
-    test: "jest",
-    "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage",
-    "test:coverage:ci": "jest --coverage --watchAll=false --maxWorkers=2"
-  }
+  ]
 };
