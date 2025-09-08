@@ -1,11 +1,14 @@
 /** @type {import('jest').Config} */
-module.exports = {
+export default {
   preset: 'ts-jest',
   testEnvironment: 'jsdom',
   setupFilesAfterEnv: ['<rootDir>/src/setupTests.ts'],
-  moduleNameMapping: {
+
+  // AQUI ESTÁ A CORREÇÃO! "moduleNameMapping" foi trocado por "moduleNameMapper".
+  moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
   },
+
   testMatch: [
     '<rootDir>/src/**/__tests__/**/*.{js,jsx,ts,tsx}',
     '<rootDir>/src/**/*.{test,spec}.{js,jsx,ts,tsx}',
@@ -35,6 +38,7 @@ module.exports = {
     '^.+\\.(ts|tsx)$': ['ts-jest', {
       tsconfig: {
         jsx: 'react-jsx',
+        esModuleInterop: true,
       },
     }],
   },
