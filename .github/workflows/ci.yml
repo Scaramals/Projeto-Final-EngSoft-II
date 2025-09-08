@@ -1,94 +1,107 @@
+# Nome do nosso workflow. Ele aparecerá na aba "Actions" do seu repositório no GitHub.
 name: CI/CD Pipeline
 
+# Define os gatilhos que iniciarão o workflow.
 on:
+  # Roda quando houver um push para as branches 'main' e 'develop'.
   push:
     branches: [ main, develop ]
+  # Roda quando um pull request for aberto (ou atualizado) para a branch 'main'.
   pull_request:
     branches: [ main ]
 
+# Define os "jobs" (trabalhos) que serão executados.
 jobs:
+  # Job para rodar testes, linter e análise de qualidade.
   test:
     name: Test & Coverage
     runs-on: ubuntu-latest
     
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          # Baixa todo o histórico do Git, necessário para análises do SonarCloud.
+          fetch-depth: 0
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '18'
-        cache: 'npm'
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
 
-    - name: Install dependencies
-      run: npm ci
+      - name: Install dependencies
+        # 'npm ci' é mais rápido e seguro para ambientes de CI do que 'npm install'.
+        run: npm ci
 
-    - name: Run linter
-      run: npm run lint
+      - name: Run linter
+        run: npm run lint
 
-    - name: Run tests with coverage
-      run: npm run test:coverage
+      - name: Run tests with coverage
+        run: npm run test:coverage
 
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v3
-      with:
-        file: ./coverage/lcov.info
-        flags: unittests
-        name: codecov-umbrella
-        fail_ci_if_error: true
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage/lcov.info
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: true
 
-    - name: SonarCloud Scan
-      uses: SonarSource/sonarcloud-github-action@master
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
+  # Job para buildar o projeto. Só roda se o job 'test' passar.
   build:
     name: Build
     runs-on: ubuntu-latest
     needs: test
     
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '18'
-        cache: 'npm'
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
 
-    - name: Install dependencies
-      run: npm ci
+      - name: Install dependencies
+        run: npm ci
 
-    - name: Build project
-      run: npm run build
+      - name: Build project
+        run: npm run build
 
-    - name: Upload build artifacts
-      uses: actions/upload-artifact@v3
-      with:
-        name: build-files
-        path: dist/
+      - name: Upload build artifacts
+        # Salva os arquivos da pasta 'dist' para serem usados em jobs futuros (ex: deploy).
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-files
+          path: dist/
 
+  # Job para auditoria de segurança das dependências.
   security:
     name: Security Audit
     runs-on: ubuntu-latest
     
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '18'
-        cache: 'npm'
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
 
-    - name: Install dependencies
-      run: npm ci
+      - name: Install dependencies
+        run: npm ci
 
-    - name: Run security audit
-      run: npm audit --audit-level=moderate
+      - name: Run security audit
+        # Falha o workflow se encontrar vulnerabilidades de nível moderado ou superior.
+        run: npm audit --audit-level=moderate
+
