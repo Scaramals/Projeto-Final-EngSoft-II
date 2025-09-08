@@ -63,13 +63,13 @@ describe('CacheService', () => {
   it('deve verificar tamanho do cache', () => {
     cacheService.set('item1', { data: 1 });
     cacheService.set('item2', { data: 2 });
-    
+
     // Verificar que tem itens
     expect(cacheService.has('item1')).toBe(true);
     expect(cacheService.has('item2')).toBe(true);
-    
+
     cacheService.clear();
-    
+
     // Verificar que foi limpo
     expect(cacheService.has('item1')).toBe(false);
     expect(cacheService.has('item2')).toBe(false);
