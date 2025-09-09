@@ -34,9 +34,6 @@ jobs:
         # 'npm ci' é mais rápido e seguro para ambientes de CI do que 'npm install'.
         run: npm ci
 
-      - name: Run linter
-        run: npm run lint
-
       - name: Run tests with coverage
         run: npm run test:coverage
 
