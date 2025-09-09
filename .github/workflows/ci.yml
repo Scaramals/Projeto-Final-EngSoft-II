@@ -12,11 +12,11 @@ on:
 
 # Define os "jobs" (trabalhos) que serão executados.
 jobs:
-  # Job para rodar testes, linter e análise de qualidade.
+  # Job para rodar testes e análise de qualidade.
   test:
     name: Test & Coverage
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -44,7 +44,6 @@ jobs:
           flags: unittests
           name: codecov-umbrella
           fail_ci_if_error: true
-          #teste
 
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@master
